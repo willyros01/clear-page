@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.2
+- Added switchable icon/text controls with accessible labels.
+- Changed editor sizing to 10–54pt with direct entry and one-point adjustments; retained the 36px-equivalent default.
+- Persisted appearance preferences independently of drafts and migrated older pixel sizes.
+- Verified both modes, minimum size, adjustment and reload persistence in desktop Chrome.
+
 ## 0.2.1
 - Compacted the toolbar to one row and moved secondary controls into a readable menu.
 - Added Exit with save, discard-draft, and cancel choices.
