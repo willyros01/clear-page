@@ -3,9 +3,9 @@
   "workflow": "ATE Apple and Desktop",
   "branch": "desktop",
   "version": "0.4.1",
-  "run_id": 43091059827,
-  "source_sha": "61584530cb7cc4bec7210cc7297ad8bdf0af2708",
+  "run_id": 43103034568,
+  "source_sha": "465e0ef847044340769a7708c75823ba9f4308d2",
   "windows_artifact_id": null,
-  "mac_artifact_id": null,
-  "created_at": "2026-11-11T20:17:32.380Z"
+  "mac_artifact_id": 13891264730,
+  "created_at": "2026-11-11T21:27:16.540Z"
 }
