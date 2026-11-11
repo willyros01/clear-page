@@ -78,3 +78,14 @@ The simulator workflow remains separate. The Clear Page TestFlight workflow now 
 - Successful setup run: https://github.com/willyros01/clear-page/actions/runs/42975190510.
 - User must accept the invitation in TestFlight; actual email delivery and physical-device installation remain unverified.
 - build/internal-testing.mjs is idempotent and pinned to this app/build/account. Review its constants before reusing for another release.
+
+## ATE 0.3.2 update — 2026-11-11
+- Product renamed to Another Text Editor (ATE); native display/toolbar label ATE. Existing repository, Apple app ID, bundle ID and recovery storage keys retained.
+- Apple name update verified through App Store Connect API: run https://github.com/willyros01/clear-page/actions/runs/42977093012.
+- Removed the Editor closed page. Close clears the current in-memory document, undo history, search and dialogs, then blurs keyboard focus. Discard removes the recovery draft; save/share cancellation continues editing. Saved device files are not removed.
+- iOS has no supported app-quit API. Close handles the document; the Home gesture leaves the application.
+- Selected icon: first minimalist faceless stick-figure variant, bent arms, upright flat paper and simple pen. Opaque 1024px PNG stored as resources/stickman-icon.png.base64; Swift decodes it directly, verifies dimensions/opacity and checks nonblank pixels, replacing the old drawing generator.
+- Added regression coverage for close cancellation, discard, undo history, panels and saving the next draft.
+- Release workflow now verifies CFBundleDisplayName and the compiled AppIcon declaration, and assigns the processed build to the existing internal tester group.
+- First 0.3.2 release attempt stopped before compilation because a transferred lockfile was incomplete; complete JSON lockfile restored and read back successfully.
+- Current release run: https://github.com/willyros01/clear-page/actions/runs/42977354436 — in progress (0.3.2, build 3).
