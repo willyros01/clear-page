@@ -49,4 +49,4 @@ Clear Page 0.3.1 (1) is signed, uploaded and processed by Apple (VALID). Release
 Clear Page Internal now contains the verified account holder and build 0.3.1 (1). Apple reports IN_BETA_TESTING. Invitation acceptance and physical-device acceptance remain pending.
 
 ## ATE 0.3.2
-Product is now Another Text Editor (ATE). Approved minimalist writing icon and direct document-close behavior are implemented. Automated close/recovery checks pass; updated native build and physical iPad acceptance are next.
+Product is now Another Text Editor (ATE). Approved minimalist writing icon and direct document-close behavior are implemented. Automated close/recovery checks and simulator launch pass. ATE 0.3.2 (3) is processed and assigned to the internal tester. Physical iPad acceptance is next.
