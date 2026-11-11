@@ -1,5 +1,10 @@
 # Changelog
 
+## iOS first build (ios branch)
+- Added Capacitor iPhone/iPad shell generation and macOS simulator build/launch workflow.
+- Added native save/share adapter and safe-area spacing.
+- Signed distribution and physical-device acceptance remain pending.
+
 ## 0.3.1
 - Set explicit theme-aware text, WebKit text fill, caret and background colors for Vim command/search inputs.
 - Made command input width and minimum height explicit for readability.
