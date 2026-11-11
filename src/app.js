@@ -1,4 +1,4 @@
-import {saveText,native} from './platform.js';
+import {saveText,native,desktop,closePlatform,handleDesktopExit} from './platform.js';
 
 import {createEditor, languageForName} from './editor.js';
 const $=id=>document.getElementById(id);
@@ -27,14 +27,16 @@ $('menuButton').onclick=()=>{$('menu').showModal()};
 $('closeMenu').onclick=()=>{$('menu').close();editor.focus()};
 $('exit').onclick=()=>{$('exitDialog').showModal()};
 $('exitCancel').onclick=()=>{$('exitDialog').close();editor.focus()};
-function closeEditor(saved){
+async function closeEditor(saved){
  try{if(!saved)localStorage.removeItem(key)}catch(e){notice('Could not discard the draft. Please keep editing or clear this app’s data.');$('exitDialog').close();return}
  loading=true;editor.value='';loading=false;dirty=false;pending=null;
  $('name').value='Untitled.txt';setLanguage('plain');counts();notice('');
  for(const dialog of document.querySelectorAll('dialog[open]'))dialog.close();
  leave();
  const active=document.activeElement;if(active instanceof HTMLElement)active.blur();
+ try{await closePlatform()}catch(e){notice('The document is closed. You can close the window now.')}
 }
+handleDesktopExit(()=>{if(!$('exitDialog').open)$('exitDialog').showModal()});
 $('discardExit').onclick=()=>closeEditor(false);
 $('saveExit').onclick=async()=>{if(await save())closeEditor(true)};
 

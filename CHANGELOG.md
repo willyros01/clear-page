@@ -60,3 +60,10 @@
 - Preserved the original full-screen text editor in GitHub.
 - Added development instructions and phased platform roadmap.
 - CodeMirror and native platform packaging are planned for subsequent steps.
+
+## 0.4.0 — desktop release preparation
+- Added Tauri desktop shell for Windows x64 and universal Intel/Apple silicon Mac.
+- Native atomic Save with cancellation/error protection; window close/Quit share Exit choices.
+- Shared editor tests cover desktop Save/Exit failure and success.
+- Coordinated iPad TestFlight, desktop installers and Mac managed-signing/export workflow.
+- Public release and native acceptance are pending the recorded workflow results.

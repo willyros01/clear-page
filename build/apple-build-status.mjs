@@ -22,7 +22,7 @@ async function main() {
   catch { throw Error('Apple processing lookup connection failed'); }
   if(!response.ok) throw Error('Apple processing lookup HTTP '+response.status);
   const body=await response.json();
-  const entry=body.data?.find(item=>item.attributes?.version===build && body.included?.some(v=>v.id===item.relationships?.preReleaseVersion?.data?.id && v.attributes?.version===process.env.VERSION));
+  const entry=body.data?.find(item=>item.attributes?.version===build && body.included?.some(v=>v.id===item.relationships?.preReleaseVersion?.data?.id && v.attributes?.version===process.env.VERSION && v.attributes?.platform===(process.env.APPLE_PLATFORM||'IOS')));
   if(entry) {
    const state=entry.attributes.processingState;
    console.log('Apple processing state: '+state);

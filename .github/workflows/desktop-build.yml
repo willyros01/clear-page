@@ -1,0 +1,174 @@
+name: ATE Apple and Desktop
+on:
+  workflow_dispatch:
+  push:
+    branches: [desktop]
+    paths: ['src/**', 'src-tauri/**', 'index.html', 'package*.json', 'build/**', 'scripts/**', 'tests/**', '.github/workflows/desktop-build.yml']
+permissions:
+  contents: read
+concurrency:
+  group: ate-desktop-release
+  cancel-in-progress: false
+jobs:
+  editor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+  desktop:
+    needs: editor
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14
+            target: universal-apple-darwin
+            bundle: dmg
+            artifact: ate-mac-universal-preview
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            bundle: nsis
+            artifact: ate-windows-x64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target == 'universal-apple-darwin' && 'aarch64-apple-darwin,x86_64-apple-darwin' || matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+      - run: npm ci
+      - run: npm run desktop:icons
+      - name: Build desktop installer
+        run: npm run tauri -- build --target ${{ matrix.target }} --bundles ${{ matrix.bundle }}
+      - name: Verify universal Mac binary and launch
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP=src-tauri/target/universal-apple-darwin/release/bundle/macos/ATE.app
+          lipo -verify_arch arm64 x86_64 "$APP/Contents/MacOS/ate-desktop"
+          codesign --verify --deep --strict "$APP"
+          "$APP/Contents/MacOS/ate-desktop" > "$RUNNER_TEMP/ate-mac-launch.log" 2>&1 &
+          ATE_PID=$!
+          sleep 8
+          kill -0 "$ATE_PID"
+          kill "$ATE_PID"
+          ditto -c -k --keepParent "$APP" ate-mac-app.zip
+          echo 'PASS: universal arm64/x86_64 binary, ad-hoc signature and Mac launch. Not signed/notarized for public distribution. Device acceptance pending.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Verify Windows installer and launch installed app
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe | Select-Object -First 1
+          if (!$installer) { throw 'Installer missing' }
+          $destination = Join-Path $env:RUNNER_TEMP 'ATE-installed'
+          $setup = Start-Process $installer.FullName -ArgumentList @('/S', "/D=$destination") -Wait -PassThru
+          if ($setup.ExitCode -ne 0) { throw "Install failed: $($setup.ExitCode)" }
+          $exe = Join-Path $destination 'ATE.exe'
+          if (!(Test-Path $exe)) { $exe = Join-Path $destination 'ate-desktop.exe' }
+          $app = Start-Process $exe -PassThru
+          Start-Sleep -Seconds 8
+          if ($app.HasExited) { throw 'Installed editor exited unexpectedly' }
+          Stop-Process -Id $app.Id
+          'PASS: Windows installer and installed application launch. Unsigned installer; physical-device acceptance pending.' >> $env:GITHUB_STEP_SUMMARY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: |
+            src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg
+            src-tauri/target/${{ matrix.target }}/release/bundle/nsis/*.exe
+            ate-mac-app.zip
+          if-no-files-found: error
+  apple-readiness:
+    needs: editor
+    runs-on: ubuntu-latest
+    env:
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+      MAC_DEVELOPER_ID_P12: ${{ secrets.MAC_DEVELOPER_ID_P12 }}
+      MAC_APP_STORE_P12: ${{ secrets.MAC_APP_STORE_P12 }}
+      MAC_INSTALLER_P12: ${{ secrets.MAC_INSTALLER_P12 }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node build/mac-signing-check.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ate-mac-signing-readiness
+          path: mac-signing-readiness.json
+  mac-release:
+    needs: desktop
+    strategy:
+      fail-fast: false
+      matrix:
+        channel: [testflight, website]
+    runs-on: macos-26
+    timeout-minutes: 40
+    env:
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - uses: actions/download-artifact@v4
+        with:
+          name: ate-mac-universal-preview
+          path: mac-input
+      - run: bash build/mac-release.sh ${{ matrix.channel }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ate-mac-${{ matrix.channel }}-release
+          path: |
+            public-desktop/*.dmg
+            ${{ runner.temp }}/ate-mac-${{ matrix.channel }}/*.log
+            ${{ runner.temp }}/ate-mac-${{ matrix.channel }}/notary.json
+  ipad-testflight:
+    needs: editor
+    runs-on: macos-26
+    timeout-minutes: 45
+    env:
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: bash build/ios-release.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ate-ipad-release-evidence
+          path: ${{ runner.temp }}/clear-page-release/*.log

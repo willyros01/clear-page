@@ -50,3 +50,6 @@ Clear Page Internal now contains the verified account holder and build 0.3.1 (1)
 
 ## ATE 0.3.2
 Product is now Another Text Editor (ATE). Approved minimalist writing icon and direct document-close behavior are implemented. Automated close/recovery checks and simulator launch pass. ATE 0.3.2 (3) is processed and assigned to the internal tester. Physical iPad acceptance is next.
+
+## 0.4.0 coordinated Apple/desktop release
+Implemented on `desktop`: shared editor with a Tauri desktop adapter, Windows installer, universal Mac build, iPad TestFlight job and Mac website/TestFlight export jobs. Existing mobile release branches are preserved. See DESKTOP-SETUP.md for signing gates and pending native acceptance. No Mac or Windows public download is claimed before its artifact is verified.

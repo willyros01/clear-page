@@ -5,3 +5,11 @@ ios/
 DerivedData/
 *.xcarchive
 *.ipa
+
+src-tauri/target/
+src-tauri/gen/
+src-tauri/icons/
+resources/desktop-icon.png
+*.p12
+*.mobileprovision
+*.provisionprofile

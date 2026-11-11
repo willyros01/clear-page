@@ -6,7 +6,7 @@ import {JSDOM} from 'jsdom';
 test('closing discards the document, undo history and panels without a closing page; the next draft still saves', async()=>{
  const dom=new JSDOM(readFileSync(new URL('../index.html',import.meta.url),'utf8'),{url:'https://ate.test/',pretendToBeVisual:true});
  const {window}=dom;
- for(const name of ['window','document','HTMLElement','MutationObserver','localStorage','getComputedStyle','requestAnimationFrame','cancelAnimationFrame']){
+ for(const name of ['window','Window','document','HTMLElement','MutationObserver','localStorage','getComputedStyle','requestAnimationFrame','cancelAnimationFrame']){
   Object.defineProperty(globalThis,name,{configurable:true,value:typeof window[name]==='function'&&['getComputedStyle','requestAnimationFrame','cancelAnimationFrame'].includes(name)?window[name].bind(window):window[name]});
  }
  Object.defineProperty(globalThis,'navigator',{configurable:true,value:window.navigator});
