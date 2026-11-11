@@ -1,3 +1,4 @@
+import {App} from '@capacitor/app';
 import {Capacitor} from '@capacitor/core';
 import {Filesystem,Directory,Encoding} from '@capacitor/filesystem';
 import {Share} from '@capacitor/share';
@@ -12,3 +13,6 @@ export async function saveText(text,name){
  const blob=new Blob([text],{type:'text/plain;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
  return 'File download started. Your draft is also kept in this browser.';
 }
+
+export function handleBack(action){if(Capacitor.getPlatform()==='android')App.addListener('backButton',action)}
+export async function closePlatform(){if(Capacitor.getPlatform()==='android')await App.exitApp()}

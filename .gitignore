@@ -5,3 +5,9 @@ ios/
 DerivedData/
 *.xcarchive
 *.ipa
+
+# Generated Android project and signing material
+android/
+out/
+*.p12
+*.jks

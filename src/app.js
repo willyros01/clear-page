@@ -1,4 +1,4 @@
-import {saveText,native} from './platform.js';
+import {saveText,native,handleBack,closePlatform} from './platform.js';
 
 import {createEditor, languageForName} from './editor.js';
 const $=id=>document.getElementById(id);
@@ -34,6 +34,7 @@ function closeEditor(saved){
  for(const dialog of document.querySelectorAll('dialog[open]'))dialog.close();
  leave();
  const active=document.activeElement;if(active instanceof HTMLElement)active.blur();
+ closePlatform().catch(()=>notice('Document closed. Use your device’s Home control to leave the app.'));
 }
 $('discardExit').onclick=()=>closeEditor(false);
 $('saveExit').onclick=async()=>{if(await save())closeEditor(true)};
@@ -62,3 +63,5 @@ $('helpButton').onclick=()=>{$('menu').close();$('help').showModal();$('help').s
 $('closeHelp').onclick=()=>{$('help').close();editor.focus()};
 editor.commands(save,()=>{$('exitDialog').showModal()},async()=>{if(await save())closeEditor(true)});
 
+
+handleBack(()=>{const dialogs=[...document.querySelectorAll('dialog[open]')];if(dialogs.length){dialogs.at(-1).close();editor.focus()}else $('exitDialog').showModal()});
