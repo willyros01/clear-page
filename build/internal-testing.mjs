@@ -29,7 +29,11 @@ async function main(){
  const email=owner.attributes.username;
  const query=new URLSearchParams({'filter[email]':email,limit:'200'});
  const testers=await api('betaTesters?'+query);
- report({matchingTesters:testers.data.map(x=>({id:x.id,firstName:x.attributes.firstName,lastName:x.attributes.lastName,state:x.attributes.state}))});
+ report({matchingTesters:testers.data.map(x=>({id:x.id,firstName:x.attributes.firstName,lastName:x.attributes.lastName,exactAddress:x.attributes.email.toLowerCase()===email.toLowerCase(),inviteType:x.attributes.inviteType}))});
+ for(const tester of testers.data){
+  const memberships=await api('betaTesters/'+tester.id+'/betaGroups?limit=200');
+  report({testerId:tester.id,memberships:memberships.data.map(g=>({id:g.id,name:g.attributes.name,isInternalGroup:g.attributes.isInternalGroup}))});
+ }
  const groups=await api('apps/'+appId+'/betaGroups?limit=200');
  report({groups:groups.data.map(x=>({id:x.id,...x.attributes}))});
  const detail=await api('builds/'+buildId+'/buildBetaDetail');
