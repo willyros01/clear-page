@@ -22,3 +22,12 @@ The iOS build workflow compiles a simulator app, installs and launches it in an 
 5. Perform physical iPad/iPhone acceptance for keyboard, Vim, text sizing, safe areas, opening, Save to Files, draft recovery, and exit.
 
 The workflow reports missing Apple secret names only; it does not print secret values. It does not upload to TestFlight yet.
+
+## Verified first run
+- GitHub run: https://github.com/willyros01/clear-page/actions/runs/42947198796
+- Tested source commit: 31aeb0e99fcfbc2d23599765b16d684cc28443f4
+- Workflow conclusion: SUCCESS.
+- npm checks, web build, generated native project, iPhone/iPad simulator compilation, iPad installation and launch: PASS.
+- Simulator app and build-log artifacts retained by the run.
+- All four Apple credentials are absent from this repository (checked without printing values).
+- No signed IPA or TestFlight upload was produced. Release icon, privacy manifest, Apple registration/signing, and physical-device acceptance remain pending.
