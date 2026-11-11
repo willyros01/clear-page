@@ -5,11 +5,11 @@ let bitmap = NSBitmapImageRep(bitmapDataPlanes:nil,pixelsWide:size,pixelsHigh:si
 NSGraphicsContext.saveGraphicsState()
 NSGraphicsContext.current=NSGraphicsContext(bitmapImageRep:bitmap)
 NSColor(red:0.13,green:0.36,blue:0.28,alpha:1).setFill()
-NSBezierPath(rect:NSRect(x:0,y:0,width:size,height:size)).fill()
+NSBezierPath(rect:NSRect(x:0,y:0,width:CGFloat(size),height:CGFloat(size))).fill()
 NSColor(red:1,green:0.996,blue:0.98,alpha:1).setFill()
 NSBezierPath(roundedRect:NSRect(x:230,y:160,width:564,height:704),xRadius:32,yRadius:32).fill()
 NSColor(red:0.13,green:0.36,blue:0.28,alpha:1).setStroke()
-for y in [680,560,440,320] { let p=NSBezierPath();p.lineWidth=30;p.lineCapStyle = .round;p.move(to:NSPoint(x:330,y:y));p.line(to:NSPoint(x:694,y:y));p.stroke() }
+for y in [680,560,440,320] { let p=NSBezierPath();p.lineWidth=30;p.lineCapStyle = .round;p.move(to:NSPoint(x:330,y:CGFloat(y)));p.line(to:NSPoint(x:694,y:CGFloat(y)));p.stroke() }
 NSGraphicsContext.restoreGraphicsState()
 let out=URL(fileURLWithPath:"ios/App/App/Assets.xcassets/AppIcon.appiconset")
 try FileManager.default.createDirectory(at:out,withIntermediateDirectories:true)
