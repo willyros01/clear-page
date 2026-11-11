@@ -2,7 +2,7 @@ import {createPrivateKey, sign} from 'node:crypto';
 import {appendFileSync} from 'node:fs';
 const appId='6833284199';
 const buildId='9e20063f-4c91-44ef-a608-9c1fd961e126';
-const mode='inspect';
+const mode='enable';
 function report(value) {
  const line=typeof value==='string'?value:JSON.stringify(value);
  console.log(line);
@@ -39,5 +39,28 @@ async function main(){
  const detail=await api('builds/'+buildId+'/buildBetaDetail');
  report({buildTesting:detail.data.attributes});
  if(mode==='inspect') return;
+ let group=groups.data.find(x=>x.attributes.isInternalGroup && x.attributes.name==='Clear Page Internal');
+ if(!group) {
+  group=(await api('betaGroups','POST',{data:{type:'betaGroups',attributes:{name:'Clear Page Internal',isInternalGroup:true},relationships:{app:{data:{type:'apps',id:appId}}}}})).data;
+  report('Created Clear Page Internal group: '+group.id);
+ }
+ if(!group.attributes.isInternalGroup) throw Error('Refusing to configure external testing');
+ let members=await api('betaGroups/'+group.id+'/betaTesters?limit=200');
+ let tester=members.data.find(x=>x.attributes.email.toLowerCase()===email.toLowerCase());
+ if(!tester){
+  tester=(await api('betaTesters','POST',{data:{type:'betaTesters',attributes:{email,firstName:owner.attributes.firstName,lastName:owner.attributes.lastName},relationships:{betaGroups:{data:[{type:'betaGroups',id:group.id}]}}}})).data;
+  report('Added verified account holder to internal group: '+tester.id);
+ }
+ let assigned=await api('betaGroups/'+group.id+'/builds?limit=200');
+ if(!assigned.data.some(x=>x.id===buildId)){
+  await api('betaGroups/'+group.id+'/relationships/builds','POST',{data:[{type:'builds',id:buildId}]});
+ }
+ members=await api('betaGroups/'+group.id+'/betaTesters?limit=200');
+ assigned=await api('betaGroups/'+group.id+'/builds?limit=200');
+ if(!members.data.some(x=>x.attributes.email.toLowerCase()===email.toLowerCase())) throw Error('Internal tester membership verification failed');
+ if(!assigned.data.some(x=>x.id===buildId)) throw Error('Build assignment verification failed');
+ const finalDetail=await api('builds/'+buildId+'/buildBetaDetail');
+ report({result:'PASS',groupId:group.id,groupName:group.attributes.name,testerId:tester.id,buildId,buildTesting:finalDetail.data.attributes});
+ report('Verified account-holder membership and Clear Page 0.3.1 (1) assignment to an internal testing group.');
 }
 main().catch(error=>{report('FAIL: '+error.message);process.exitCode=1;});
