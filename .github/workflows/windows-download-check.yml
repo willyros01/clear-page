@@ -1,0 +1,42 @@
+name: ATE public Windows download verification
+on:
+  workflow_dispatch:
+  push:
+    branches: [desktop]
+    paths: ['.github/workflows/windows-download-check.yml']
+permissions:
+  contents: read
+jobs:
+  download-install-launch:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - name: Download the public installer, verify it and install on Windows
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $base = 'https://www.cuberoot-systems.com/downloads/'
+          $meta = Invoke-RestMethod ($base + 'ate-desktop-build.json')
+          $installer = Join-Path $env:RUNNER_TEMP 'ATE-setup.exe'
+          Invoke-WebRequest ($base + 'ate-windows.exe') -OutFile $installer
+          $hash = (Get-FileHash $installer -Algorithm SHA256).Hash.ToLower()
+          if ($hash -ne $meta.windows.sha256) { throw 'Public installer checksum mismatch' }
+          $bytes = [IO.File]::ReadAllBytes($installer)
+          if ($bytes.Length -ne $meta.windows.bytes -or $bytes[0] -ne 77 -or $bytes[1] -ne 90) { throw 'Invalid Windows executable' }
+          $destination = Join-Path $env:RUNNER_TEMP 'ATE-public-installed'
+          $setup = Start-Process $installer -ArgumentList @('/S', "/D=$destination") -Wait -PassThru
+          if ($setup.ExitCode -ne 0) { throw "Public installer failed: $($setup.ExitCode)" }
+          $exe = Join-Path $destination 'ATE.exe'
+          if (!(Test-Path $exe)) { $exe = Join-Path $destination 'ate-desktop.exe' }
+          $app = Start-Process $exe -PassThru
+          Start-Sleep -Seconds 8
+          if ($app.HasExited) { throw 'Public installed application exited unexpectedly' }
+          Stop-Process -Id $app.Id
+          $result = "PASS: actual public Windows installer downloaded, checksum matched, executable recognized, installed and application launched. Version $($meta.windows.version), SHA256 $hash. Interactive browser/SmartScreen and physical-device acceptance remain unverified."
+          $result | Tee-Object -FilePath (Join-Path $env:RUNNER_TEMP 'public-windows-download.txt')
+          $result >> $env:GITHUB_STEP_SUMMARY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: public-windows-download-evidence
+          path: ${{ runner.temp }}/public-windows-download.txt
