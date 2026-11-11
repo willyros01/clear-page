@@ -48,3 +48,13 @@ The workflow reports missing Apple secret names only; it does not print secret v
 - Signed archive/export/upload, custom icon integration, privacy-resource integration and physical-device acceptance remain pending.
 
 - P8 blocker resolved: key parsing, ES256 token signing, and Apple app lookup passed on attempt 2, job 130366015171. No credential or token values were printed. The first attempt failed parsing; its exact character-level cause cannot be determined because GitHub does not reveal saved secret values.
+
+## Signed release pipeline — 2026-11-11
+- Clear Page TestFlight workflow uses macOS/Xcode, locked npm dependencies, editor checks and web bundling before archiving.
+- Build version comes from package.json; build number comes from the release workflow run number.
+- Swift is checked on the Mac runner before native resource work. The icon is generated as an opaque 1024px PNG.
+- The privacy manifest is placed at the archived app-bundle root, before refreshing the ad-hoc archive signature and before Apple distribution export/signing. No raw Xcode project edits are used.
+- Archive checks enforce the bundle ID, version, build number, iPhone+iPad targets, bundled editor assets, privacy reason and valid archive signature.
+- Export uses automatic Apple cloud-managed distribution signing and uploads to App Store Connect. The API then polls for the matching version/build processing result.
+- Release run: https://github.com/willyros01/clear-page/actions/runs/42973630845 (in progress). No TestFlight success is claimed until Apple returns VALID.
+- Physical-device acceptance and tester group assignment are separate steps.
