@@ -44,3 +44,6 @@ Apple app registration and all four repository signing secret entries are config
 
 ## First TestFlight release
 Clear Page 0.3.1 (1) is signed, uploaded and processed by Apple (VALID). Release-resource packaging and archive checks passed. Next: tester assignment and physical iPad/iPhone acceptance; see IOS-SETUP.md for evidence.
+
+## Internal tester access enabled
+Clear Page Internal now contains the verified account holder and build 0.3.1 (1). Apple reports IN_BETA_TESTING. Invitation acceptance and physical-device acceptance remain pending.
