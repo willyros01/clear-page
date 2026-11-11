@@ -65,3 +65,6 @@ The user rejected Store distribution and approved trying verified code signing f
 Final Windows decision: the owner declined paid signing after reviewing Basic at US$9.99/month. The unsubmitted Azure form was closed and zero signing accounts were confirmed. Keep code proprietary and direct downloads available. The owner subsequently completed the Windows download using Keep and confirmed editor functionality.
 
 Mac 0.4.1 website recovery: Apple accepted notarization 06073ae2-3718-46f1-a9c2-9866b9606821. Recovery run 43103034568 verified the exact submitted disk image hash, stapled and validated the ticket, checked Developer ID/team/bundle ID, verified Intel/Apple silicon architectures and passed Gatekeeper. Publication is proceeding through the verified Cuberoot installer pipeline.
+
+## Planned syntax checking
+See [TODO.md](TODO.md) for language-aware syntax checking, free Clang/LLVM integration for C on Mac/Windows, platform limitations and task-by-task progress. Planning recorded on 11 November 2026; implementation not started (0/12 complete).
