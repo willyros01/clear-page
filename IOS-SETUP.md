@@ -29,7 +29,7 @@ The workflow reports missing Apple secret names only; it does not print secret v
 - Workflow conclusion: SUCCESS.
 - npm checks, web build, generated native project, iPhone/iPad simulator compilation, iPad installation and launch: PASS.
 - Simulator app and build-log artifacts retained by the run.
-- All four Apple credentials are absent from this repository (checked without printing values).
+- At the first simulator run, Apple credentials had not yet been configured. See the latest credential checkpoint below.
 - No signed IPA or TestFlight upload was produced. Release icon, privacy manifest, Apple registration/signing, and physical-device acceptance remain pending.
 
 ## Apple registration progress
@@ -40,3 +40,9 @@ The workflow reports missing Apple secret names only; it does not print secret v
 - App URL: https://appstoreconnect.apple.com/apps/6833284199/distribution
 - Initial Apple listing version: 1.0 (Prepare for Submission). No signed build uploaded yet.
 - Release icon generator and privacy manifest source saved under resources/. Icon execution, manifest build-resource integration, signing and upload remain pending.
+
+## Apple credential checkpoint — 2026-11-11
+- All four repository secret names verified in GitHub after the user saved the P8 directly. The private key was not read back or committed.
+- Added scripts/apple-preflight.mjs and a lightweight Apple access workflow to parse the key, authenticate using a five-minute ES256 token, and read only the Clear Page app record. Tokens and key contents are never logged.
+- API preflight run: https://github.com/willyros01/clear-page/actions/runs/42972316734 (result pending).
+- Signed archive/export/upload, custom icon integration, privacy-resource integration and physical-device acceptance remain pending.
