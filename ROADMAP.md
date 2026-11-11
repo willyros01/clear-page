@@ -29,3 +29,6 @@ Compact toolbar and explicit exit choices implemented and browser checked. iPad 
 
 ## 0.2.2 usability update
 Switchable text/icon controls and editor text sizes down to 10pt implemented and browser checked.
+
+## 0.3.0 editing tools
+Search/replace, Go to line, Select all/Copy, optional Vim and online Help implemented and browser checked. Physical iPad acceptance pending.
