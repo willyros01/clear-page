@@ -27,8 +27,20 @@ async function main() {
    const state=entry.attributes.processingState;
    console.log('Apple processing state: '+state);
    if(state==='VALID') {
-    report('PASS: Apple finished processing Clear Page '+process.env.VERSION+' ('+build+'). Build ID: '+entry.id);
-    report('TestFlight build is processed. Physical-device acceptance and tester group assignment are separate.');
+    report('PASS: Apple finished processing ATE '+process.env.VERSION+' ('+build+'). Build ID: '+entry.id);
+    const groupId='a310eafe-4a60-4759-ba9e-a4db47551732';
+    const call=async(path,method='GET',body)=>{
+     const response=await fetch('https://api.appstoreconnect.apple.com/v1/'+path,{method,headers:{Authorization:'Bearer '+token(),'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined,redirect:'error',signal:AbortSignal.timeout(30000)});
+     if(!response.ok) throw Error('Internal testing assignment HTTP '+response.status);
+     return response.status===204?null:response.json();
+    };
+    const group=await call('betaGroups/'+groupId);
+    if(!group.data.attributes.isInternalGroup) throw Error('Expected internal tester group');
+    let assigned=await call('betaGroups/'+groupId+'/builds?limit=200');
+    if(!assigned.data.some(x=>x.id===entry.id)) await call('betaGroups/'+groupId+'/relationships/builds','POST',{data:[{type:'builds',id:entry.id}]});
+    assigned=await call('betaGroups/'+groupId+'/builds?limit=200');
+    if(!assigned.data.some(x=>x.id===entry.id)) throw Error('New build tester assignment not verified');
+    report('PASS: updated build assigned to the existing internal tester group. Physical-device acceptance remains pending.');
     return;
    }
    if(['INVALID','FAILED'].includes(state)) throw Error('Apple processing rejected build: '+state);
@@ -38,3 +50,4 @@ async function main() {
  throw Error('Upload succeeded, but Apple processing is still pending after the observation window. Check TestFlight before retrying upload.');
 }
 main().catch(error=>{report('FAIL: '+error.message);process.exitCode=1;});
+
