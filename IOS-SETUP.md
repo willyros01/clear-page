@@ -44,7 +44,7 @@ The workflow reports missing Apple secret names only; it does not print secret v
 ## Apple credential checkpoint — 2026-11-11
 - All four repository secret names verified in GitHub after the user saved the P8 directly. The private key was not read back or committed.
 - Added scripts/apple-preflight.mjs and a lightweight Apple access workflow to parse the key, authenticate using a five-minute ES256 token, and read only the Clear Page app record. Tokens and key contents are never logged.
-- API preflight run: https://github.com/willyros01/clear-page/actions/runs/42972316734 (FAILED: saved P8 value could not be parsed as a PEM private key; Apple authentication was not attempted).
+- API preflight run: https://github.com/willyros01/clear-page/actions/runs/42972316734 (attempt 2: SUCCESS after the user replaced the saved value; Apple authenticated the key and confirmed Clear Page app access).
 - Signed archive/export/upload, custom icon integration, privacy-resource integration and physical-device acceptance remain pending.
 
-- Current blocker: user must replace ASC_KEY_P8 directly in GitHub with the complete original private-key contents. Other three secret entries are configured. No secret value was read back.
+- P8 blocker resolved: key parsing, ES256 token signing, and Apple app lookup passed on attempt 2, job 130366015171. No credential or token values were printed. The first attempt failed parsing; its exact character-level cause cannot be determined because GitHub does not reveal saved secret values.
