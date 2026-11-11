@@ -54,3 +54,7 @@ Release evidence and website availability are recorded below only after verifica
 - Apple Developer certificate form is prepared with the public ATE CSR. Creation of the new signing credential and storing its private signing package as a GitHub repository secret require the user's explicit confirmation before those browser actions. No certificate has been created at this checkpoint.
 - After the secret is configured, a normal `[desktop-only]` workflow change rebuilds/verifies both architectures and exports both Mac channels. `[signing-setup]` commits validate shared tests while skipping native rebuilds and report replacement.
 - Physical iPad, Windows and Mac acceptance remain distinct from CI launch and automated editor tests.
+
+## Developer ID credential issued
+
+The user explicitly authorized credential creation. Developer ID Application certificate `YVJFC97Q96` was issued in the Apple Developer portal and its public key was verified against the prepared private key. An encrypted PKCS#12 signing package and private backup are prepared. The repository secret has NOT been uploaded: automatic approval review requires a separate explicit authorization to transmit the private signing package to `willyros01/clear-page` as `MAC_DEVELOPER_ID_SIGNING`. The GitHub form is prepared with that name and an empty Secret field. No website Mac installer has been published. The iPad and universal Mac TestFlight releases and the public Windows installer remain available.
