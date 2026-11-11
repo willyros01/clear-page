@@ -1,0 +1,24 @@
+name: Clear Page Apple access check
+on:
+  workflow_dispatch:
+  push:
+    branches: [ios]
+    paths: ['.github/workflows/apple-preflight.yml', 'scripts/apple-preflight.mjs']
+permissions:
+  contents: read
+jobs:
+  apple-access:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify key and Clear Page app access
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: node scripts/apple-preflight.mjs
