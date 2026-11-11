@@ -1,5 +1,11 @@
 # Changelog
 
+## Android packaging and Cuberoot launch
+- Added reproducible Android release build, approved launcher icons, native Back/Close handling and a permanent-key signing gate.
+- Android compilation and editor checks passed; public signed APK awaits the one-time signing secret.
+- Added Cuberoot app/download page, Android logo, iOS TestFlight and future Mac/Windows notices, and large-print Quick Start/full User Guide in HTML and PDF.
+- Added automatic Cuberoot publication of verified successful Android artifacts.
+
 ## 0.3.2 — Another Text Editor (ATE)
 - Renamed the product to Another Text Editor (ATE), retaining its existing app identity and recovery data.
 - Replaced the blank generated icon with the approved minimalist faceless writing figure and upright paper.

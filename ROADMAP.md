@@ -50,3 +50,6 @@ Clear Page Internal now contains the verified account holder and build 0.3.1 (1)
 
 ## ATE 0.3.2
 Product is now Another Text Editor (ATE). Approved minimalist writing icon and direct document-close behavior are implemented. Automated close/recovery checks and simulator launch pass. ATE 0.3.2 (3) is processed and assigned to the internal tester. Physical iPad acceptance is next.
+
+## Android and public guides
+Android release compilation and tests pass. Permanent signing secret activation and physical-device acceptance remain. Cuberoot app page, large-print guides and automatic verified APK publisher are implemented. Mac and Windows installers remain planned. See ANDROID-SETUP.md.
