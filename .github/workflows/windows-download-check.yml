@@ -11,6 +11,41 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 10
     steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Follow the website download button in Microsoft Edge
+        shell: pwsh
+        run: |
+          $task = Join-Path $env:RUNNER_TEMP 'ate-download-browser'
+          New-Item -ItemType Directory -Force $task | Out-Null
+          npm install --prefix $task --no-save playwright@1.62.1
+          $script = @'
+          import {chromium} from 'playwright';
+          import {readFileSync,writeFileSync} from 'node:fs';
+          import {join} from 'node:path';
+          import {createHash} from 'node:crypto';
+          const browser=await chromium.launch({channel:'msedge'});
+          try{
+            const page=await browser.newPage({acceptDownloads:true});
+            await page.goto('https://www.cuberoot-systems.com/ate/');
+            const button=page.locator('#windows-download');
+            await button.waitFor({state:'visible'});
+            const [download]=await Promise.all([page.waitForEvent('download'),button.click()]);
+            if(download.suggestedFilename()!=='ate-windows.exe')throw Error('Wrong downloaded filename: '+download.suggestedFilename());
+            const destination=join(process.env.RUNNER_TEMP,'ATE-setup.exe');
+            await download.saveAs(destination);
+            const meta=await (await fetch('https://www.cuberoot-systems.com/downloads/ate-desktop-build.json',{cache:'no-store'})).json();
+            const bytes=readFileSync(destination),hash=createHash('sha256').update(bytes).digest('hex');
+            if(hash!==meta.windows.sha256||bytes.length!==meta.windows.bytes)throw Error('Browser download checksum mismatch');
+            const result='PASS: Microsoft Edge followed the actual website button, saved ate-windows.exe and verified the complete installer checksum. Interactive SmartScreen/device acceptance remains unverified.';
+            console.log(result);writeFileSync(join(process.env.RUNNER_TEMP,'browser-download.txt'),result);
+          }finally{await browser.close()}
+          '@
+          $scriptPath = Join-Path $task 'download.mjs'
+          [IO.File]::WriteAllText($scriptPath, $script)
+          node $scriptPath
+          if ($LASTEXITCODE -ne 0) { throw 'Website browser download failed' }
       - name: Download the public installer, verify it and install on Windows
         shell: pwsh
         run: |
@@ -18,7 +53,6 @@ jobs:
           $base = 'https://www.cuberoot-systems.com/downloads/'
           $meta = Invoke-RestMethod ($base + 'ate-desktop-build.json')
           $installer = Join-Path $env:RUNNER_TEMP 'ATE-setup.exe'
-          Invoke-WebRequest ($base + 'ate-windows.exe') -OutFile $installer
           $hash = (Get-FileHash $installer -Algorithm SHA256).Hash.ToLower()
           if ($hash -ne $meta.windows.sha256) { throw 'Public installer checksum mismatch' }
           $bytes = [IO.File]::ReadAllBytes($installer)
@@ -39,4 +73,6 @@ jobs:
         if: always()
         with:
           name: public-windows-download-evidence
-          path: ${{ runner.temp }}/public-windows-download.txt
+          path: |
+            ${{ runner.temp }}/public-windows-download.txt
+            ${{ runner.temp }}/browser-download.txt
