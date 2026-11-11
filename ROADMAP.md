@@ -41,3 +41,6 @@ Capacitor shell and simulator workflow implemented on ios branch. See IOS-SETUP.
 
 ## Apple access checkpoint
 Apple app registration and all four repository signing secret entries are configured. A read-only Apple API preflight is now available. Signing/export/upload and release-resource integration remain pending; see IOS-SETUP.md.
+
+## First TestFlight release
+Signed release workflow is implemented and running. Release-resource packaging and archive checks now run before distribution signing. Apple processing and physical-device acceptance must be verified; see IOS-SETUP.md for the latest result.
