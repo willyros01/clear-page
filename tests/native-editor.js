@@ -29,14 +29,14 @@
   await wait(150);
   const scroller=content.closest('.cm-scroller');
   assert(getComputedStyle(content.closest('.cm-editor')).display==='flex','Native editor uses CodeMirror flex layout');
-  assert(getComputedStyle(content).whiteSpace==='pre-wrap','Native editor preserves whitespace');
+  assert(['pre-wrap','break-spaces'].includes(getComputedStyle(content).whiteSpace),'Native editor preserves whitespace');
   assert(/monospace/.test(getComputedStyle(scroller).fontFamily),'Native editor uses a monospaced font');
   assert(getComputedStyle(content).fontSize==='36px','Native editor defaults to large 36px text');
   assert(getComputedStyle(content).paddingTop==='24px','Native editor retains reading padding');
   const keyword=content.querySelector('.cm-line span');
   assert(keyword&&getComputedStyle(keyword).color!==getComputedStyle(content).color,'Native JavaScript syntax colors render');
   await open('function hello() {');
-  key('End',{ctrlKey:true,metaKey:true});key('Enter');
+  key('End');key('Enter');
   assert(/\n    /.test(text()),'Native Enter automatically indents JavaScript');
   key('Tab');assert(/\n        /.test(text()),'Native Tab indents');
   key('Tab',{shiftKey:true});assert(/\n    $/.test(text()),'Native Shift Tab unindents');

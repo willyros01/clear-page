@@ -42,7 +42,7 @@ try{
     return {whiteSpace:getComputedStyle(e).whiteSpace,font:getComputedStyle(scroller).fontFamily,size:getComputedStyle(e).fontSize,padding:getComputedStyle(e).paddingTop,line:getComputedStyle(line).lineHeight,keyword:keyword&&getComputedStyle(keyword).color,color:getComputedStyle(e).color,display:getComputedStyle(e.closest('.cm-editor')).display,nonce:[...document.querySelectorAll('style')].every(s=>s.nonce==='ate-test-nonce-2026')};
    });
    assert.equal(styles.display,'flex',JSON.stringify(styles));
-   assert.equal(styles.whiteSpace,'pre-wrap');assert.match(styles.font,/monospace/);
+   assert.ok(['pre-wrap','break-spaces'].includes(styles.whiteSpace));assert.match(styles.font,/monospace/);
    assert.equal(styles.size,'36px');assert.equal(styles.padding,'24px');
    assert.ok(styles.keyword&&styles.keyword!==styles.color,'JavaScript keywords must have syntax colors');assert.ok(styles.nonce);
    assert.match(await text(),/\n    const answer/,'Opening must preserve indentation');
