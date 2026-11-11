@@ -1,4 +1,5 @@
 name: ATE TestFlight
+# ATE 0.3.2: complete lockfile verified before release.
 on:
   workflow_dispatch:
   push:
