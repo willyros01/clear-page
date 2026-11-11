@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.2 — Another Text Editor (ATE)
+- Renamed the product to Another Text Editor (ATE), retaining its existing app identity and recovery data.
+- Replaced the blank generated icon with the approved minimalist faceless writing figure and upright paper.
+- Removed Editor closed. Close clears the document, undo history, dialogs and keyboard focus without an extra page; iOS uses the Home gesture to leave the app.
+- Added close/discard/cancel and next-draft recovery regression coverage.
+- Signed release and internal tester assignment are in progress.
+
 ## Internal TestFlight access
 - Enabled the verified Apple account holder in Clear Page Internal and assigned 0.3.1 (1).
 - Apple reports IN_BETA_TESTING with automatic notifications enabled. User invitation acceptance and device testing remain pending.
