@@ -35,3 +35,6 @@ Search/replace, Go to line, Select all/Copy, optional Vim and online Help implem
 
 ## 0.3.1 Vim command visibility
 Explicit command-input contrast and sizing applied. Build/automated checks pass; browser preview was access-blocked, and iPad visual acceptance is pending.
+
+## iOS build checkpoint
+Capacitor shell and simulator workflow implemented on ios branch. See IOS-SETUP.md for release gates. Signed TestFlight distribution remains pending.
