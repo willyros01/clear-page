@@ -60,9 +60,10 @@ jobs:
         run: |
           set -euo pipefail
           APP=src-tauri/target/universal-apple-darwin/release/bundle/macos/ATE.app
-          lipo "$APP/Contents/MacOS/ate-desktop" -verify_arch arm64 x86_64
+          EXECUTABLE=$(/usr/libexec/PlistBuddy -c "Print :CFBundleExecutable" "$APP/Contents/Info.plist")
+          lipo "$APP/Contents/MacOS/$EXECUTABLE" -verify_arch arm64 x86_64
           codesign --verify --deep --strict "$APP"
-          "$APP/Contents/MacOS/ate-desktop" > "$RUNNER_TEMP/ate-mac-launch.log" 2>&1 &
+          "$APP/Contents/MacOS/$EXECUTABLE" > "$RUNNER_TEMP/ate-mac-launch.log" 2>&1 &
           ATE_PID=$!
           sleep 8
           kill -0 "$ATE_PID"
