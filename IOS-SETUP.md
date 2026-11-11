@@ -1,10 +1,10 @@
-# Clear Page iOS — first build
+# Another Text Editor (ATE) — iOS
 
 Branch: ios. Main and the hosted web editor are unchanged.
 
-- App name: Clear Page
+- App name: Another Text Editor (ATE); device label: ATE
 - Bundle ID: io.github.willyros01.clearpage
-- Shared version: 0.3.1
+- Shared version: 0.3.2
 - Targets: iPhone and iPad, iOS 15+
 - Shell: Capacitor 8, Swift Package Manager, Xcode 26
 - Generate locally on a Mac: npm ci; npm run build; node scripts/prepare-ios.mjs; npx cap open ios
@@ -88,4 +88,15 @@ The simulator workflow remains separate. The Clear Page TestFlight workflow now 
 - Added regression coverage for close cancellation, discard, undo history, panels and saving the next draft.
 - Release workflow now verifies CFBundleDisplayName and the compiled AppIcon declaration, and assigns the processed build to the existing internal tester group.
 - First 0.3.2 release attempt stopped before compilation because a transferred lockfile was incomplete; complete JSON lockfile restored and read back successfully.
-- Current release run: https://github.com/willyros01/clear-page/actions/runs/42977354436 — in progress (0.3.2, build 3).
+- Current release run: https://github.com/willyros01/clear-page/actions/runs/42977354436 — SUCCESS (0.3.2, build 3).
+
+## Verified ATE 0.3.2 (3)
+- Release run: https://github.com/willyros01/clear-page/actions/runs/42977354436 — SUCCESS.
+- Tested source commit: 4820e3d3342c0dd12ec4aa2b0226291848912681.
+- Four automated tests, web build, nonblank icon, archive name/icon metadata, iPhone/iPad archive and privacy/signature checks: PASS.
+- Separate simulator run https://github.com/willyros01/clear-page/actions/runs/42977351320: SUCCESS, iPad installation and launch passed.
+- Distribution upload succeeded at 07:12 UTC; Apple processing returned VALID at 07:15 UTC.
+- Apple build ID: 7c7e92f0-cee8-425c-b07b-a54b1477b11d.
+- New build membership verified in the existing internal tester group; no new invitation is needed for the existing tester.
+- Evidence artifact: ATE-release-evidence, 13836142998.
+- Physical iPad acceptance of new icon, Close behavior and native keyboard dismissal remains pending.
