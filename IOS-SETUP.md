@@ -21,7 +21,7 @@ The iOS build workflow compiles a simulator app, installs and launches it in an 
 4. Configure and verify signed archive/export/upload, then verify Apple processing.
 5. Perform physical iPad/iPhone acceptance for keyboard, Vim, text sizing, safe areas, opening, Save to Files, draft recovery, and exit.
 
-The workflow reports missing Apple secret names only; it does not print secret values. It does not upload to TestFlight yet.
+The simulator workflow remains separate. The Clear Page TestFlight workflow now signs, uploads and verifies Apple processing; it never prints key or token values.
 
 ## Verified first run
 - GitHub run: https://github.com/willyros01/clear-page/actions/runs/42947198796
@@ -39,13 +39,13 @@ The workflow reports missing Apple secret names only; it does not print secret v
 - Apple app ID: 6833284199.
 - App URL: https://appstoreconnect.apple.com/apps/6833284199/distribution
 - Initial Apple listing version: 1.0 (Prepare for Submission). No signed build uploaded yet.
-- Release icon generator and privacy manifest source saved under resources/. Icon execution, manifest build-resource integration, signing and upload remain pending.
+- Release icon generator and privacy manifest source saved under resources/. Icon generation, root privacy-manifest packaging, distribution signing and upload passed in the first TestFlight release.
 
 ## Apple credential checkpoint — 2026-11-11
 - All four repository secret names verified in GitHub after the user saved the P8 directly. The private key was not read back or committed.
 - Added scripts/apple-preflight.mjs and a lightweight Apple access workflow to parse the key, authenticate using a five-minute ES256 token, and read only the Clear Page app record. Tokens and key contents are never logged.
 - API preflight run: https://github.com/willyros01/clear-page/actions/runs/42972316734 (attempt 2: SUCCESS after the user replaced the saved value; Apple authenticated the key and confirmed Clear Page app access).
-- Signed archive/export/upload, custom icon integration, privacy-resource integration and physical-device acceptance remain pending.
+- Signed archive/export/upload and release-resource packaging subsequently passed; physical-device acceptance remains pending.
 
 - P8 blocker resolved: key parsing, ES256 token signing, and Apple app lookup passed on attempt 2, job 130366015171. No credential or token values were printed. The first attempt failed parsing; its exact character-level cause cannot be determined because GitHub does not reveal saved secret values.
 
@@ -56,5 +56,16 @@ The workflow reports missing Apple secret names only; it does not print secret v
 - The privacy manifest is placed at the archived app-bundle root, before refreshing the ad-hoc archive signature and before Apple distribution export/signing. No raw Xcode project edits are used.
 - Archive checks enforce the bundle ID, version, build number, iPhone+iPad targets, bundled editor assets, privacy reason and valid archive signature.
 - Export uses automatic Apple cloud-managed distribution signing and uploads to App Store Connect. The API then polls for the matching version/build processing result.
-- Release run: https://github.com/willyros01/clear-page/actions/runs/42973630845 (in progress). No TestFlight success is claimed until Apple returns VALID.
+- Release run: https://github.com/willyros01/clear-page/actions/runs/42973630845 (SUCCESS). Apple returned VALID.
 - Physical-device acceptance and tester group assignment are separate steps.
+
+## Verified TestFlight release — 2026-11-11
+- Version/build: 0.3.1 (1).
+- Tested source commit: 1daa0e5d6f0ba2be7afe6bb03ab1cba74ba5d1a4.
+- Workflow: https://github.com/willyros01/clear-page/actions/runs/42973630845 — SUCCESS.
+- Mac Swift 6.3.3, npm checks, web bundle, release icon generation, iPhone/iPad archive checks, privacy manifest and archive signature: PASS.
+- Automatic distribution signing and upload: PASS at 06:40 UTC.
+- Apple processing: VALID at 06:42 UTC.
+- Apple build ID: 9e20063f-4c91-44ef-a608-9c1fd961e126.
+- Release evidence artifact: Clear-Page-release-evidence (13833934525).
+- No physical-device acceptance or tester group assignment has been claimed. Next: enable the intended internal tester and verify Open/Save to Files, Vim commands, keyboard, large text, draft recovery and exit on iPad/iPhone.
