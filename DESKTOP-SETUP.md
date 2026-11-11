@@ -58,3 +58,7 @@ Release evidence and website availability are recorded below only after verifica
 ## Developer ID credential issued
 
 The user explicitly authorized credential creation. Developer ID Application certificate `YVJFC97Q96` was issued in the Apple Developer portal and its public key was verified against the prepared private key. An encrypted PKCS#12 signing package and private backup are prepared. The repository secret has NOT been uploaded: automatic approval review requires a separate explicit authorization to transmit the private signing package to `willyros01/clear-page` as `MAC_DEVELOPER_ID_SIGNING`. The GitHub form is prepared with that name and an empty Secret field. No website Mac installer has been published. The iPad and universal Mac TestFlight releases and the public Windows installer remain available.
+
+## Approved signing upload completed
+
+The user explicitly authorized upload of the private signing package to the named Mac GitHub Actions secret. GitHub confirmed `MAC_DEVELOPER_ID_SIGNING` was added to `willyros01/clear-page`. Coordinated release run `43055226935`, source `8669c38a87810d6b88a1ad8d10e3b94436379bb7`, is using the approved package for the website channel. Private key material is not committed to this repository or included in public artifacts.
