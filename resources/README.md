@@ -1,9 +1,8 @@
-# iOS release resources
+# ATE iOS release resources
 
-The TestFlight workflow verifies Swift on macOS before using these resources.
+- stickman-icon.png.base64 stores the approved opaque 1024px PNG as text for repository transport. Decode it as base64 to inspect the image. It is the selected first faceless minimalist figure with bent arms, upright flat paper and a simple pen. Original image generated with the built-in image tool; resized/quantized for app packaging.
+- make-icon.swift decodes that PNG directly, validates dimensions, opacity and nonblank color samples, and installs it into the generated AppIcon asset catalog. No off-screen drawing is used.
+- PrivacyInfo.xcprivacy declares no tracking/data collection and Filesystem timestamp reason C617.1.
+- package-privacy.swift places the manifest at the archived app root before archive-signature refresh and Apple distribution signing.
 
-- make-icon.swift generates an opaque 1024px green paper app icon in the generated asset catalog.
-- PrivacyInfo.xcprivacy declares no tracking or data collection and the Filesystem timestamp reason C617.1.
-- package-privacy.swift places that manifest at the archived app-bundle root. The build then refreshes and verifies the ad-hoc archive signature before Apple distribution export signs the final package.
-
-No generated .pbxproj text edits are used. Build evidence includes the generated icon and release logs. See IOS-SETUP.md for actual release status; source files alone are not proof of an accepted release.
+The Mac workflow verifies Swift first. No raw .pbxproj text edits are used. See IOS-SETUP.md for actual release verification.
