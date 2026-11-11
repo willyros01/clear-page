@@ -1,0 +1,146 @@
+name: ATE Apple and Desktop
+run-name: Check and recover the existing ATE Mac notarization
+on:
+  workflow_dispatch:
+  push:
+    branches: [desktop]
+    paths: ['notarization/**', '.github/workflows/mac-notary-recovery.yml']
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: ate-notary-recovery
+  cancel-in-progress: false
+jobs:
+  status:
+    runs-on: ubuntu-latest
+    outputs:
+      status: ${{ steps.status.outputs.status }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check the existing submission without resubmitting
+        id: status
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: node notarization/status.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ate-notary-status
+          path: notary-status.json
+  mac-release:
+    name: mac-release (website)
+    needs: status
+    if: needs.status.outputs.status == 'Accepted'
+    runs-on: macos-26
+    timeout-minutes: 15
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify the source app is unchanged since submission
+        run: |
+          node --input-type=module <<'JS'
+          const headers={Authorization:'Bearer '+process.env.GITHUB_TOKEN,Accept:'application/vnd.github+json'};
+          const r=await fetch('https://api.github.com/repos/willyros01/clear-page/compare/61584530cb7cc4bec7210cc7297ad8bdf0af2708...'+process.env.GITHUB_SHA,{headers});
+          if(!r.ok)throw Error('Source comparison HTTP '+r.status);
+          const diff=await r.json();
+          if(diff.total_commits>50||diff.files.length>=300)throw Error('Source comparison too large');
+          for(const f of diff.files)if(!/^([^/]+\.md|\.github\/workflows\/.*|windows-signing\/.*|notarization\/.*)$/.test(f.filename))throw Error('App changed since notarization: '+f.filename);
+          console.log('PASS: app sources unchanged; recover the exact submitted disk image.');
+          JS
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 43091059827
+          name: ate-mac-website-release
+          path: recovered-input
+      - name: Verify Apple's accepted hash, staple and assess the exact DMG
+        shell: bash
+        run: |
+          set -euo pipefail
+          export VERSION=$(node -p "require('./package.json').version")
+          test "$VERSION" = 0.4.1
+          KEY_DIR=$(mktemp -d "$RUNNER_TEMP/ate-notary-key.XXXXXX")
+          export KEY_DIR
+          trap 'rm -rf "$KEY_DIR"' EXIT
+          node --input-type=module <<'JS'
+          import {writeFileSync} from 'node:fs';
+          writeFileSync(process.env.KEY_DIR+'/AuthKey.p8',process.env.ASC_KEY_P8.trim()+'\n',{mode:0o600});
+          JS
+          mkdir -p public-desktop
+          FOUND=$(find recovered-input -name "ATE-$VERSION-universal.dmg" -type f)
+          test -n "$FOUND"
+          test "$(printf '%s\n' "$FOUND" | wc -l | tr -d ' ')" = 1
+          cp "$FOUND" "public-desktop/ATE-$VERSION-universal.dmg"
+          xcrun notarytool log 06073ae2-3718-46f1-a9c2-9866b9606821 --key "$KEY_DIR/AuthKey.p8" --key-id "$ASC_KEY_ID" --issuer "$ASC_ISSUER_ID" "$RUNNER_TEMP/notary-log.json"
+          node --input-type=module <<'JS'
+          import {readFileSync} from 'node:fs';import {createHash} from 'node:crypto';
+          const log=JSON.parse(readFileSync(process.env.RUNNER_TEMP+'/notary-log.json','utf8'));
+          const name='ATE-'+process.env.VERSION+'-universal.dmg';
+          const hash=createHash('sha256').update(readFileSync('public-desktop/'+name)).digest('hex');
+          if(log.jobId!=='06073ae2-3718-46f1-a9c2-9866b9606821'||log.status!=='Accepted'||log.sha256!==hash||log.archiveFilename!==name)throw Error('Apple acceptance does not match the exact recovered installer');
+          console.log('PASS: Apple accepted this exact disk image SHA-256.');
+          JS
+          DMG="public-desktop/ATE-$VERSION-universal.dmg"
+          xcrun stapler staple "$DMG"
+          xcrun stapler validate "$DMG"
+          MOUNT="$RUNNER_TEMP/ate-recovered-mount"
+          mkdir -p "$MOUNT"
+          hdiutil attach "$DMG" -readonly -nobrowse -mountpoint "$MOUNT"
+          APP="$MOUNT/ATE.app"
+          codesign --verify --deep --strict "$APP"
+          codesign -d --verbose=4 "$APP" 2> "$RUNNER_TEMP/ate-recovered-signature.txt"
+          grep -q 'Authority=Developer ID Application:' "$RUNNER_TEMP/ate-recovered-signature.txt"
+          grep -q 'TeamIdentifier=VXMLKHF72B' "$RUNNER_TEMP/ate-recovered-signature.txt"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Contents/Info.plist")" = io.github.willyros01.clearpage
+          EXECUTABLE=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP/Contents/Info.plist")
+          lipo "$APP/Contents/MacOS/$EXECUTABLE" -verify_arch arm64 x86_64
+          spctl --assess --type execute "$APP"
+          hdiutil detach "$MOUNT" -quiet
+          node --input-type=module <<'JS'
+          import {readFileSync,writeFileSync} from 'node:fs';import {createHash} from 'node:crypto';
+          const name='ATE-'+process.env.VERSION+'-universal.dmg',bytes=readFileSync('public-desktop/'+name);
+          writeFileSync('public-desktop/manifest.json',JSON.stringify({app:'ATE',platform:'mac-universal',version:process.env.VERSION,run_id:Number(process.env.GITHUB_RUN_ID),source_sha:process.env.GITHUB_SHA,binary_source_sha:'c0e502ede069d1d5ef5e6218b8bc53b047fb386d',signing_source_sha:'61584530cb7cc4bec7210cc7297ad8bdf0af2708',notarization_id:'06073ae2-3718-46f1-a9c2-9866b9606821',file:name,sha256:createHash('sha256').update(bytes).digest('hex'),bytes:bytes.length,team_id:'VXMLKHF72B',signature:'developer-id',notarization:'Accepted',stapled:true},null,2)+'\n');
+          JS
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ate-mac-website-release
+          path: |
+            public-desktop/*
+            ${{ runner.temp }}/notary-log.json
+  report:
+    needs: mac-release
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node build/desktop-report.mjs
+      - name: Publish the recovered Mac release result
+        run: |
+          set -euo pipefail
+          cp desktop-report/ate-desktop-last-run.json "$RUNNER_TEMP/report.json"
+          git fetch origin desktop-releases
+          git checkout -B desktop-releases origin/desktop-releases
+          cp "$RUNNER_TEMP/report.json" ate-desktop-last-run.json
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ate-desktop-last-run.json
+          git commit -m "Record recovered notarized Mac run $GITHUB_RUN_ID"
+          git push origin HEAD:desktop-releases

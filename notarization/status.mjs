@@ -1,0 +1,15 @@
+import {createPrivateKey,sign} from 'node:crypto';
+import {writeFileSync,appendFileSync} from 'node:fs';
+const id='06073ae2-3718-46f1-a9c2-9866b9606821';
+const enc=x=>Buffer.from(JSON.stringify(x)).toString('base64url');
+const now=Math.floor(Date.now()/1000);
+const input=enc({alg:'ES256',kid:process.env.ASC_KEY_ID.trim(),typ:'JWT'})+'.'+enc({iss:process.env.ASC_ISSUER_ID.trim(),iat:now,exp:now+300,aud:'appstoreconnect-v1'});
+const jwt=input+'.'+sign('sha256',Buffer.from(input),{key:createPrivateKey(process.env.ASC_KEY_P8.trim()),dsaEncoding:'ieee-p1363'}).toString('base64url');
+const response=await fetch('https://appstoreconnect.apple.com/notary/v2/submissions/'+id,{headers:{Authorization:'Bearer '+jwt},redirect:'error',signal:AbortSignal.timeout(30000)});
+if(!response.ok)throw Error('Apple notarization status HTTP '+response.status);
+const body=await response.json();
+const status=body.data?.attributes?.status;
+if(body.data?.id!==id||!['Accepted','In Progress','Invalid','Rejected'].includes(status))throw Error('Unexpected Apple notarization response');
+writeFileSync('notary-status.json',JSON.stringify({app:'ATE',version:'0.4.1',submission_id:id,status,checked_at:new Date().toISOString()},null,2)+'\n');
+appendFileSync(process.env.GITHUB_OUTPUT,'status='+status+'\n');
+console.log('Apple notarization status: '+status);

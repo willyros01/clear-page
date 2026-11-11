@@ -79,3 +79,6 @@
 
 ## Windows direct-distribution signing preparation
 Added a manual-only Azure OIDC signing workflow, timestamp/publisher verification and installed executable checks. This is account-blocked preparation, not a signed release. Public download remains unsigned pending verified identity and a successful signed build.
+
+## Device feedback and Mac notarization follow-up
+The owner confirmed Windows 0.4.1 downloaded successfully after finding Keep, and indentation, syntax highlighting and Vim behave like iPad. Paid Windows signing was declined; no Azure signing account was created. Mac website signing succeeded, but notarization submission 06073ae2-3718-46f1-a9c2-9866b9606821 exceeded the initial 20-minute observation window. The recovery workflow checks that existing submission and only publishes after Apple's accepted archive hash, stapled ticket, Developer ID signature and Gatekeeper assessment all match.
