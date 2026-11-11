@@ -2,19 +2,23 @@
 import {createEditor, languageForName} from './editor.js';
 const $=id=>document.getElementById(id);
 let loading=true;
-const editor=createEditor($('editor'),()=>{if(!loading){dirty=true;counts();persist()}});let font=36,dirty=false,pending=null;const key='clear-page-draft-v1';
+const editor=createEditor($('editor'),()=>{if(!loading){dirty=true;counts();persist()}});let font=27,dirty=false,pending=null;const key='clear-page-draft-v1';const prefsKey='clear-page-preferences-v1';
 function notice(msg){$('notice').textContent=msg;$('notice').hidden=!msg}
 function counts(){const t=editor.value;const words=t.trim()?t.trim().split(/\s+/u).length:0;$('counts').textContent=`${words.toLocaleString()} ${words===1?'word':'words'} · ${Array.from(t).length.toLocaleString()} characters`}
 let closed=false;
-function persist(){if(closed)return;try{localStorage.setItem(key,JSON.stringify({text:editor.value,name:$('name').value,font,dark:document.body.classList.contains('dark'),language:$('language').value}));$('status').textContent='Draft saved on this device'}catch(e){$('status').textContent='Draft not saved — use Save file'}}
-function updateSize(){$('editor').style.fontSize=font+'px';$('size').textContent=font+'px';$('smaller').disabled=font<=24;$('larger').disabled=font>=72}
-function themeLabel(){editor.setDark(document.body.classList.contains('dark'));$('theme').textContent=document.body.classList.contains('dark')?'Light':'Dark';$('theme').setAttribute('aria-label','Switch to '+$('theme').textContent.toLowerCase()+' appearance')}
-try{let d=JSON.parse(localStorage.getItem(key));if(d){editor.value=typeof d.text==='string'?d.text:''; $('language').value=['plain','javascript','html','css','python'].includes(d.language)?d.language:languageForName(d.name||'');$('name').value=d.name||'Untitled.txt';font=Math.min(72,Math.max(24,Number(d.font)||36));document.body.classList.toggle('dark',!!d.dark)}}catch(e){$('status').textContent='Use Save file to keep your work'}loading=false;editor.setLanguage($('language').value);counts();updateSize();themeLabel();
+function persist(){if(closed)return;try{localStorage.setItem(key,JSON.stringify({text:editor.value,name:$('name').value,fontPt:font,dark:document.body.classList.contains('dark'),language:$('language').value}));$('status').textContent='Draft saved on this device'}catch(e){$('status').textContent='Draft not saved — use Save file'}}
+function persistPreferences(){try{localStorage.setItem(prefsKey,JSON.stringify({fontPt:font,buttonStyle:$('buttonStyle').value,dark:document.body.classList.contains('dark')}))}catch(e){}}
+function updateSize(){$('editor').style.fontSize=font+'pt';$('fontSize').value=font;$('smaller').disabled=font<=10;$('larger').disabled=font>=54}
+function setFont(value){if(!Number.isFinite(value)){updateSize();return}font=Math.min(54,Math.max(10,Math.round(value)));updateSize();persistPreferences();persist()}
+function themeLabel(){editor.setDark(document.body.classList.contains('dark'));const label=document.body.classList.contains('dark')?'Light':'Dark';$('theme').querySelector('.control-label').textContent=label;$('theme').setAttribute('aria-label','Switch to '+label.toLowerCase()+' appearance');$('theme').title=$('theme').getAttribute('aria-label')}
+try{let d=JSON.parse(localStorage.getItem(key));if(d){editor.value=typeof d.text==='string'?d.text:''; $('language').value=['plain','javascript','html','css','python'].includes(d.language)?d.language:languageForName(d.name||'');$('name').value=d.name||'Untitled.txt';font=Math.min(54,Math.max(10,Number(d.fontPt)||(Number(d.font)||36)*.75));document.body.classList.toggle('dark',!!d.dark)}}catch(e){$('status').textContent='Use Save file to keep your work'}try{const p=JSON.parse(localStorage.getItem(prefsKey));if(p){font=Math.min(54,Math.max(10,Number(p.fontPt)||font));$('buttonStyle').value=p.buttonStyle==='icons'?'icons':'text';document.body.classList.toggle('dark',!!p.dark)}}catch(e){}
+setupIcons();applyButtonStyle();
+loading=false;editor.setLanguage($('language').value);counts();updateSize();themeLabel();
 $('name').onchange=()=>{setLanguage(languageForName($('name').value));persist()};
 function setLanguage(id){$('language').value=id;editor.setLanguage(id)}
 $('language').onchange=()=>{editor.setLanguage($('language').value);persist()};
 $('indent').onclick=()=>editor.indent();$('unindent').onclick=()=>editor.unindent();
-$('smaller').onclick=()=>{font=Math.max(24,font-4);updateSize();persist()};$('larger').onclick=()=>{font=Math.min(72,font+4);updateSize();persist()};$('theme').onclick=()=>{document.body.classList.toggle('dark');themeLabel();persist()};
+$('smaller').onclick=()=>setFont(font-1);$('larger').onclick=()=>setFont(font+1);$('fontSize').oninput=()=>{const value=$('fontSize').valueAsNumber;if(Number.isFinite(value)&&value>=10&&value<=54){font=value;$('editor').style.fontSize=font+'pt';$('smaller').disabled=font<=10;$('larger').disabled=font>=54;persistPreferences();persist()}};$('fontSize').onchange=()=>setFont($('fontSize').valueAsNumber);$('buttonStyle').onchange=()=>{applyButtonStyle();persistPreferences()};$('theme').onclick=()=>{document.body.classList.toggle('dark');themeLabel();persistPreferences();persist()};
 function save(){let name=$('name').value.trim()||'Untitled.txt';if(!/\.[a-z0-9]+$/i.test(name))name+='.txt';const blob=new Blob([editor.value],{type:'text/plain;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);dirty=false;notice('File download started. Your draft is also kept in this browser.');persist()}
 $('save').onclick=save;
 $('menuButton').onclick=()=>{$('menu').showModal()};
@@ -39,3 +43,9 @@ $('open').onclick=()=>{$('menu').close();guard(()=>$('file').click(),'Open anoth
 $('focus').onclick=async()=>{$('menu').close();document.body.classList.add('focus');try{if(document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen()}catch(e){}editor.focus()};
 async function leave(){document.body.classList.remove('focus');if(document.fullscreenElement)try{await document.exitFullscreen()}catch(e){}}
 $('leaveFocus').onclick=leave;document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement)document.body.classList.remove('focus')});document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();save()}if(e.key==='Escape')leave()});window.addEventListener('beforeunload',e=>{if(dirty&&$('status').textContent.startsWith('Draft not')){e.preventDefault();e.returnValue=''}});
+
+function applyButtonStyle(){document.body.classList.toggle('icons',$('buttonStyle').value==='icons')}
+function setupIcons(){
+ const paths={menuButton:'M4 6h16M4 12h16M4 18h16',exit:'M10 4H4v16h6M14 8l4 4-4 4M8 12h12',save:'M5 3h12l4 4v14H3V3h2M7 3v6h10V3M7 21v-8h10v8',new:'M6 3h8l4 4v14H6zM14 3v5h4M9 14h6M12 11v6',open:'M3 8V5h6l2 3h10v12H3z',closeMenu:'M5 12l4 4L19 6',indent:'M10 5h11M10 12h11M10 19h11M3 8l4 4-4 4',unindent:'M10 5h11M10 12h11M10 19h11M7 8l-4 4 4 4',smaller:'M3 19L8 5l5 14M5 14h6M16 12h6',larger:'M3 19L8 5l5 14M5 14h6M16 12h6M19 9v6',theme:'M12 3a9 9 0 100 18V3zM12 3a9 9 0 010 18',focus:'M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5',leaveFocus:'M3 8h5V3M21 8h-5V3M8 21v-5H3M16 21v-5h5'};
+ for(const [id,path] of Object.entries(paths)){const b=$(id),label=b.textContent;b.classList.add('icon-button');b.setAttribute('aria-label',b.getAttribute('aria-label')||label);b.title=b.getAttribute('aria-label');b.innerHTML='<svg class="control-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="'+path+'"/></svg><span class="control-label"></span>';b.querySelector('.control-label').textContent=label}
+}
