@@ -1,5 +1,9 @@
 # Changelog
 
+## Internal TestFlight access
+- Enabled the verified Apple account holder in Clear Page Internal and assigned 0.3.1 (1).
+- Apple reports IN_BETA_TESTING with automatic notifications enabled. User invitation acceptance and device testing remain pending.
+
 ## First TestFlight pipeline (ios branch)
 - Added reproducible release archive, app icon generation, root privacy-manifest packaging and signature checks.
 - Added automatic Apple distribution signing/upload and processing verification.
