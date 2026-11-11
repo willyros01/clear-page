@@ -31,3 +31,9 @@ The workflow reports missing Apple secret names only; it does not print secret v
 - Simulator app and build-log artifacts retained by the run.
 - All four Apple credentials are absent from this repository (checked without printing values).
 - No signed IPA or TestFlight upload was produced. Release icon, privacy manifest, Apple registration/signing, and physical-device acceptance remain pending.
+
+## Apple registration progress
+- Bundle ID io.github.willyros01.clearpage registered and verified in Apple Developer.
+- App Store Connect new-app form prepared: Clear Page, iOS, English (Canada), SKU clear-page-ios.
+- App record not yet created: Full Access selection was blocked by automatic approval review; Limited Access is disabled in Apple's form. Await explicit user approval for the Full Access scope.
+- Release icon generator and privacy manifest source saved under resources/. Icon execution, manifest build-resource integration, signing and upload remain pending.
