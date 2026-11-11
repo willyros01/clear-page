@@ -5,8 +5,9 @@ execFileSync('npx',['--no-install','cap','sync','ios'],{stdio:'inherit'});
 const code=`import plistlib
 p='ios/App/App/Info.plist'
 with open(p,'rb') as f: d=plistlib.load(f)
-d['CFBundleDisplayName']='Clear Page'
+d['CFBundleDisplayName']='ATE'
 d['ITSAppUsesNonExemptEncryption']=False
 with open(p,'wb') as f: plistlib.dump(d,f)
 `;
 execFileSync('python3',['-c',code],{stdio:'inherit'});
+
