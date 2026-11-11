@@ -69,3 +69,12 @@ The simulator workflow remains separate. The Clear Page TestFlight workflow now 
 - Apple build ID: 9e20063f-4c91-44ef-a608-9c1fd961e126.
 - Release evidence artifact: Clear-Page-release-evidence (13833934525).
 - No physical-device acceptance or tester group assignment has been claimed. Next: enable the intended internal tester and verify Open/Save to Files, Vim commands, keyboard, large text, draft recovery and exit on iPad/iPhone.
+
+## Internal TestFlight access — 2026-11-11
+- Resolved the sole Apple account holder as Wilfredo Rosales using Apple's current user roster, then used that account's exact address to create the app-specific internal tester record. No address or credential was printed.
+- Created Clear Page Internal, group a310eafe-4a60-4759-ba9e-a4db47551732.
+- Verified account-holder membership (tester 3f2d5a7d-11fe-406f-bab2-c1fea0f8a692) and build 0.3.1 (1) assignment.
+- Apple internalBuildState: IN_BETA_TESTING; autoNotifyEnabled: true.
+- Successful setup run: https://github.com/willyros01/clear-page/actions/runs/42975190510.
+- User must accept the invitation in TestFlight; actual email delivery and physical-device installation remain unverified.
+- build/internal-testing.mjs is idempotent and pinned to this app/build/account. Review its constants before reusing for another release.
