@@ -2,7 +2,7 @@
 
 ## Android packaging and Cuberoot launch
 - Added reproducible Android release build, approved launcher icons, native Back/Close handling and a permanent-key signing gate.
-- Android compilation and editor checks passed; public signed APK awaits the one-time signing secret.
+- Android compilation, editor checks and permanent signing passed. ATE 0.3.2 (Android build 1) is published on Cuberoot; live checksum and download buttons verified.
 - Added Cuberoot app/download page, Android logo, iOS TestFlight and future Mac/Windows notices, and large-print Quick Start/full User Guide in HTML and PDF.
 - Added automatic Cuberoot publication of verified successful Android artifacts.
 
