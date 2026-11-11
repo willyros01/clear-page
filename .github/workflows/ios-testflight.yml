@@ -1,4 +1,4 @@
-name: Clear Page TestFlight
+name: ATE TestFlight
 on:
   workflow_dispatch:
   push:
@@ -37,7 +37,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: Clear-Page-release-evidence
+          name: ATE-release-evidence
           path: |
             ${{ runner.temp }}/clear-page-release/*.log
             ${{ runner.temp }}/clear-page-release/icon.png
