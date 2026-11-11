@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.1
+- Compacted the toolbar to one row and moved secondary controls into a readable menu.
+- Added Exit with save, discard-draft, and cancel choices.
+- Verified exit cancellation, draft discard across reload, save-and-exit download, and restart in desktop Chrome.
+
 ## 0.2.0
 - Added bundled CodeMirror with JavaScript, HTML, CSS, Python and plain-text modes.
 - Added syntax highlighting, four-space automatic indentation, line numbers, bracket matching, and touch-friendly indent/unindent buttons.
