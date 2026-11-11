@@ -32,3 +32,6 @@ Switchable text/icon controls and editor text sizes down to 10pt implemented and
 
 ## 0.3.0 editing tools
 Search/replace, Go to line, Select all/Copy, optional Vim and online Help implemented and browser checked. Physical iPad acceptance pending.
+
+## 0.3.1 Vim command visibility
+Explicit command-input contrast and sizing applied. Build/automated checks pass; browser preview was access-blocked, and iPad visual acceptance is pending.
