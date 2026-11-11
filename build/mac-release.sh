@@ -65,6 +65,8 @@ JS
  security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN" >/dev/null
  security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
  security set-keychain-settings -lut 3600 "$KEYCHAIN"
+ security list-keychains -d user -s "$KEYCHAIN"
+ security default-keychain -d user -s "$KEYCHAIN"
  # Normalize OpenSSL 3 PKCS#12 encryption to the format supported by macOS
  # Keychain. An incorrect package password still fails before any import.
  umask 077
