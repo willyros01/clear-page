@@ -6,7 +6,7 @@ Branch: android, based on the tested ios editor at version 0.3.2. The Apple app 
 - Shared editor, native Open/system share Save, approved launcher icon in legacy and adaptive resources.
 - Android Back closes an open dialog first or opens Close choices. Confirming Close clears the document and leaves the Android activity through Capacitor App.
 - Workflow: ATE Android APK, .github/workflows/android-apk.yml. It runs tests, creates the web bundle, generates Android and compiles a release APK before signing.
-- First compile: https://github.com/willyros01/clear-page/actions/runs/42980450400. Compilation and four editor/regression checks passed. Signing intentionally stopped because its one-time repository secret is absent. The retained unsigned APK is evidence only, not an installable public release.
+- First compile: https://github.com/willyros01/clear-page/actions/runs/42980450400. Compilation and four editor/regression checks passed. The initial attempt stopped at the signing gate; attempt 2 passed after the owner saved the secret. The permanent signed APK is now published.
 
 ## Permanent signing
 Add ONE repository Actions secret: ATE_ANDROID_SIGNING. Its value is the complete private JSON signing package supplied separately to the owner. It contains the PKCS12 keystore, password, alias ate and certificate digest. Never commit that value or print it in a workflow.
@@ -26,4 +26,14 @@ The landing page and home app card reveal the Android download only after a vali
 Cuberoot publishes /ate/, /ate/quick-start/, /ate/guide/ and two large-print PDFs under /guides/ate/. The full guide covers Open/Save, local recovery, settings, indentation, search/replace, copying, hardware shortcuts, Vim, Close and troubleshooting.
 
 ## Remaining acceptance
-Signed build/public APK publication is pending the one secret. Physical Android/Fire tablet acceptance is pending: install/update, icon, rotation, file picker, share destinations, keyboard, Vim, search, draft recovery and Back/Close.
+Physical Android/Fire tablet acceptance is pending: install/update, icon, rotation, file picker, share destinations, keyboard, Vim, search, draft recovery and Back/Close.
+
+## Verified release — 11 November 2026
+- ATE 0.3.2, Android versionCode 1; source 82f10e0521b7df338357a027e7f0027b78895aa6.
+- Build run 42980450400, attempt 2: SUCCESS. Signed artifact 13838516529.
+- Cuberoot publisher run 42983705702: SUCCESS. Permanent signature, package, version and ATE label verified before publication.
+- Live APK: https://www.cuberoot-systems.com/downloads/ate.apk?build=42980450400 .
+- APK bytes: 3628818; SHA-256: 54377685830065153a0ce46ac5bf3f23ed1f11b7532047686bdf54326673810c.
+- Downloaded live APK and independently matched bytes/hash to the signed release metadata. Landing page and Cuberoot home card display active Android-logo downloads.
+- Automatic publisher remains scheduled every five minutes; GitHub scheduling delays may affect timing. Future successful signed Android builds update this same website download.
+- Physical Android/Fire device acceptance is still pending.
