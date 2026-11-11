@@ -38,3 +38,6 @@ Explicit command-input contrast and sizing applied. Build/automated checks pass;
 
 ## iOS build checkpoint
 Capacitor shell and simulator workflow implemented on ios branch. See IOS-SETUP.md for release gates. Signed TestFlight distribution remains pending.
+
+## Apple access checkpoint
+Apple app registration and all four repository signing secret entries are configured. A read-only Apple API preflight is now available. Signing/export/upload and release-resource integration remain pending; see IOS-SETUP.md.
