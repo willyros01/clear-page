@@ -29,7 +29,7 @@ jobs:
         include:
           - os: macos-26
             target: universal-apple-darwin
-            bundle: dmg
+            bundle: app,dmg
             artifact: ate-mac-universal-preview
           - os: windows-latest
             target: x86_64-pc-windows-msvc
