@@ -43,4 +43,4 @@ Capacitor shell and simulator workflow implemented on ios branch. See IOS-SETUP.
 Apple app registration and all four repository signing secret entries are configured. A read-only Apple API preflight is now available. Signing/export/upload and release-resource integration remain pending; see IOS-SETUP.md.
 
 ## First TestFlight release
-Signed release workflow is implemented and running. Release-resource packaging and archive checks now run before distribution signing. Apple processing and physical-device acceptance must be verified; see IOS-SETUP.md for the latest result.
+Clear Page 0.3.1 (1) is signed, uploaded and processed by Apple (VALID). Release-resource packaging and archive checks passed. Next: tester assignment and physical iPad/iPhone acceptance; see IOS-SETUP.md for evidence.
