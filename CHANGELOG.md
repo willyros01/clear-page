@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0
+- Added touch-sized search/replace controls, Go to line, Select all and system clipboard Copy with manual fallback.
+- Added optional Vim key bindings, Ex command line, save and exit integration.
+- Added bundled large-text online Help with topic links and command tables.
+- Preserved language, appearance and editing mode when replacing documents.
+- Browser-verified replacement, clipboard contents, Vim commands, Help and navigation.
+
 ## 0.2.2
 - Added switchable icon/text controls with accessible labels.
 - Changed editor sizing to 10–54pt with direct entry and one-point adjustments; retained the 36px-equivalent default.
