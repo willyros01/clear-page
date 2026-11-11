@@ -7,13 +7,13 @@ function notice(msg){$('notice').textContent=msg;$('notice').hidden=!msg}
 function counts(){const t=editor.value;const words=t.trim()?t.trim().split(/\s+/u).length:0;$('counts').textContent=`${words.toLocaleString()} ${words===1?'word':'words'} · ${Array.from(t).length.toLocaleString()} characters`}
 let closed=false;
 function persist(){if(closed)return;try{localStorage.setItem(key,JSON.stringify({text:editor.value,name:$('name').value,fontPt:font,dark:document.body.classList.contains('dark'),language:$('language').value}));$('status').textContent='Draft saved on this device'}catch(e){$('status').textContent='Draft not saved — use Save file'}}
-function persistPreferences(){try{localStorage.setItem(prefsKey,JSON.stringify({fontPt:font,buttonStyle:$('buttonStyle').value,dark:document.body.classList.contains('dark')}))}catch(e){}}
+function persistPreferences(){try{localStorage.setItem(prefsKey,JSON.stringify({fontPt:font,buttonStyle:$('buttonStyle').value,editingMode:$('editingMode').value,dark:document.body.classList.contains('dark')}))}catch(e){}}
 function updateSize(){$('editor').style.fontSize=font+'pt';$('fontSize').value=font;$('smaller').disabled=font<=10;$('larger').disabled=font>=54}
 function setFont(value){if(!Number.isFinite(value)){updateSize();return}font=Math.min(54,Math.max(10,Math.round(value)));updateSize();persistPreferences();persist()}
 function themeLabel(){editor.setDark(document.body.classList.contains('dark'));const label=document.body.classList.contains('dark')?'Light':'Dark';$('theme').querySelector('.control-label').textContent=label;$('theme').setAttribute('aria-label','Switch to '+label.toLowerCase()+' appearance');$('theme').title=$('theme').getAttribute('aria-label')}
-try{let d=JSON.parse(localStorage.getItem(key));if(d){editor.value=typeof d.text==='string'?d.text:''; $('language').value=['plain','javascript','html','css','python'].includes(d.language)?d.language:languageForName(d.name||'');$('name').value=d.name||'Untitled.txt';font=Math.min(54,Math.max(10,Number(d.fontPt)||(Number(d.font)||36)*.75));document.body.classList.toggle('dark',!!d.dark)}}catch(e){$('status').textContent='Use Save file to keep your work'}try{const p=JSON.parse(localStorage.getItem(prefsKey));if(p){font=Math.min(54,Math.max(10,Number(p.fontPt)||font));$('buttonStyle').value=p.buttonStyle==='icons'?'icons':'text';document.body.classList.toggle('dark',!!p.dark)}}catch(e){}
+try{let d=JSON.parse(localStorage.getItem(key));if(d){editor.value=typeof d.text==='string'?d.text:''; $('language').value=['plain','javascript','html','css','python'].includes(d.language)?d.language:languageForName(d.name||'');$('name').value=d.name||'Untitled.txt';font=Math.min(54,Math.max(10,Number(d.fontPt)||(Number(d.font)||36)*.75));document.body.classList.toggle('dark',!!d.dark)}}catch(e){$('status').textContent='Use Save file to keep your work'}try{const p=JSON.parse(localStorage.getItem(prefsKey));if(p){font=Math.min(54,Math.max(10,Number(p.fontPt)||font));$('buttonStyle').value=p.buttonStyle==='icons'?'icons':'text';$('editingMode').value=p.editingMode==='vim'?'vim':'standard';document.body.classList.toggle('dark',!!p.dark)}}catch(e){}
 setupIcons();applyButtonStyle();
-loading=false;editor.setLanguage($('language').value);counts();updateSize();themeLabel();
+loading=false;editor.setLanguage($('language').value);counts();updateSize();themeLabel();editor.setVim($('editingMode').value==='vim');
 $('name').onchange=()=>{setLanguage(languageForName($('name').value));persist()};
 function setLanguage(id){$('language').value=id;editor.setLanguage(id)}
 $('language').onchange=()=>{editor.setLanguage($('language').value);persist()};
@@ -46,6 +46,16 @@ $('leaveFocus').onclick=leave;document.addEventListener('fullscreenchange',()=>{
 
 function applyButtonStyle(){document.body.classList.toggle('icons',$('buttonStyle').value==='icons')}
 function setupIcons(){
- const paths={menuButton:'M4 6h16M4 12h16M4 18h16',exit:'M10 4H4v16h6M14 8l4 4-4 4M8 12h12',save:'M5 3h12l4 4v14H3V3h2M7 3v6h10V3M7 21v-8h10v8',new:'M6 3h8l4 4v14H6zM14 3v5h4M9 14h6M12 11v6',open:'M3 8V5h6l2 3h10v12H3z',closeMenu:'M5 12l4 4L19 6',indent:'M10 5h11M10 12h11M10 19h11M3 8l4 4-4 4',unindent:'M10 5h11M10 12h11M10 19h11M7 8l-4 4 4 4',smaller:'M3 19L8 5l5 14M5 14h6M16 12h6',larger:'M3 19L8 5l5 14M5 14h6M16 12h6M19 9v6',theme:'M12 3a9 9 0 100 18V3zM12 3a9 9 0 010 18',focus:'M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5',leaveFocus:'M3 8h5V3M21 8h-5V3M8 21v-5H3M16 21v-5h5'};
+ const paths={search:'M10 3a7 7 0 100 14 7 7 0 000-14M15 15l6 6',goToLine:'M3 6h18M3 12h18M3 18h18M7 3v18',selectAll:'M3 3h18v18H3zM7 7h10v10H7z',copy:'M8 8h13v13H8zM16 8V3H3v13h5',helpButton:'M9 8a3 3 0 116 0c0 2-3 2-3 5M12 17h.01M12 2a10 10 0 100 20 10 10 0 000-20',menuButton:'M4 6h16M4 12h16M4 18h16',exit:'M10 4H4v16h6M14 8l4 4-4 4M8 12h12',save:'M5 3h12l4 4v14H3V3h2M7 3v6h10V3M7 21v-8h10v8',new:'M6 3h8l4 4v14H6zM14 3v5h4M9 14h6M12 11v6',open:'M3 8V5h6l2 3h10v12H3z',closeMenu:'M5 12l4 4L19 6',indent:'M10 5h11M10 12h11M10 19h11M3 8l4 4-4 4',unindent:'M10 5h11M10 12h11M10 19h11M7 8l-4 4 4 4',smaller:'M3 19L8 5l5 14M5 14h6M16 12h6',larger:'M3 19L8 5l5 14M5 14h6M16 12h6M19 9v6',theme:'M12 3a9 9 0 100 18V3zM12 3a9 9 0 010 18',focus:'M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5',leaveFocus:'M3 8h5V3M21 8h-5V3M8 21v-5H3M16 21v-5h5'};
  for(const [id,path] of Object.entries(paths)){const b=$(id),label=b.textContent;b.classList.add('icon-button');b.setAttribute('aria-label',b.getAttribute('aria-label')||label);b.title=b.getAttribute('aria-label');b.innerHTML='<svg class="control-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="'+path+'"/></svg><span class="control-label"></span>';b.querySelector('.control-label').textContent=label}
 }
+
+$('editingMode').onchange=()=>{editor.setVim($('editingMode').value==='vim');persistPreferences()};
+$('search').onclick=()=>{$('menu').close();editor.search()};
+$('goToLine').onclick=()=>{$('menu').close();editor.goToLine()};
+$('selectAll').onclick=()=>{$('menu').close();editor.selectAll()};
+$('copy').onclick=async()=>{const text=editor.selectedText();if(!text){$('menu').close();notice('Select text first, or choose Select all.');return}try{await navigator.clipboard.writeText(text);$('menu').close();notice('Copied selection to clipboard.')}catch(e){$('menu').close();$('copyText').value=text;$('copyDialog').showModal();$('copyText').select()}};
+$('closeCopy').onclick=()=>{$('copyDialog').close();editor.focus()};
+$('helpButton').onclick=()=>{$('menu').close();$('help').showModal();$('help').scrollTop=0};
+$('closeHelp').onclick=()=>{$('help').close();editor.focus()};
+editor.commands(save,()=>{$('exitDialog').showModal()},()=>{save();closeEditor(true)});
