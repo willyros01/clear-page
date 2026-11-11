@@ -26,7 +26,7 @@ AUTH=(-allowProvisioningUpdates -authenticationKeyPath "$KEY" -authenticationKey
 node scripts/prepare-ios.mjs
 swift resources/make-icon.swift
 cp ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png "$RELEASE_DIR/icon.png"
-echo "Archiving Clear Page $VERSION ($BUILD)"
+echo "Archiving ATE $VERSION ($BUILD)"
 xcodebuild archive -project ios/App/App.xcodeproj -scheme App -configuration Release \
   -destination 'generic/platform=iOS' -archivePath "$RELEASE_DIR/ClearPage.xcarchive" \
   "${AUTH[@]}" DEVELOPMENT_TEAM="$APPLE_TEAM_ID" CODE_SIGN_STYLE=Automatic \
@@ -49,6 +49,8 @@ assert info['CFBundleIdentifier']=='io.github.willyros01.clearpage'
 assert info['CFBundleShortVersionString']==os.environ['VERSION']
 assert info['CFBundleVersion']==os.environ['BUILD']
 assert info['UIDeviceFamily']==[1,2]
+assert info['CFBundleDisplayName']=='ATE'
+assert info['CFBundleIcons']['CFBundlePrimaryIcon']['CFBundleIconName']=='AppIcon'
 assert (app/'Assets.car').is_file()
 assert (app/'public/index.html').is_file()
 with (app/'PrivacyInfo.xcprivacy').open('rb') as f: privacy=plistlib.load(f)
@@ -60,5 +62,6 @@ PY
 xcodebuild -exportArchive -archivePath "$RELEASE_DIR/ClearPage.xcarchive" \
   -exportOptionsPlist "$RELEASE_DIR/ExportOptions.plist" -exportPath "$RELEASE_DIR/export" \
   "${AUTH[@]}" > "$RELEASE_DIR/export.log" 2>&1 || { tail -100 "$RELEASE_DIR/export.log"; exit 1; }
-echo "PASS: Clear Page $VERSION ($BUILD) uploaded to App Store Connect." | tee -a "$GITHUB_STEP_SUMMARY"
+echo "PASS: ATE $VERSION ($BUILD) uploaded to App Store Connect." | tee -a "$GITHUB_STEP_SUMMARY"
 node build/apple-build-status.mjs
+
