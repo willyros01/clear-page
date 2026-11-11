@@ -76,3 +76,6 @@
 - Run 43087543526 passed Chromium/WebKit editing and actual Mac/Windows webview checks; both installers built and launched. Run 43087885350 also downloaded, recognized, installed and launched the exact public Windows installer. Physical-device acceptance and the user-specific Windows rejection remain open.
 
 - Final delivery: Mac 0.4.1 (10) processed VALID and assigned to the existing internal TestFlight group. Windows 0.4.1 is live on Cuberoot; its downloaded bytes match SHA-256 `1aa3cb360916c12d00700fa74faf0ade5474541cf5e4ae70e945a04f00621159`. Browser-download testing reproduced the Windows “Unknown Publisher” confirmation for the unsigned installer; Windows recognizes its type as Application. This may explain the user's report, but the exact user-device message is still needed if different.
+
+## Windows direct-distribution signing preparation
+Added a manual-only Azure OIDC signing workflow, timestamp/publisher verification and installed executable checks. This is account-blocked preparation, not a signed release. Public download remains unsigned pending verified identity and a successful signed build.

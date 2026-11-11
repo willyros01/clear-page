@@ -1,0 +1,116 @@
+name: ATE Windows signing preparation
+on:
+  push:
+    branches: [desktop]
+    paths: ['windows-signing/**', '.github/workflows/windows-signed-build.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check PowerShell signing scripts
+        shell: pwsh
+        run: |
+          Get-ChildItem windows-signing/*.ps1 | ForEach-Object {
+            $tokens = $null; $errors = $null
+            [Management.Automation.Language.Parser]::ParseFile($_.FullName,[ref]$tokens,[ref]$errors) | Out-Null
+            if ($errors.Count) { $errors | Format-List; throw 'Signing script syntax failed' }
+          }
+          'PASS: signing script syntax. Real signing awaits verified Azure identity and configuration.'
+  signed-build:
+    if: github.event_name == 'workflow_dispatch'
+    needs: validate
+    runs-on: windows-2025
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      ATE_ARTIFACT_ENDPOINT: ${{ vars.ATE_ARTIFACT_ENDPOINT }}
+      ATE_ARTIFACT_ACCOUNT: ${{ vars.ATE_ARTIFACT_ACCOUNT }}
+      ATE_ARTIFACT_PROFILE: ${{ vars.ATE_ARTIFACT_PROFILE }}
+      ATE_EXPECTED_PUBLISHER: ${{ vars.ATE_EXPECTED_PUBLISHER }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require identity configuration before building
+        shell: pwsh
+        env:
+          AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          foreach ($name in @('AZURE_CLIENT_ID','AZURE_TENANT_ID','AZURE_SUBSCRIPTION_ID','ATE_ARTIFACT_ENDPOINT','ATE_ARTIFACT_ACCOUNT','ATE_ARTIFACT_PROFILE','ATE_EXPECTED_PUBLISHER')) {
+            if ([string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($name))) { throw "Identity/account setup still required: $name" }
+          }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Install Microsoft's verified signing client
+        shell: pwsh
+        run: |
+          $msi = Join-Path $env:RUNNER_TEMP 'ArtifactSigningClientTools.msi'
+          Invoke-WebRequest 'https://download.microsoft.com/download/70ad2c3b-761f-4aa9-a9de-e7405aa2b4c1/ArtifactSigningClientTools.msi' -OutFile $msi
+          $signature = Get-AuthenticodeSignature $msi
+          if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch 'O=Microsoft Corporation') { throw 'Microsoft client installer signature invalid' }
+          $process = Start-Process msiexec.exe -ArgumentList @('/i',$msi,'/quiet','/norestart') -Wait -PassThru
+          if ($process.ExitCode -notin @(0,3010)) { throw 'Signing client installation failed' }
+      - name: Prepare Tauri signing hook
+        shell: pwsh
+        run: ./windows-signing/prepare.ps1
+      - run: npm ci
+      - run: npm test
+      - run: npm run desktop:icons
+      - name: Build and sign app, uninstaller and setup
+        shell: pwsh
+        run: npm run tauri -- build --target x86_64-pc-windows-msvc --bundles nsis --config "$env:ATE_SIGN_CONFIG"
+      - name: Verify signed installer and installed application
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $installers = @(Get-ChildItem src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe)
+          if ($installers.Count -ne 1) { throw 'Expected one installer' }
+          $setup = $installers[0]
+          $signature = Get-AuthenticodeSignature $setup.FullName
+          if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -ne $env:ATE_EXPECTED_PUBLISHER -or !$signature.TimeStamperCertificate) { throw 'Installer signature invalid' }
+          $destination = Join-Path $env:RUNNER_TEMP 'ATE-signed-installed'
+          $process = Start-Process $setup.FullName -ArgumentList @('/S',"/D=$destination") -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw 'Signed installer failed' }
+          $executables = @(Get-ChildItem $destination/*.exe)
+          if (!$executables.Count) { throw 'Installed application missing' }
+          foreach ($file in $executables) {
+            $signature = Get-AuthenticodeSignature $file.FullName
+            if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -ne $env:ATE_EXPECTED_PUBLISHER) { throw "Installed executable signature invalid: $($file.Name)" }
+          }
+          $appPath = Join-Path $destination 'ATE.exe'
+          if (!(Test-Path $appPath)) { $appPath = Join-Path $destination 'ate-desktop.exe' }
+          $app = Start-Process $appPath -PassThru
+          Start-Sleep -Seconds 8
+          if ($app.HasExited) { throw 'Signed app exited unexpectedly' }
+          Stop-Process -Id $app.Id
+          New-Item -ItemType Directory -Force signed-windows-review | Out-Null
+          Copy-Item $setup.FullName signed-windows-review/
+          $report = @{ app='ATE';version=(Get-Content package.json | ConvertFrom-Json).version;signature='azure-artifact-signing';publisher=$env:ATE_EXPECTED_PUBLISHER;sha256=(Get-FileHash $setup.FullName -Algorithm SHA256).Hash.ToLower();verification='ci-signed-installed-and-launched';source_sha=$env:GITHUB_SHA }
+          $report | ConvertTo-Json | Set-Content signed-windows-review/verification.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ate-windows-signed-review
+          path: signed-windows-review/*
+          if-no-files-found: error
