@@ -3,7 +3,7 @@
 ## First TestFlight pipeline (ios branch)
 - Added reproducible release archive, app icon generation, root privacy-manifest packaging and signature checks.
 - Added automatic Apple distribution signing/upload and processing verification.
-- Release run is in progress; physical-device acceptance remains pending.
+- Clear Page 0.3.1 (1) signed and uploaded successfully; Apple processing returned VALID. Physical-device acceptance and tester assignment remain pending.
 
 ## Apple access preflight (ios branch)
 - Added read-only validation of the Apple P8 key and access to the Clear Page app record, without logging credentials or tokens.
