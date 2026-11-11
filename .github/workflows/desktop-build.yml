@@ -25,6 +25,11 @@ jobs:
       - run: npx playwright install --with-deps chromium webkit
       - name: Verify editing under the desktop security policy
         run: npm run test:browser
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: editor-browser-evidence
+          path: editor-evidence/*
   desktop:
     if: ${{ !contains(github.event.head_commit.message, '[signing-setup]') }}
     needs: editor

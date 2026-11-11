@@ -1,5 +1,5 @@
 import {createServer} from 'node:http';
-import {readFile} from 'node:fs/promises';
+import {readFile,mkdir} from 'node:fs/promises';
 import assert from 'node:assert/strict';
 import {chromium, webkit} from 'playwright';
 
@@ -68,6 +68,8 @@ try{
    await setMode('standard');await page.keyboard.press('ControlOrMeta+End');await page.keyboard.type(' // standard');assert.match(await text(),/\/\/ standard$/);
    await page.reload();await page.waitForSelector('.cm-content');assert.match(await text(),/\/\/ standard$/,'Draft recovery must keep edits');
    assert.deepEqual(errors,[]);
+   await mkdir('editor-evidence',{recursive:true});
+   await page.screenshot({path:`editor-evidence/${name}-editor.png`});
    console.log(`PASS ${name}: strict desktop CSP, 36px monospaced layout, preserved spaces, syntax colors, Tab/Shift+Tab, Enter indentation, dark theme, Vim insert/delete/undo/search/substitution/go-to-line, mode switching, draft recovery`);
   }catch(error){console.error(name+': '+error.stack);throw error}finally{await browser.close()}
  }

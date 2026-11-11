@@ -65,7 +65,15 @@ JS
  security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN" >/dev/null
  security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
  security set-keychain-settings -lut 3600 "$KEYCHAIN"
- security import "$KEY_DIR/certificate.p12" -k "$KEYCHAIN" -P "$CERT_PASSWORD" -T /usr/bin/codesign >/dev/null
+ # Normalize OpenSSL 3 PKCS#12 encryption to the format supported by macOS
+ # Keychain. An incorrect package password still fails before any import.
+ umask 077
+ openssl pkcs12 -in "$KEY_DIR/certificate.p12" -passin "file:$KEY_DIR/password" \
+  -nodes -out "$KEY_DIR/identity.pem" 2> "$KEY_DIR/p12-check.log" || { echo 'Mac signing package cannot be decrypted with its supplied password.'; exit 1; }
+ openssl pkcs12 -export -in "$KEY_DIR/identity.pem" -out "$KEY_DIR/keychain-compatible.p12" \
+  -passout "file:$KEY_DIR/password" -keypbe PBE-SHA1-3DES -certpbe PBE-SHA1-3DES -macalg sha1
+ rm -f "$KEY_DIR/identity.pem"
+ security import "$KEY_DIR/keychain-compatible.p12" -k "$KEYCHAIN" -P "$CERT_PASSWORD" -T /usr/bin/codesign >/dev/null
  curl --max-time 60 -fsSL https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer -o "$KEY_DIR/intermediate.cer"
  security import "$KEY_DIR/intermediate.cer" -k "$KEYCHAIN" >/dev/null
  security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" >/dev/null
