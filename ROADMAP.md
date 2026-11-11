@@ -61,3 +61,7 @@ Verification update: run 43087543526 passed Chromium, WebKit and actual native M
 
 ## Windows signing preparation
 The user rejected Store distribution and approved trying verified code signing for direct Cuberoot downloads. The manual signing workflow and Tauri signing hook are prepared; no billable resources have been created. Real signing and publication await the owner's Azure account and Public Trust identity validation. See WINDOWS-SIGNING.md. Signing does not guarantee immediate SmartScreen reputation.
+
+Final Windows decision: the owner declined paid signing after reviewing Basic at US$9.99/month. The unsubmitted Azure form was closed and zero signing accounts were confirmed. Keep code proprietary and direct downloads available. The owner subsequently completed the Windows download using Keep and confirmed editor functionality.
+
+Mac 0.4.1 website recovery: Apple accepted notarization 06073ae2-3718-46f1-a9c2-9866b9606821. Recovery run 43103034568 verified the exact submitted disk image hash, stapled and validated the ticket, checked Developer ID/team/bundle ID, verified Intel/Apple silicon architectures and passed Gatekeeper. Publication is proceeding through the verified Cuberoot installer pipeline.

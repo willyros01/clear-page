@@ -82,3 +82,5 @@ Added a manual-only Azure OIDC signing workflow, timestamp/publisher verificatio
 
 ## Device feedback and Mac notarization follow-up
 The owner confirmed Windows 0.4.1 downloaded successfully after finding Keep, and indentation, syntax highlighting and Vim behave like iPad. Paid Windows signing was declined; no Azure signing account was created. Mac website signing succeeded, but notarization submission 06073ae2-3718-46f1-a9c2-9866b9606821 exceeded the initial 20-minute observation window. The recovery workflow checks that existing submission and only publishes after Apple's accepted archive hash, stapled ticket, Developer ID signature and Gatekeeper assessment all match.
+
+Mac notarization completed: Apple returned Accepted. Recovery run 43103034568 passed exact archive-hash matching, staple validation, Developer ID and Gatekeeper checks for the universal 0.4.1 image. Cuberoot publication started.

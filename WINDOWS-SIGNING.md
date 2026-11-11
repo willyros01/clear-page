@@ -1,6 +1,6 @@
 # Windows direct-download signing
 
-Status: prepared, not activated. No paid Azure resource has been created. The public Windows installer is still unsigned.
+Status: paused at the owner’s request on 11 November 2026. The owner declined the US$9.99/month signing fee. No Azure signing account or certificate profile was created. Do not activate paid Windows signing without a new explicit request. The public Windows installer remains unsigned; the owner found Edge’s Keep option and confirmed the downloaded editor works correctly.
 
 The user chose freely downloadable installers on Cuberoot and explicitly declined Microsoft Store distribution. Browser changes may change the download prompt; Windows can still check downloaded apps when opened. Signing does not promise immediate SmartScreen reputation.
 
