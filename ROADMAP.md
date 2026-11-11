@@ -56,3 +56,5 @@ Implemented on `desktop`: shared editor with a Tauri desktop adapter, Windows in
 
 ## Desktop regression, 11 November 2026
 Mac 0.4.0 device feedback exposed missing CodeMirror styles and unreliable Vim. Launch-only checks did not establish editor usability. Version 0.4.1 passes the bundled style nonce into CodeMirror and requires browser behavior tests plus native webview checks before packaging. Physical Mac/Windows acceptance remains required. Investigate the Windows download rejection with the exact Windows message; the current public file is a valid installer with a matching checksum.
+
+Verification update: run 43087543526 passed Chromium, WebKit and actual native Mac/Windows editor behavior; both native installer builds and launches passed. Public-download run 43087885350 passed Windows download/checksum/executable recognition/install/launch. Final signing/upload and publication are tracked by release run 43088542493. Device acceptance and the exact Windows rejection remain outstanding.

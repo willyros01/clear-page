@@ -35,3 +35,10 @@ Editing → Vim enables optional Vim key bindings; Standard remains the default.
 Menu → Help is the bundled online user guide, with topic links and command tables in large text. Browser checks verified Replace all, system clipboard content, Vim substitution and quit, returning to Standard mode, Help content, and go-to-line. Physical-device acceptance remains pending.
 
 0.3.1 fixes Vim command-input contrast and width, including explicit WebKit text-fill colors. Visual confirmation on iPad remains pending.
+
+## Desktop 0.4.1 verification — 11 November 2026
+The desktop repair passes Tauri's style nonce to CodeMirror. Without it, Tauri's strict policy rejected the generated styles and the editor lost its whitespace, layout, syntax colors and readable Vim controls.
+
+Run `npm ci`, `npm test`, `npm run build`, `npx playwright install --with-deps chromium webkit`, then `npm run test:browser`. The browser checks use built assets and a nonce policy matching the desktop policy. Native CI builds with `--features editor-verification` and checks the actual Mac/Windows webviews before rebuilding distribution binaries without that feature. The test bridge is excluded from distributed builds.
+
+Run 43087543526 passed both browser engines and both native webviews, including 36px text, monospaced layout, preserved spaces, JavaScript highlighting, Enter/Tab/Shift-Tab indentation, Vim delete/undo/substitution/go-to-line and dark appearance. Run 43087885350 downloaded the exact public 0.4.0 Windows installer, verified SHA-256, installed and launched it on Windows. This does not resolve the user's device-specific rejection or establish interactive browser/SmartScreen acceptance; request the exact message and downloaded filename. No physical-device acceptance is claimed.
