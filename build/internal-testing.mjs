@@ -22,8 +22,7 @@ async function api(path,method='GET',body){
 }
 async function main(){
  const users=await api('users?limit=200');
- report({users:users.data.map(x=>({id:x.id,firstName:x.attributes.firstName,lastName:x.attributes.lastName,roles:x.attributes.roles,knownOwnerAddress:x.attributes.username.toLowerCase()==='willyros01@gmail.com'}))});
- const candidates=users.data.filter(x=>x.attributes.username.toLowerCase()==='willyros01@gmail.com');
+ const candidates=users.data.filter(x=>x.id==='00a4b5d8-6a2f-4433-809d-26aeeaff0ce7' && x.attributes.roles.includes('ACCOUNT_HOLDER') && x.attributes.lastName==='Rosales');
  if(candidates.length!==1) throw Error('Could not uniquely identify Willy Rosales as account holder');
  const owner=candidates[0];
  report({accountHolder:{id:owner.id,firstName:owner.attributes.firstName,lastName:owner.attributes.lastName,roles:owner.attributes.roles}});
