@@ -74,3 +74,5 @@
 - Add feature-gated checks in actual Mac and Windows webviews for layout, syntax colors, indentation and Vim; distribution builds exclude the verification bridge.
 - User reported Windows download rejection. The live 0.4.0 NSIS installer is a valid PE executable and matches its published SHA-256; the exact device error remains unconfirmed.
 - Run 43087543526 passed Chromium/WebKit editing and actual Mac/Windows webview checks; both installers built and launched. Run 43087885350 also downloaded, recognized, installed and launched the exact public Windows installer. Physical-device acceptance and the user-specific Windows rejection remain open.
+
+- Final delivery: Mac 0.4.1 (10) processed VALID and assigned to the existing internal TestFlight group. Windows 0.4.1 is live on Cuberoot; its downloaded bytes match SHA-256 `1aa3cb360916c12d00700fa74faf0ade5474541cf5e4ae70e945a04f00621159`. Browser-download testing reproduced the Windows “Unknown Publisher” confirmation for the unsigned installer; Windows recognizes its type as Application. This may explain the user's report, but the exact user-device message is still needed if different.

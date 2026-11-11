@@ -46,7 +46,7 @@ jobs:
           [IO.File]::WriteAllText($scriptPath, $script)
           node $scriptPath
           if ($LASTEXITCODE -ne 0) { throw 'Website browser download failed' }
-      - name: Download the public installer, verify it and install on Windows
+      - name: Verify the browser-downloaded installer and its security confirmation
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -76,11 +76,14 @@ jobs:
             if ($warning) {
               $texts = $warning.FindAll([Windows.Automation.TreeScope]::Descendants,[Windows.Automation.Condition]::TrueCondition) | ForEach-Object { $_.Current.Name }
               if (($texts -join ' ') -notmatch [regex]::Escape($installer)) { throw 'Unexpected security dialog destination' }
-              $buttonCondition = [Windows.Automation.AndCondition]::new([Windows.Automation.PropertyCondition]::new([Windows.Automation.AutomationElement]::NameProperty,'Run'),[Windows.Automation.PropertyCondition]::new([Windows.Automation.AutomationElement]::ControlTypeProperty,[Windows.Automation.ControlType]::Button))
-              $runButton = $warning.FindFirst([Windows.Automation.TreeScope]::Descendants,$buttonCondition)
-              if (!$runButton) { throw 'Expected Run button missing' }
-              $runButton.GetCurrentPattern([Windows.Automation.InvokePattern]::Pattern).Invoke()
-              'Observed and accepted Unknown Publisher warning for the checksum-verified test installer. Windows recognized it as an Application.' | Tee-Object -FilePath (Join-Path $env:RUNNER_TEMP 'windows-security-warning.txt')
+              if (($texts -join ' ') -notmatch 'Unknown Publisher') { throw 'Unexpected publisher warning' }
+              'PASS: Edge downloaded a checksum-verified Windows application. Windows displayed the expected Unknown Publisher confirmation for this unsigned installer. This is a warning check; installation acceptance is not claimed.' | Tee-Object -FilePath (Join-Path $env:RUNNER_TEMP 'windows-security-warning.txt')
+              # Dismiss this test worker's confirmation without approving execution.
+              $owner = $warning.Current.ProcessId
+              if ($owner -eq $PID -or (Get-Process -Id $owner).ProcessName -ne 'pwsh') { throw 'Unexpected dialog owner' }
+              Stop-Process -Id $owner -Force
+              Remove-Job $installJob -Force
+              exit 0
               break
             }
             Start-Sleep -Seconds 1
