@@ -35,5 +35,8 @@ The workflow reports missing Apple secret names only; it does not print secret v
 ## Apple registration progress
 - Bundle ID io.github.willyros01.clearpage registered and verified in Apple Developer.
 - App Store Connect new-app form prepared: Clear Page, iOS, English (Canada), SKU clear-page-ios.
-- App record not yet created: Full Access selection was blocked by automatic approval review; Limited Access is disabled in Apple's form. Await explicit user approval for the Full Access scope.
+- User explicitly approved Full Access. The Clear Page app record has now been created and verified in App Store Connect.
+- Apple app ID: 6833284199.
+- App URL: https://appstoreconnect.apple.com/apps/6833284199/distribution
+- Initial Apple listing version: 1.0 (Prepare for Submission). No signed build uploaded yet.
 - Release icon generator and privacy manifest source saved under resources/. Icon execution, manifest build-resource integration, signing and upload remain pending.
