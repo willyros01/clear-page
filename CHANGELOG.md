@@ -1,5 +1,10 @@
 # Changelog
 
+## Apple access preflight (ios branch)
+- Added read-only validation of the Apple P8 key and access to the Clear Page app record, without logging credentials or tokens.
+- Configured repository Apple signing identifiers; user saved the private key directly in GitHub.
+- TestFlight distribution remains pending.
+
 ## iOS first build (ios branch)
 - Added Capacitor iPhone/iPad shell generation and macOS simulator build/launch workflow.
 - Added native save/share adapter and safe-area spacing.
