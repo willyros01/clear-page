@@ -76,7 +76,7 @@ jobs:
             if ($warning) {
               $texts = $warning.FindAll([Windows.Automation.TreeScope]::Descendants,[Windows.Automation.Condition]::TrueCondition) | ForEach-Object { $_.Current.Name }
               if (($texts -join ' ') -notmatch [regex]::Escape($installer)) { throw 'Unexpected security dialog destination' }
-              $buttonCondition = New-Object Windows.Automation.PropertyCondition ([Windows.Automation.AutomationElement]::NameProperty), 'Run'
+              $buttonCondition = [Windows.Automation.AndCondition]::new([Windows.Automation.PropertyCondition]::new([Windows.Automation.AutomationElement]::NameProperty,'Run'),[Windows.Automation.PropertyCondition]::new([Windows.Automation.AutomationElement]::ControlTypeProperty,[Windows.Automation.ControlType]::Button))
               $runButton = $warning.FindFirst([Windows.Automation.TreeScope]::Descendants,$buttonCondition)
               if (!$runButton) { throw 'Expected Run button missing' }
               $runButton.GetCurrentPattern([Windows.Automation.InvokePattern]::Pattern).Invoke()
