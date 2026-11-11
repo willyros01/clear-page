@@ -23,3 +23,6 @@ Package the shared editor using Tauri for Windows and macOS. Add desktop file ad
 
 ## Verification record
 Baseline JavaScript syntax check passes. Earlier browser checks verified typing, font adjustment, recovery after refresh, and full-screen mode. Native packages and offline installation have not yet been built or verified.
+
+## 0.2.1 usability update
+Compact toolbar and explicit exit choices implemented and browser checked. iPad acceptance pending.
