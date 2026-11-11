@@ -6,13 +6,13 @@ let loading=true;
 const editor=createEditor($('editor'),()=>{if(!loading){dirty=true;counts();persist()}});let font=27,dirty=false,pending=null;const key='clear-page-draft-v1';const prefsKey='clear-page-preferences-v1';
 function notice(msg){$('notice').textContent=msg;$('notice').hidden=!msg}
 function counts(){const t=editor.value;const words=t.trim()?t.trim().split(/\s+/u).length:0;$('counts').textContent=`${words.toLocaleString()} ${words===1?'word':'words'} · ${Array.from(t).length.toLocaleString()} characters`}
-let closed=false;
-function persist(){if(closed)return;try{localStorage.setItem(key,JSON.stringify({text:editor.value,name:$('name').value,fontPt:font,dark:document.body.classList.contains('dark'),language:$('language').value}));$('status').textContent='Draft saved on this device'}catch(e){$('status').textContent='Draft not saved — use Save file'}}
+function persist(){try{localStorage.setItem(key,JSON.stringify({text:editor.value,name:$('name').value,fontPt:font,dark:document.body.classList.contains('dark'),language:$('language').value}));$('status').textContent='Draft saved on this device'}catch(e){$('status').textContent='Draft not saved — use Save file'}}
 function persistPreferences(){try{localStorage.setItem(prefsKey,JSON.stringify({fontPt:font,buttonStyle:$('buttonStyle').value,editingMode:$('editingMode').value,dark:document.body.classList.contains('dark')}))}catch(e){}}
 function updateSize(){$('editor').style.fontSize=font+'pt';$('fontSize').value=font;$('smaller').disabled=font<=10;$('larger').disabled=font>=54}
 function setFont(value){if(!Number.isFinite(value)){updateSize();return}font=Math.min(54,Math.max(10,Math.round(value)));updateSize();persistPreferences();persist()}
 function themeLabel(){editor.setDark(document.body.classList.contains('dark'));const label=document.body.classList.contains('dark')?'Light':'Dark';$('theme').querySelector('.control-label').textContent=label;$('theme').setAttribute('aria-label','Switch to '+label.toLowerCase()+' appearance');$('theme').title=$('theme').getAttribute('aria-label')}
 try{let d=JSON.parse(localStorage.getItem(key));if(d){editor.value=typeof d.text==='string'?d.text:''; $('language').value=['plain','javascript','html','css','python'].includes(d.language)?d.language:languageForName(d.name||'');$('name').value=d.name||'Untitled.txt';font=Math.min(54,Math.max(10,Number(d.fontPt)||(Number(d.font)||36)*.75));document.body.classList.toggle('dark',!!d.dark)}}catch(e){$('status').textContent='Use Save file to keep your work'}try{const p=JSON.parse(localStorage.getItem(prefsKey));if(p){font=Math.min(54,Math.max(10,Number(p.fontPt)||font));$('buttonStyle').value=p.buttonStyle==='icons'?'icons':'text';$('editingMode').value=p.editingMode==='vim'?'vim':'standard';document.body.classList.toggle('dark',!!p.dark)}}catch(e){}
+if(native){$('exit').textContent='Close';$('exit').setAttribute('aria-label','Close document');$('exitTitle').textContent='Close the document?';$('saveExit').textContent='Save and close';$('discardExit').textContent='Close without saving'}
 setupIcons();applyButtonStyle();
 loading=false;editor.setLanguage($('language').value);counts();updateSize();themeLabel();editor.setVim($('editingMode').value==='vim');
 $('name').onchange=()=>{setLanguage(languageForName($('name').value));persist()};
@@ -28,15 +28,15 @@ $('closeMenu').onclick=()=>{$('menu').close();editor.focus()};
 $('exit').onclick=()=>{$('exitDialog').showModal()};
 $('exitCancel').onclick=()=>{$('exitDialog').close();editor.focus()};
 function closeEditor(saved){
- try{if(!saved)localStorage.removeItem(key)}catch(e){notice('Could not discard the browser draft. Please keep editing or clear this site’s browser data.');$('exitDialog').close();return}
- closed=true;loading=true;editor.value='';loading=false;dirty=false;counts();
- $('exitDialog').close();leave();document.body.classList.add('closed');$('closed').hidden=false;
- $('closedMessage').textContent=saved?(native?'Save/share sheet closed. Your recovery draft is kept.':'File download started. Check your Downloads or Files app.'):'The browser draft was discarded.';
- $('restart').focus();
+ try{if(!saved)localStorage.removeItem(key)}catch(e){notice('Could not discard the draft. Please keep editing or clear this app’s data.');$('exitDialog').close();return}
+ loading=true;editor.value='';loading=false;dirty=false;pending=null;
+ $('name').value='Untitled.txt';setLanguage('plain');counts();notice('');
+ for(const dialog of document.querySelectorAll('dialog[open]'))dialog.close();
+ leave();
+ const active=document.activeElement;if(active instanceof HTMLElement)active.blur();
 }
 $('discardExit').onclick=()=>closeEditor(false);
 $('saveExit').onclick=async()=>{if(await save())closeEditor(true)};
-$('restart').onclick=()=>{closed=false;$('closed').hidden=true;document.body.classList.remove('closed');$('name').value='Untitled.txt';setLanguage('plain');notice('');persist();editor.focus()};
 
 function guard(action,title){if(editor.value){pending=action;$('dialogTitle').textContent=title;$('confirm').showModal()}else action()}
 $('cancel').onclick=()=>{$('confirm').close();pending=null};$('proceed').onclick=()=>{const fn=pending;pending=null;$('confirm').close();if(fn)fn()};
@@ -61,3 +61,4 @@ $('closeCopy').onclick=()=>{$('copyDialog').close();editor.focus()};
 $('helpButton').onclick=()=>{$('menu').close();$('help').showModal();$('help').scrollTop=0};
 $('closeHelp').onclick=()=>{$('help').close();editor.focus()};
 editor.commands(save,()=>{$('exitDialog').showModal()},async()=>{if(await save())closeEditor(true)});
+
