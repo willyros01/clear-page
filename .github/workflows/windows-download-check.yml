@@ -65,6 +65,26 @@ jobs:
             $setup = Start-Process $installer -ArgumentList @('/S', "/D=$destination") -Wait -PassThru
             $setup.ExitCode
           }
+          # Accept only the expected warning for this checksum-verified fixture.
+          # Keep Mark-of-the-Web and Windows security settings unchanged.
+          Add-Type -AssemblyName UIAutomationClient
+          Add-Type -AssemblyName UIAutomationTypes
+          $root = [Windows.Automation.AutomationElement]::RootElement
+          $condition = New-Object Windows.Automation.PropertyCondition ([Windows.Automation.AutomationElement]::NameProperty), 'Open File - Security Warning'
+          for ($attempt=0; $attempt -lt 20 -and $installJob.State -eq 'Running'; $attempt++) {
+            $warning = $root.FindFirst([Windows.Automation.TreeScope]::Children,$condition)
+            if ($warning) {
+              $texts = $warning.FindAll([Windows.Automation.TreeScope]::Descendants,[Windows.Automation.Condition]::TrueCondition) | ForEach-Object { $_.Current.Name }
+              if (($texts -join ' ') -notmatch [regex]::Escape($installer)) { throw 'Unexpected security dialog destination' }
+              $buttonCondition = New-Object Windows.Automation.PropertyCondition ([Windows.Automation.AutomationElement]::NameProperty), 'Run'
+              $runButton = $warning.FindFirst([Windows.Automation.TreeScope]::Descendants,$buttonCondition)
+              if (!$runButton) { throw 'Expected Run button missing' }
+              $runButton.GetCurrentPattern([Windows.Automation.InvokePattern]::Pattern).Invoke()
+              'Observed and accepted Unknown Publisher warning for the checksum-verified test installer. Windows recognized it as an Application.' | Tee-Object -FilePath (Join-Path $env:RUNNER_TEMP 'windows-security-warning.txt')
+              break
+            }
+            Start-Sleep -Seconds 1
+          }
           $finished = Wait-Job $installJob -Timeout 60
           if (!$finished) {
             Get-Process | Where-Object { $_.MainWindowTitle -or $_.Name -match 'smart|setup|ATE|msedge' } | Select-Object Name,Id,MainWindowTitle | Format-Table -AutoSize
@@ -98,3 +118,4 @@ jobs:
             ${{ runner.temp }}/public-windows-download.txt
             ${{ runner.temp }}/browser-download.txt
             ${{ runner.temp }}/windows-installer-block.png
+            ${{ runner.temp }}/windows-security-warning.txt
