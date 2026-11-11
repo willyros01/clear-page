@@ -53,3 +53,6 @@ Product is now Another Text Editor (ATE). Approved minimalist writing icon and d
 
 ## 0.4.0 coordinated Apple/desktop release
 Implemented on `desktop`: shared editor with a Tauri desktop adapter, Windows installer, universal Mac build, iPad TestFlight job and Mac website/TestFlight export jobs. Existing mobile release branches are preserved. See DESKTOP-SETUP.md for signing gates and pending native acceptance. No Mac or Windows public download is claimed before its artifact is verified.
+
+## Desktop regression, 11 November 2026
+Mac 0.4.0 device feedback exposed missing CodeMirror styles and unreliable Vim. Launch-only checks did not establish editor usability. Version 0.4.1 passes the bundled style nonce into CodeMirror and requires browser behavior tests plus native webview checks before packaging. Physical Mac/Windows acceptance remains required. Investigate the Windows download rejection with the exact Windows message; the current public file is a valid installer with a matching checksum.

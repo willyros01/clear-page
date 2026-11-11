@@ -67,3 +67,10 @@
 - Shared editor tests cover desktop Save/Exit failure and success.
 - Coordinated iPad TestFlight, desktop installers and Mac managed-signing/export workflow.
 - Public release and native acceptance are pending the recorded workflow results.
+
+## 0.4.1 — Desktop editor repair
+- Reuse Tauri's per-document style nonce for CodeMirror runtime styles. This preserves the desktop security policy and restores editor layout, whitespace, font sizing, highlighting and Vim panel styling.
+- Require Chromium/WebKit editing tests under the desktop nonce policy before desktop builds.
+- Add feature-gated checks in actual Mac and Windows webviews for layout, syntax colors, indentation and Vim; distribution builds exclude the verification bridge.
+- User reported Windows download rejection. The live 0.4.0 NSIS installer is a valid PE executable and matches its published SHA-256; the exact device error remains unconfirmed.
+- Native build and browser results are pending CI; no physical-device acceptance claimed.

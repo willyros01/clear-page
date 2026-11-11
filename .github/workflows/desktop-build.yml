@@ -22,6 +22,9 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+      - run: npx playwright install --with-deps chromium webkit
+      - name: Verify editing under the desktop security policy
+        run: npm run test:browser
   desktop:
     if: ${{ !contains(github.event.head_commit.message, '[signing-setup]') }}
     needs: editor
@@ -54,6 +57,38 @@ jobs:
           cache-on-failure: true
       - run: npm ci
       - run: npm run desktop:icons
+      - name: Build native editor verification binary
+        run: npm run tauri -- build --target ${{ matrix.target }} --no-bundle --features editor-verification
+      - name: Verify editing inside native Mac webview
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -euo pipefail
+          export ATE_VERIFICATION_REPORT="$RUNNER_TEMP/native-editor.txt"
+          src-tauri/target/universal-apple-darwin/release/ate-desktop &
+          ATE_PID=$!
+          for attempt in {1..60}; do
+            if [ -f "$ATE_VERIFICATION_REPORT" ]; then break; fi
+            sleep 1
+          done
+          if [ ! -f "$ATE_VERIFICATION_REPORT" ]; then kill "$ATE_PID" || true; exit 1; fi
+          cat "$ATE_VERIFICATION_REPORT"
+          wait "$ATE_PID"
+      - name: Verify editing inside native Windows webview
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $env:ATE_VERIFICATION_REPORT = Join-Path $env:RUNNER_TEMP 'native-editor.txt'
+          $app = Start-Process 'src-tauri/target/x86_64-pc-windows-msvc/release/ate-desktop.exe' -PassThru
+          if (!$app.WaitForExit(60000)) { Stop-Process -Id $app.Id; throw 'Native editor checks timed out' }
+          Get-Content $env:ATE_VERIFICATION_REPORT
+          if ($app.ExitCode -ne 0) { throw 'Native editor behavior failed' }
+      - name: Save native editor evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-editor-${{ runner.os }}
+          path: ${{ runner.temp }}/native-editor.txt
       - name: Build desktop installer
         run: npm run tauri -- build --target ${{ matrix.target }} --bundles ${{ matrix.bundle }}
       - name: Verify universal Mac binary and launch

@@ -27,11 +27,32 @@ fn exit_editor(app: tauri::AppHandle) {
     app.exit(0);
 }
 
+// The verification bridge is excluded from all distribution builds.
+#[cfg(feature = "editor-verification")]
+#[tauri::command]
+fn editor_verification_result(app: tauri::AppHandle, passed: bool, report: String) {
+    let path = std::env::var("ATE_VERIFICATION_REPORT").expect("Verification report path required");
+    std::fs::write(path, report).expect("Could not write verification report");
+    app.state::<ExitAllowed>().0.store(true, Ordering::SeqCst);
+    app.exit(if passed { 0 } else { 1 });
+}
+
 fn main() {
-    let app = tauri::Builder::default()
+    let builder = tauri::Builder::default()
         .manage(ExitAllowed(AtomicBool::new(false)))
         .plugin(tauri_plugin_dialog::init())
-        .invoke_handler(tauri::generate_handler![save_document, exit_editor])
+        ;
+    #[cfg(feature = "editor-verification")]
+    let builder = builder
+        .invoke_handler(tauri::generate_handler![save_document, exit_editor, editor_verification_result])
+        .on_page_load(|webview, payload| {
+            if matches!(payload.event(), tauri::webview::PageLoadEvent::Finished) {
+                let _ = webview.eval(include_str!("../../tests/native-editor.js"));
+            }
+        });
+    #[cfg(not(feature = "editor-verification"))]
+    let builder = builder.invoke_handler(tauri::generate_handler![save_document, exit_editor]);
+    let app = builder
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 if !window.state::<ExitAllowed>().0.load(Ordering::SeqCst) {
