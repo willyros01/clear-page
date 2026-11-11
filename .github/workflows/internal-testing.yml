@@ -1,0 +1,23 @@
+name: Clear Page internal testing
+on:
+  workflow_dispatch:
+  push:
+    branches: [ios]
+    paths: ['build/internal-testing.mjs', '.github/workflows/internal-testing.yml']
+permissions:
+  contents: read
+jobs:
+  internal-testing:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Configure authorized internal tester access
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: node build/internal-testing.mjs
