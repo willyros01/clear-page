@@ -1,4 +1,5 @@
 name: ATE Apple and Desktop
+# Developer ID website signing activated with the approved repository secret.
 on:
   workflow_dispatch:
   push:
@@ -140,7 +141,7 @@ jobs:
           path: mac-input
       - run: bash build/mac-release.sh ${{ matrix.channel }}
         env:
-          MAC_DEVELOPER_ID_SIGNING: ${{ secrets.MAC_DEVELOPER_ID_SIGNING }}
+          MAC_DEVELOPER_ID_SIGNING: ${{ matrix.channel == 'website' && secrets.MAC_DEVELOPER_ID_SIGNING || '' }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:
