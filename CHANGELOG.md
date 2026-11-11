@@ -5,7 +5,7 @@
 - Replaced the blank generated icon with the approved minimalist faceless writing figure and upright paper.
 - Removed Editor closed. Close clears the document, undo history, dialogs and keyboard focus without an extra page; iOS uses the Home gesture to leave the app.
 - Added close/discard/cancel and next-draft recovery regression coverage.
-- Signed release and internal tester assignment are in progress.
+- Version 0.3.2 (3) signed/uploaded, Apple processing VALID, and internal tester assignment verified. Simulator installation/launch passed; physical iPad acceptance pending.
 
 ## Internal TestFlight access
 - Enabled the verified Apple account holder in Clear Page Internal and assigned 0.3.1 (1).
