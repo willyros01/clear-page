@@ -1,6 +1,6 @@
 # Clear Page
 
-An accessible full-screen text and code editor, version 0.3.0.
+An accessible full-screen text and code editor, version 0.3.1.
 
 ## Build and run
 Use Node.js 22 or newer. Run `npm ci`, `npm test`, then `npm run build`. Serve the generated `dist/` directory using a static web server. Dependencies are bundled locally; the editor does not load CodeMirror from a CDN.
@@ -33,3 +33,5 @@ Menu now includes Search / Replace, Go to line, Select all, Copy, and Help. Sear
 Editing → Vim enables optional Vim key bindings; Standard remains the default. Esc returns to normal mode, i inserts, / searches, : starts an Ex command, :25 jumps to a line, and :%s/old/new/g replaces across the document. :w downloads, :q opens the exit choices, and :wq starts a download and exits. Vim yanks use an internal register; Copy uses the system clipboard.
 
 Menu → Help is the bundled online user guide, with topic links and command tables in large text. Browser checks verified Replace all, system clipboard content, Vim substitution and quit, returning to Standard mode, Help content, and go-to-line. Physical-device acceptance remains pending.
+
+0.3.1 fixes Vim command-input contrast and width, including explicit WebKit text-fill colors. Visual confirmation on iPad remains pending.
