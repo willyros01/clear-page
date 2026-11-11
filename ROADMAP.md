@@ -26,3 +26,6 @@ Baseline JavaScript syntax check passes. Earlier browser checks verified typing,
 
 ## 0.2.1 usability update
 Compact toolbar and explicit exit choices implemented and browser checked. iPad acceptance pending.
+
+## 0.2.2 usability update
+Switchable text/icon controls and editor text sizes down to 10pt implemented and browser checked.
