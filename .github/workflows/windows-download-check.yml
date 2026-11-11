@@ -58,8 +58,29 @@ jobs:
           $bytes = [IO.File]::ReadAllBytes($installer)
           if ($bytes.Length -ne $meta.windows.bytes -or $bytes[0] -ne 77 -or $bytes[1] -ne 90) { throw 'Invalid Windows executable' }
           $destination = Join-Path $env:RUNNER_TEMP 'ATE-public-installed'
-          $setup = Start-Process $installer -ArgumentList @('/S', "/D=$destination") -Wait -PassThru
-          if ($setup.ExitCode -ne 0) { throw "Public installer failed: $($setup.ExitCode)" }
+          Get-AuthenticodeSignature $installer | Select-Object Status,StatusMessage | Format-List
+          Get-Content $installer -Stream Zone.Identifier -ErrorAction SilentlyContinue
+          $installJob = Start-Job -ArgumentList $installer,$destination -ScriptBlock {
+            param($installer,$destination)
+            $setup = Start-Process $installer -ArgumentList @('/S', "/D=$destination") -Wait -PassThru
+            $setup.ExitCode
+          }
+          $finished = Wait-Job $installJob -Timeout 60
+          if (!$finished) {
+            Get-Process | Where-Object { $_.MainWindowTitle -or $_.Name -match 'smart|setup|ATE|msedge' } | Select-Object Name,Id,MainWindowTitle | Format-Table -AutoSize
+            Add-Type -AssemblyName System.Windows.Forms
+            Add-Type -AssemblyName System.Drawing
+            $bounds = [Windows.Forms.Screen]::PrimaryScreen.Bounds
+            $image = New-Object Drawing.Bitmap $bounds.Width,$bounds.Height
+            $graphics = [Drawing.Graphics]::FromImage($image)
+            $graphics.CopyFromScreen($bounds.Location,[Drawing.Point]::Empty,$bounds.Size)
+            $image.Save((Join-Path $env:RUNNER_TEMP 'windows-installer-block.png'))
+            $graphics.Dispose(); $image.Dispose()
+            throw 'Browser-downloaded installer did not complete within 60 seconds; desktop evidence captured'
+          }
+          $exitCode = Receive-Job $installJob -ErrorAction Stop
+          Remove-Job $installJob
+          if ($exitCode -ne 0) { throw "Public installer failed: $exitCode" }
           $exe = Join-Path $destination 'ATE.exe'
           if (!(Test-Path $exe)) { $exe = Join-Path $destination 'ate-desktop.exe' }
           $app = Start-Process $exe -PassThru
@@ -76,3 +97,4 @@ jobs:
           path: |
             ${{ runner.temp }}/public-windows-download.txt
             ${{ runner.temp }}/browser-download.txt
+            ${{ runner.temp }}/windows-installer-block.png
