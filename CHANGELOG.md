@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.1
+- Set explicit theme-aware text, WebKit text fill, caret and background colors for Vim command/search inputs.
+- Made command input width and minimum height explicit for readability.
+- Build and existing automated checks passed. Browser visual verification unavailable due to preview access restriction; physical iPad confirmation pending.
+
 ## 0.3.0
 - Added touch-sized search/replace controls, Go to line, Select all and system clipboard Copy with manual fallback.
 - Added optional Vim key bindings, Ex command line, save and exit integration.
