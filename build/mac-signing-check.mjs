@@ -8,6 +8,6 @@ const certificates=await get('certificates?limit=200');
 const versions=await get('apps/6833284199/appStoreVersions?filter[platform]=MAC_OS&limit=20');
 const result={certificateLookup:certificates.http,certificateTypes:[...new Set(certificates.data?.map(x=>x.attributes.certificateType)??[])],macPlatformLookup:versions.http,macVersions:versions.data?.map(x=>({version:x.attributes.versionString,state:x.attributes.appStoreState}))??[],
  signingSecrets:{developerId:!!process.env.MAC_DEVELOPER_ID_P12,appStoreApplication:!!process.env.MAC_APP_STORE_P12,appStoreInstaller:!!process.env.MAC_INSTALLER_P12},
- note:'Read-only check. Existing iOS cloud-managed signing does not expose an exportable Mac private key. No certificate was created or revoked.'};
+ note:'Read-only check. The Mac release jobs will attempt cloud-managed export with the existing Apple key. No certificate was created or revoked.'};
 writeFileSync('mac-signing-readiness.json',JSON.stringify(result,null,2)+'\n');console.log(JSON.stringify(result,null,2));
 if(process.env.GITHUB_STEP_SUMMARY)appendFileSync(process.env.GITHUB_STEP_SUMMARY,'### Mac signing readiness\n```json\n'+JSON.stringify(result,null,2)+'\n```\n');

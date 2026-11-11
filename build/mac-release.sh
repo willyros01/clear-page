@@ -26,7 +26,7 @@ ditto -x -k mac-input/ate-mac-app.zip "$RELEASE_DIR/input"
 export APP="$RELEASE_DIR/ATE.xcarchive/Products/Applications/ATE.app"
 mkdir -p "$(dirname "$APP")"
 ditto "$RELEASE_DIR/input/ATE.app" "$APP"
-lipo -verify_arch arm64 x86_64 "$APP/Contents/MacOS/ate-desktop"
+lipo "$APP/Contents/MacOS/ate-desktop" -verify_arch arm64 x86_64
 cp resources/PrivacyInfo.xcprivacy "$APP/Contents/Resources/PrivacyInfo.xcprivacy"
 python3 - <<'PY'
 import os,plistlib,pathlib,datetime

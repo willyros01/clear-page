@@ -34,3 +34,12 @@ Windows builds are initially unsigned: CI installation/launch is distinct from p
 - Generated icons, native targets, credentials and provisioning profiles are ignored.
 
 Release evidence and website availability are recorded below only after verification.
+
+## Verified checkpoint — 11 November 2026
+
+- Shared editor: 5 automated tests pass, including native Save cancellation/error and Save-and-Exit sequencing.
+- First coordinated run: https://github.com/willyros01/clear-page/actions/runs/43044237574
+- iPhone/iPad ATE 0.4.0 (1): uploaded, Apple VALID, assigned to the existing internal group. Build ID `e496280a-28d1-4569-a50a-ce2e9cf574b6`.
+- Windows x64: compilation, NSIS installation and installed-process launch passed in the first run. Physical-device acceptance remains pending.
+- macos-14 runner was cancelled before execution; corrected to macos-26. Follow-up run: https://github.com/willyros01/clear-page/actions/runs/43044688913
+- Apple read-only inventory succeeded; no existing Mac App Store version. Cloud-managed Mac export will be attempted; no certificate was revoked.

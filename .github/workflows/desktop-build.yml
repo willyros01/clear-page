@@ -49,6 +49,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri -> target
+          cache-on-failure: true
       - run: npm ci
       - run: npm run desktop:icons
       - name: Build desktop installer
@@ -59,7 +60,7 @@ jobs:
         run: |
           set -euo pipefail
           APP=src-tauri/target/universal-apple-darwin/release/bundle/macos/ATE.app
-          lipo -verify_arch arm64 x86_64 "$APP/Contents/MacOS/ate-desktop"
+          lipo "$APP/Contents/MacOS/ate-desktop" -verify_arch arm64 x86_64
           codesign --verify --deep --strict "$APP"
           "$APP/Contents/MacOS/ate-desktop" > "$RUNNER_TEMP/ate-mac-launch.log" 2>&1 &
           ATE_PID=$!
