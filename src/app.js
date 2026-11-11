@@ -1,3 +1,4 @@
+import {saveText,native} from './platform.js';
 
 import {createEditor, languageForName} from './editor.js';
 const $=id=>document.getElementById(id);
@@ -19,7 +20,8 @@ function setLanguage(id){$('language').value=id;editor.setLanguage(id)}
 $('language').onchange=()=>{editor.setLanguage($('language').value);persist()};
 $('indent').onclick=()=>editor.indent();$('unindent').onclick=()=>editor.unindent();
 $('smaller').onclick=()=>setFont(font-1);$('larger').onclick=()=>setFont(font+1);$('fontSize').oninput=()=>{const value=$('fontSize').valueAsNumber;if(Number.isFinite(value)&&value>=10&&value<=54){font=value;$('editor').style.fontSize=font+'pt';$('smaller').disabled=font<=10;$('larger').disabled=font>=54;persistPreferences();persist()}};$('fontSize').onchange=()=>setFont($('fontSize').valueAsNumber);$('buttonStyle').onchange=()=>{applyButtonStyle();persistPreferences()};$('theme').onclick=()=>{document.body.classList.toggle('dark');themeLabel();persistPreferences();persist()};
-function save(){let name=$('name').value.trim()||'Untitled.txt';if(!/\.[a-z0-9]+$/i.test(name))name+='.txt';const blob=new Blob([editor.value],{type:'text/plain;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);dirty=false;notice('File download started. Your draft is also kept in this browser.');persist()}
+let saving=false;
+async function save(){if(saving)return false;saving=true;try{let name=$('name').value.trim()||'Untitled.txt';if(!/\.[a-z0-9]+$/i.test(name))name+='.txt';notice(await saveText(editor.value,name));dirty=false;persist();return true}catch(e){notice('Save was cancelled or could not complete. Your draft is kept.');return false}finally{saving=false}}
 $('save').onclick=save;
 $('menuButton').onclick=()=>{$('menu').showModal()};
 $('closeMenu').onclick=()=>{$('menu').close();editor.focus()};
@@ -29,11 +31,11 @@ function closeEditor(saved){
  try{if(!saved)localStorage.removeItem(key)}catch(e){notice('Could not discard the browser draft. Please keep editing or clear this site’s browser data.');$('exitDialog').close();return}
  closed=true;loading=true;editor.value='';loading=false;dirty=false;counts();
  $('exitDialog').close();leave();document.body.classList.add('closed');$('closed').hidden=false;
- $('closedMessage').textContent=saved?'File download started. Check your Downloads or Files app.':'The browser draft was discarded.';
+ $('closedMessage').textContent=saved?(native?'Save/share sheet closed. Your recovery draft is kept.':'File download started. Check your Downloads or Files app.'):'The browser draft was discarded.';
  $('restart').focus();
 }
 $('discardExit').onclick=()=>closeEditor(false);
-$('saveExit').onclick=()=>{save();closeEditor(true)};
+$('saveExit').onclick=async()=>{if(await save())closeEditor(true)};
 $('restart').onclick=()=>{closed=false;$('closed').hidden=true;document.body.classList.remove('closed');$('name').value='Untitled.txt';setLanguage('plain');notice('');persist();editor.focus()};
 
 function guard(action,title){if(editor.value){pending=action;$('dialogTitle').textContent=title;$('confirm').showModal()}else action()}
@@ -58,4 +60,4 @@ $('copy').onclick=async()=>{const text=editor.selectedText();if(!text){$('menu')
 $('closeCopy').onclick=()=>{$('copyDialog').close();editor.focus()};
 $('helpButton').onclick=()=>{$('menu').close();$('help').showModal();$('help').scrollTop=0};
 $('closeHelp').onclick=()=>{$('help').close();editor.focus()};
-editor.commands(save,()=>{$('exitDialog').showModal()},()=>{save();closeEditor(true)});
+editor.commands(save,()=>{$('exitDialog').showModal()},async()=>{if(await save())closeEditor(true)});
