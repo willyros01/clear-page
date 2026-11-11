@@ -73,11 +73,23 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GITHUB_TOKEN: ${{ github.token }}
+      SOURCE_RUN: ${{ inputs.source_run || '43088542493' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Preserve publication of the verified Windows source build
+        run: |
+          node --input-type=module <<'JS'
+          let ready=false;
+          for(let attempt=0;attempt<10;attempt++){
+            const r=await fetch('https://www.cuberoot-systems.com/downloads/ate-desktop-build.json?check='+Date.now(),{cache:'no-store'});
+            if(r.ok&&(await r.json()).windows?.run_id>=Number(process.env.SOURCE_RUN)){ready=true;break}
+            await new Promise(resolve=>setTimeout(resolve,30000));
+          }
+          if(!ready)throw Error('Source Windows publication still pending; preserve its report');
+          JS
       - run: node build/desktop-report.mjs
       - name: Publish verified signing result
         run: |

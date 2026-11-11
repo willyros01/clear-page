@@ -99,8 +99,8 @@ else
  SIGNED_APP="$RELEASE_DIR/export/ATE.app"
  test -d "$SIGNED_APP"
  codesign --verify --deep --strict "$SIGNED_APP"
- codesign -dv "$SIGNED_APP" 2> "$RELEASE_DIR/signature.txt"
- grep -q 'Authority=Developer ID Application:' "$RELEASE_DIR/signature.txt"
+ codesign -d --verbose=4 "$SIGNED_APP" 2> "$RELEASE_DIR/signature.txt"
+ grep -q 'Authority=Developer ID Application:' "$RELEASE_DIR/signature.txt" || { cat "$RELEASE_DIR/signature.txt"; echo 'Developer ID authority verification failed'; exit 1; }
  grep -q "TeamIdentifier=$APPLE_TEAM_ID" "$RELEASE_DIR/signature.txt"
  mkdir -p public-desktop
  DMG="public-desktop/ATE-$VERSION-universal.dmg"
