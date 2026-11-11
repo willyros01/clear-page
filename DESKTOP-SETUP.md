@@ -29,7 +29,7 @@ Windows builds are initially unsigned: CI installation/launch is distinct from p
 - `npm ci && npm test && npm run build`
 - Install the official Rust stable toolchain and platform prerequisites.
 - `npm run desktop:icons` derives native icons from the approved ATE image.
-- macOS: `npm run tauri -- build --target universal-apple-darwin --bundles dmg`
+- macOS: `npm run tauri -- build --target universal-apple-darwin --bundles app,dmg`
 - Windows: `npm run tauri -- build --target x86_64-pc-windows-msvc --bundles nsis`
 - Generated icons, native targets, credentials and provisioning profiles are ignored.
 
@@ -43,3 +43,14 @@ Release evidence and website availability are recorded below only after verifica
 - Windows x64: compilation, NSIS installation and installed-process launch passed in the first run. Physical-device acceptance remains pending.
 - macos-14 runner was cancelled before execution; corrected to macos-26. Follow-up run: https://github.com/willyros01/clear-page/actions/runs/43044688913
 - Apple read-only inventory succeeded; no existing Mac App Store version. Cloud-managed Mac export will be attempted; no certificate was revoked.
+
+## Current release result
+
+- Universal Mac build, arm64/x86_64 verification, ad-hoc signature verification and launch all PASS in run 43048900046.
+- Native Mac TestFlight 0.4.0 (5): Apple VALID and assigned to the existing internal group. Build ID `c0d6b164-554d-499d-a995-90ac0df192a8`. macOS was added to the existing ATE app; App Review was not submitted.
+- Windows 0.4.0: installed/launched in CI and automatically published on Cuberoot. The installer is unsigned and labelled accordingly.
+- Website Mac export: BLOCKED by `Cloud signing permission error` / missing `Developer ID Application` certificate. No unsigned preview is linked publicly.
+- A manual website-signing path now accepts one repository secret, `MAC_DEVELOPER_ID_SIGNING`, containing JSON fields `p12` (base64 PKCS#12 certificate/private key) and `password`. It imports only into an ephemeral keychain, verifies a Developer ID Application identity for team VXMLKHF72B, signs with hardened runtime, then requires notarization and stapling. Existing ASC credentials handle notarization.
+- Apple Developer certificate form is prepared with the public ATE CSR. Creation of the new signing credential and storing its private signing package as a GitHub repository secret require the user's explicit confirmation before those browser actions. No certificate has been created at this checkpoint.
+- After the secret is configured, a normal `[desktop-only]` workflow change rebuilds/verifies both architectures and exports both Mac channels. `[signing-setup]` commits validate shared tests while skipping native rebuilds and report replacement.
+- Physical iPad, Windows and Mac acceptance remain distinct from CI launch and automated editor tests.

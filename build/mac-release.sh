@@ -9,7 +9,8 @@ export BUILD="${GITHUB_RUN_NUMBER:?}"
 export RELEASE_DIR="$RUNNER_TEMP/ate-mac-$CHANNEL"
 mkdir -p "$RELEASE_DIR"
 KEY_DIR=$(mktemp -d "$RUNNER_TEMP/ate-mac-key.XXXXXX")
-trap 'rm -rf "$KEY_DIR"' EXIT
+cleanup(){ if [ -f "$KEY_DIR/signing.keychain-db" ]; then security delete-keychain "$KEY_DIR/signing.keychain-db" >/dev/null 2>&1 || true; fi; rm -rf "$KEY_DIR"; }
+trap cleanup EXIT
 export KEY_DIR CHANNEL
 node --input-type=module <<'JS'
 import {writeFileSync} from 'node:fs';
@@ -48,8 +49,38 @@ PY
 codesign --force --sign - --options runtime --entitlements "$RELEASE_DIR/Entitlements.plist" "$APP"
 codesign --verify --deep --strict "$APP"
 if [ "$CHANNEL" = testflight ]; then node build/mac-platform.mjs; fi
-xcodebuild -exportArchive -archivePath "$RELEASE_DIR/ATE.xcarchive" -exportPath "$RELEASE_DIR/export" \
- -exportOptionsPlist "$RELEASE_DIR/ExportOptions.plist" "${AUTH[@]}" > "$RELEASE_DIR/export.log" 2>&1 || { tail -90 "$RELEASE_DIR/export.log"; exit 1; }
+if [ "$CHANNEL" = website ] && [ -n "${MAC_DEVELOPER_ID_SIGNING:-}" ]; then
+ # This identity is a dedicated website signing certificate, kept only in the
+ # repository secret. It is never logged, uploaded as an artifact or committed.
+ node --input-type=module <<'JS'
+import {writeFileSync} from 'node:fs';
+let m;try{m=JSON.parse(process.env.MAC_DEVELOPER_ID_SIGNING)}catch{throw Error('Mac signing package could not be parsed')}
+if(typeof m?.p12!=='string'||typeof m?.password!=='string'||m.password.length<20)throw Error('Invalid Mac signing package');
+writeFileSync(process.env.KEY_DIR+'/certificate.p12',Buffer.from(m.p12,'base64'),{mode:0o600});
+writeFileSync(process.env.KEY_DIR+'/password',m.password,{mode:0o600});
+JS
+ KEYCHAIN_PASSWORD=$(openssl rand -hex 32)
+ KEYCHAIN="$KEY_DIR/signing.keychain-db"
+ CERT_PASSWORD=$(cat "$KEY_DIR/password")
+ security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN" >/dev/null
+ security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+ security set-keychain-settings -lut 3600 "$KEYCHAIN"
+ security import "$KEY_DIR/certificate.p12" -k "$KEYCHAIN" -P "$CERT_PASSWORD" -T /usr/bin/codesign >/dev/null
+ curl --max-time 60 -fsSL https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer -o "$KEY_DIR/intermediate.cer"
+ security import "$KEY_DIR/intermediate.cer" -k "$KEYCHAIN" >/dev/null
+ security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" >/dev/null
+ IDENTITY=$(security find-identity -v -p codesigning "$KEYCHAIN" | awk '/Developer ID Application:.*\(VXMLKHF72B\)/ {print $2}')
+ test -n "$IDENTITY"
+ test "$(printf '%s\n' "$IDENTITY" | wc -l | tr -d ' ')" = 1
+ mkdir -p "$RELEASE_DIR/export"
+ ditto "$APP" "$RELEASE_DIR/export/ATE.app"
+ codesign --force --sign "$IDENTITY" --keychain "$KEYCHAIN" --timestamp --options runtime "$RELEASE_DIR/export/ATE.app"
+ codesign --verify --deep --strict "$RELEASE_DIR/export/ATE.app"
+ unset CERT_PASSWORD KEYCHAIN_PASSWORD
+else
+ xcodebuild -exportArchive -archivePath "$RELEASE_DIR/ATE.xcarchive" -exportPath "$RELEASE_DIR/export" \
+  -exportOptionsPlist "$RELEASE_DIR/ExportOptions.plist" "${AUTH[@]}" > "$RELEASE_DIR/export.log" 2>&1 || { tail -90 "$RELEASE_DIR/export.log"; exit 1; }
+fi
 if [ "$CHANNEL" = testflight ]; then
  export APPLE_PLATFORM=MAC_OS
  node build/apple-build-status.mjs

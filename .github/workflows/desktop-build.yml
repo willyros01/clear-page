@@ -22,6 +22,7 @@ jobs:
       - run: npm test
       - run: npm run build
   desktop:
+    if: ${{ !contains(github.event.head_commit.message, '[signing-setup]') }}
     needs: editor
     strategy:
       fail-fast: false
@@ -138,6 +139,8 @@ jobs:
           name: ate-mac-universal-preview
           path: mac-input
       - run: bash build/mac-release.sh ${{ matrix.channel }}
+        env:
+          MAC_DEVELOPER_ID_SIGNING: ${{ secrets.MAC_DEVELOPER_ID_SIGNING }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -174,7 +177,7 @@ jobs:
           name: ate-ipad-release-evidence
           path: ${{ runner.temp }}/clear-page-release/*.log
   report:
-    if: always()
+    if: ${{ always() && !contains(github.event.head_commit.message, '[signing-setup]') }}
     needs: [desktop, mac-release, ipad-testflight]
     runs-on: ubuntu-latest
     env:
