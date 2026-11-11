@@ -67,5 +67,10 @@ else
  node -e 'if(require(process.argv[1]).status!=="Accepted")throw Error("Notarization was not accepted")' "$RELEASE_DIR/notary.json"
  xcrun stapler staple "$DMG"
  xcrun stapler validate "$DMG"
+ node --input-type=module <<'JS'
+import {readFileSync,writeFileSync} from 'node:fs';import {createHash} from 'node:crypto';
+const name='ATE-'+process.env.VERSION+'-universal.dmg',bytes=readFileSync('public-desktop/'+name);
+writeFileSync('public-desktop/manifest.json',JSON.stringify({app:'ATE',platform:'mac-universal',version:process.env.VERSION,run_id:Number(process.env.GITHUB_RUN_ID),source_sha:process.env.GITHUB_SHA,file:name,sha256:createHash('sha256').update(bytes).digest('hex'),bytes:bytes.length,team_id:process.env.APPLE_TEAM_ID,signature:'developer-id',notarization:'Accepted',stapled:true},null,2)+'\n');
+JS
  echo 'PASS: Developer ID-signed universal Mac DMG notarized and stapled.' >> "$GITHUB_STEP_SUMMARY"
 fi

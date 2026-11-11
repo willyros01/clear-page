@@ -5,9 +5,9 @@ on:
     branches: [desktop]
     paths: ['src/**', 'src-tauri/**', 'index.html', 'package*.json', 'build/**', 'scripts/**', 'tests/**', '.github/workflows/desktop-build.yml']
 permissions:
-  contents: read
+  contents: write
 concurrency:
-  group: ate-desktop-release
+  group: ate-desktop-${{ github.run_id }}
   cancel-in-progress: false
 jobs:
   editor:
@@ -27,7 +27,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-14
+          - os: macos-26
             target: universal-apple-darwin
             bundle: dmg
             artifact: ate-mac-universal-preview
@@ -84,13 +84,11 @@ jobs:
           if ($app.HasExited) { throw 'Installed editor exited unexpectedly' }
           Stop-Process -Id $app.Id
           'PASS: Windows installer and installed application launch. Unsigned installer; physical-device acceptance pending.' >> $env:GITHUB_STEP_SUMMARY
+      - run: node build/stage-desktop.mjs
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
-          path: |
-            src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg
-            src-tauri/target/${{ matrix.target }}/release/bundle/nsis/*.exe
-            ate-mac-app.zip
+          path: desktop-artifacts/*
           if-no-files-found: error
   apple-readiness:
     needs: editor
@@ -143,10 +141,11 @@ jobs:
         with:
           name: ate-mac-${{ matrix.channel }}-release
           path: |
-            public-desktop/*.dmg
+            public-desktop/*
             ${{ runner.temp }}/ate-mac-${{ matrix.channel }}/*.log
             ${{ runner.temp }}/ate-mac-${{ matrix.channel }}/notary.json
   ipad-testflight:
+    if: ${{ !contains(github.event.head_commit.message, '[desktop-only]') }}
     needs: editor
     runs-on: macos-26
     timeout-minutes: 45
@@ -172,3 +171,33 @@ jobs:
         with:
           name: ate-ipad-release-evidence
           path: ${{ runner.temp }}/clear-page-release/*.log
+  report:
+    if: always()
+    needs: [desktop, mac-release, ipad-testflight]
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node build/desktop-report.mjs
+      - name: Publish release result for Cuberoot
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp desktop-report/ate-desktop-last-run.json "$RUNNER_TEMP/ate-desktop-last-run.json"
+          git fetch origin desktop-releases || true
+          if git show-ref --verify --quiet refs/remotes/origin/desktop-releases; then
+            git checkout -B desktop-releases origin/desktop-releases
+          else
+            git checkout --orphan desktop-releases
+            git rm -rf .
+          fi
+          cp "$RUNNER_TEMP/ate-desktop-last-run.json" ate-desktop-last-run.json
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ate-desktop-last-run.json
+          git commit -m "Record ATE desktop run $GITHUB_RUN_ID"
+          git push origin HEAD:desktop-releases
