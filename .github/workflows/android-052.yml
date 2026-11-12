@@ -15,6 +15,7 @@ env:
   ATE_BUILD_NUMBER: "17"
 jobs:
   browser:
+    if: ${{ !contains(github.event.head_commit.message, '[diagnostics-only]') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -134,3 +135,32 @@ jobs:
             android/app/build/outputs/androidTest-results/**
 
 # Reverify Android 11 WebView and commit the native filename before Save.
+
+  diagnose:
+    if: ${{ contains(github.event.head_commit.message, '[diagnostics-only]') }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: ate-android-native-evidence
+          run-id: 43173987051
+          github-token: ${{ github.token }}
+          path: diagnosis
+      - name: Show exact native callback and picker state
+        run: |
+          python - <<'PY'
+          import pathlib,json,xml.etree.ElementTree as E
+          root=pathlib.Path('diagnosis')
+          report=json.loads((root/'android-webview-report.json').read_text())
+          print('WEBVIEW',report['passed'],len(report['checks']),report.get('error'))
+          tree=E.parse(root/'android-ui.xml')
+          for n in tree.iter('node'):
+              if n.get('text') or n.get('content-desc'):
+                  print('UI',n.attrib)
+          for line in (root/'android-logcat.txt').read_text().splitlines():
+              if any(k in line for k in ['pluginId: DocumentFiles','pluginId":"DocumentFiles"','Capacitor/Console','CreateDocument','DocumentsActivity','Could not finish','Failed to create document']):
+                  print(line)
+          PY
