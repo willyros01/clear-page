@@ -1,11 +1,10 @@
 {
   "app": "ATE",
-  "workflow": "ATE Apple and Desktop",
-  "branch": "desktop",
-  "version": "0.4.1",
-  "run_id": 43103034568,
-  "source_sha": "465e0ef847044340769a7708c75823ba9f4308d2",
-  "windows_artifact_id": null,
-  "mac_artifact_id": 13891264730,
-  "created_at": "2026-11-11T21:27:16.540Z"
+  "workflow": "ATE Windows website release",
+  "branch": "windows-compiler",
+  "run_id": 43153549631,
+  "source_sha": "be6218506efe19132324fcf223a16c6a3a52a85e",
+  "version": "0.5.1",
+  "windows_artifact_id": 13915442343,
+  "mac_artifact_id": null
 }
