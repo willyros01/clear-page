@@ -1,6 +1,7 @@
 # Changelog
 
 ## 0.5.2 — control sizing and Android file manager
+- Added a read-only Apple availability audit: both 0.5.2 (17) builds were confirmed IN_BETA_TESTING in run 43211972237 after the owner reported missing updates. Device visibility/notification delivery remains unverified.
 - Menus, configuration, search and syntax messages use 12pt text, headings at most 14pt. Document text keeps its independent 36px default and 10–54pt adjustment.
 - Android/Fire Open and Save use native document pickers; cancellation preserves the draft, and Save confirms the actual UTF-8 write.
 - Android 11 emulator verified the shared editor, save/cancel/reopen and exact saved bytes. Production excludes the verification driver and uses the permanent signer.

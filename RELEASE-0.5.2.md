@@ -53,3 +53,7 @@ Source: `74e92a55837c90546e80b7249166f1262a27fc2f`.
 Automated native checks establish results for their named environments. They do not establish acceptance on the owner's physical Fire HD 8, iPad/iPhone, Mac or Windows device. Install/update, Android storage-provider behavior, touch/hardware-keyboard editing, save/reopen and syntax checks remain physical acceptance items. TestFlight processing and internal availability do not imply a public App Store release or Apple review approval.
 
 Mac guided compiler installation and separately planned language checkers remain tracked in TODO.md.
+
+## TestFlight availability recheck — 12 November 2026
+
+After the owner reported no new build appearing, [read-only Apple audit 43211972237](https://github.com/willyros01/clear-page/actions/runs/43211972237) confirmed both 0.5.2 (17) builds remain VALID, unexpired, assigned to Clear Page Internal, and IN_BETA_TESTING. The existing tester is INSTALLED; autoNotifyEnabled is true for both builds. This verifies Apple-side availability, not notification delivery or visibility on the owner's devices. The next device check is TestFlight → ATE → version 0.5.2 (17) under the registered tester Apple Account.

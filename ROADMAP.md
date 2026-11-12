@@ -98,3 +98,6 @@ Implementing and verifying the approved optional LLVM-MinGW setup for Windows we
 
 ATE **0.5.2 (17)** is processed VALID and assigned to the existing internal TestFlight groups for iPhone/iPad and universal Mac. Verified 0.5.2 Mac, Windows and Android downloads are published on Cuberoot. See [RELEASE-0.5.2.md](RELEASE-0.5.2.md) for exact build sources, native test runs, signatures and public-download hashes. Physical-device acceptance remains separate.
 All native control-sizing and editor gates passed. Android 11 native verification additionally covered the system document pickers, cancellation, saving exact UTF-8 bytes and reopening. Source branches share the approved editor and thin native adapters. See TODO.md for remaining physical acceptance and Mac guided compiler setup.
+
+## TestFlight visibility audit
+12 November 2026: read-only run 43211972237 confirmed both iOS and Mac 0.5.2 (17) are IN_BETA_TESTING, VALID, unexpired and assigned to the existing installed tester. Notification delivery and device UI visibility were not verified. Added a read-only availability workflow for future checks; no binaries rebuilt or tester recipients changed.
