@@ -4,7 +4,7 @@ Last updated: 2026-11-11 (America/Toronto).
 
 ## Progress
 
-Implementation is committed on `syntax-checking`, reviewed through [PR #1](https://github.com/willyros01/clear-page/pull/1). **11 of 12 tasks verified within their documented scope**. SYN-12 remains in progress for installer/iPad/physical acceptance and release. Production downloads remain 0.4.1.
+Implementation is committed on `syntax-checking`, reviewed through [PR #1](https://github.com/willyros01/clear-page/pull/1). **11 of 13 tasks verified within their documented scope**. SYN-12 remains in progress for installer/iPad/physical acceptance and release; SYN-13 tracks the newly approved optional compiler download/setup. Production downloads remain 0.4.1.
 
 Statuses: Pending → In progress → Implemented → Verified. Assessed records a documented feasibility decision. Use Blocked when a dependency prevents work. Mark a task Verified only with evidence; automated checks and physical-device acceptance must be recorded separately. Update this table and the progress log with each change.
 
@@ -12,7 +12,7 @@ Statuses: Pending → In progress → Implemented → Verified. Assessed records
 
 - Add code checking based on document language, distinct from syntax highlighting and indentation already available in several modes.
 - Initial target: JavaScript, JSON, HTML, CSS, YAML and C. Additional candidates: TypeScript, Python, SQL and Markdown.
-- C desktop recommendation: Clang/LLVM; Apple Command Line Tools on Mac, LLVM-MinGW on Windows. Tools are free. Compiler integration, packaging and licensing review remain pending.
+- C desktop recommendation: Clang/LLVM; Apple Command Line Tools on Mac, LLVM-MinGW on Windows. Compiler integration is implemented; optional download/setup and distribution acceptance remain pending.
 - Keep ATE proprietary. Retain required third-party licenses/notices; do not change ATE's license.
 - Prefer local/offline checking. Do not execute user programs as part of checking or upload document contents.
 - Keep shared editor behavior with thin native adapters. Preserve 36px default text, adjustable sizing, themes and Vim behavior.
@@ -35,6 +35,8 @@ Statuses: Pending → In progress → Implemented → Verified. Assessed records
 | SYN-11 | Assess TypeScript, Python, SQL, Markdown and iPad C checking. | Verified (assessment) | TypeScript syntax implemented; Python ast.parse and Markdown lint candidates assessed; SQL dialect and iPad C deferred explicitly. |
 | SYN-12 | Verify, document and release approved changes across platforms. | In progress | Record automated results, native Mac/Windows checks and physical acceptance separately; update Help, ROADMAP and CHANGELOG before publication. |
 
+| SYN-13 | Offer optional free compiler download/setup when C checking cannot find Clang. | Pending | Implement the flow below; validate downloads, cancellation, automatic detection and platform restrictions. |
+
 ## Acceptance record
 
 [Verification run 43134841430](https://github.com/willyros01/clear-page/actions/runs/43134841430) passed all three jobs on code commit `75a55d599d493a4c3071ef5e438e736b2c51b899`:
@@ -51,6 +53,7 @@ No physical-device syntax-checking acceptance yet. Existing Windows 0.4.1 accept
 
 | Date | Update | Evidence |
 | --- | --- | --- |
+| 2026-11-11 | Owner approved optional compiler download/setup; added SYN-13 and its acceptance criteria. | Planning recorded; no downloader or installer implemented or invoked. |
 | 2026-11-11 | Implementation and feasibility tasks SYN-01 through SYN-11 verified; release task remains open. | Runs 43133614516, 43134348229 and final 43134841430 passed; final run also passed the Mac sandbox probe. |
 | 2026-11-11 | Implementation authorized; added parser workers, diagnostics UI, C adapter/settings and verification workflow. | Local tests pass; native/browser CI pending. |
 | 2026-11-11 | Created tracked plan at the owner's request; selected Clang/LLVM as the recommended free desktop C compiler approach. | Planning only; all 12 implementation tasks Pending. |
@@ -66,7 +69,7 @@ No physical-device syntax-checking acceptance yet. Existing Windows 0.4.1 accept
 
 - SYN-01–06: language detection/manual selection, 26px issue list with jump-to-error, underlines, debounced worker checks, manual checks, stale-result cancellation and size/time limits are implemented. JavaScript/TypeScript/JSON/YAML/HTML/CSS use bundled offline parsers.
 - SYN-07–09: C mode/standard and native Clang syntax-only adapter are implemented, with stdin for unsaved text, optional source folder, include directories and macros. Native checks are serialized and bounded; no source files or executables are produced. Five Rust integration tests cover real standard/project headers, macros, invalid code and setup validation. Compiler/project selection is session-only.
-- SYN-10: use an existing user-installed compiler for this release. Mac: Apple Command Line Tools; Windows: LLVM-MinGW. No compiler or SDK is redistributed and no paid signing service is activated. ATE remains proprietary. Bundled JS package licenses are recorded in THIRD-PARTY-NOTICES.txt and included in the app assets.
+- SYN-10: the implemented baseline uses an existing user-installed compiler. SYN-13 adds the approved optional download/setup path; it is not implemented yet. Mac: Apple Command Line Tools; Windows: LLVM-MinGW. No compiler or SDK is redistributed and no paid signing service is activated. ATE remains proprietary. Bundled JS package licenses are recorded in THIRD-PARTY-NOTICES.txt and included in the app assets.
 - SYN-11: TypeScript syntax checking implemented; type checking deferred. Python candidate: a user-installed CPython `ast.parse` adapter (must parse the buffer without executing it). SQL requires a chosen dialect and matching validator before a checker can be promised. Markdown candidate: markdownlint, with selected document-style rules rather than compiler syntax checks. These three retain highlighting only. iPad C needs an evaluated on-device compiler/runtime; no remote service or embedded compiler added.
 - SYN-12: version 0.5.0 prepared; Help updated; isolated browser/native verification workflow added. Release and physical acceptance remain outstanding.
 
@@ -79,3 +82,16 @@ No physical-device syntax-checking acceptance yet. Existing Windows 0.4.1 accept
 - [ ] Publish the accepted release and update the release record.
 
 No 0.5.0 installer, TestFlight upload or website publication has been performed by this implementation task.
+
+## Optional compiler download/setup (SYN-13)
+
+Approved product behavior: when an explicit C check cannot find Clang, show a large, readable **Get free C compiler** action alongside **Choose installed compiler** and **Later**. Keep the editor usable without a compiler; never label an unavailable check as successful. Do not download or install automatically at app launch or file open.
+
+- **Mac:** guide the user through Apple's official Command Line Tools setup. The operating system handles installation, licensing and any credentials it requires. Detect the completed install and retry the check only after setup succeeds. Do not rehost Apple's SDK or promise a silent installation. Verify the website and sandboxed TestFlight editions separately.
+- **Windows:** offer an optional LLVM-MinGW toolchain download from the official upstream release. Select an appropriate architecture/version, show download size and destination, verify a pinned trusted SHA-256 before extraction/use, retain license notices, and configure ATE to use the selected local compiler. Prefer app-private storage with no system PATH changes or administrator requirement; verify that this packaging approach works before promising it. Never execute partially downloaded or unverified files.
+- **Both:** support progress, cancellation, network interruption, retry, insufficient disk space and setup failure. Preserve the document throughout. After setup, verify the compiler identity/version and a simple standard-header fixture before reporting C checking ready.
+- Existing compiler detection stays the first option. Downloading is optional; the editor and bundled non-C checkers remain available when the user chooses Later. No paid service or account is part of ATE's compiler setup.
+
+Acceptance evidence must cover missing/existing compilers, a successful official download/setup, wrong checksum, cancellation/interrupted downloads, unsupported platform/architecture, successful re-detection, and C diagnostics after setup. Licensing, download size and exact clean-machine Windows setup are recorded before release.
+
+**Status: planned only.** No compiler download, installation or new build was performed for this decision.

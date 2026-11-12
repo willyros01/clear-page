@@ -73,3 +73,6 @@ See [TODO.md](TODO.md) for language-aware syntax checking, free Clang/LLVM integ
 Implementation is on `syntax-checking`: shared parser workers and readable diagnostics, C Clang adapter/settings, additional language modes and bundled license notices. See TODO.md for per-task progress and remaining browser/native/device acceptance. Production downloads remain 0.4.1 pending verification.
 
 Verification checkpoint: SYN-01–11 are verified at the scope recorded in TODO.md. Final run 43134841430 passed Chromium/WebKit, native Mac/Windows and a Mac sandbox probe. Implementation is in PR #1; 0.5.0 packaging, physical acceptance and publication remain outstanding.
+
+## Optional C compiler setup approved
+SYN-13 in TODO.md tracks an optional missing-compiler offer: official Apple Command Line Tools setup on Mac, or a verified official LLVM-MinGW download on Windows. Keep Later and Choose installed compiler options; no automatic install at launch. This is planned, not implemented.

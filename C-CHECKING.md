@@ -39,3 +39,6 @@ Only the editor buffer is passed to the compiler, through standard input. Includ
 ## Licensing
 
 ATE remains proprietary. This version uses the user's compiler rather than redistributing Clang or an Apple/Windows SDK. The bundled JavaScript packages retain their own licenses, included in THIRD-PARTY-NOTICES.txt. Any future compiler bundle needs a separate review of the exact compiler, runtime, headers, SDK and notices before distribution.
+
+## Planned optional setup
+The owner approved adding a Get free C compiler action when Clang is missing. Mac setup will use Apple’s official installation flow; Windows setup will use a verified official LLVM-MinGW download, with progress/cancel and subsequent compiler detection. Later keeps editing available without a compiler. This optional setup is not implemented yet; see SYN-13 in TODO.md.
