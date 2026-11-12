@@ -36,11 +36,14 @@ Only the editor buffer is passed to the compiler, through standard input. Includ
 - Checks are limited to 512K characters, 32 include directories, 32 macros, 10 seconds of compiler time and bounded diagnostic output. Stale results are ignored, and requests are serialized.
 - No arbitrary compiler flags, shell commands, plugins or build scripts are accepted by this integration. A compiler selected through the native file chooser must be a trusted local executable.
 - Checks stay on the device. ATE does not send source text to a remote compiler.
-- iPad/web basic structural C checks are being added with bundled Tree-sitter C/Wasm. No compiler download is needed there. Header resolution, macro expansion, type checking and C-standard conformance remain desktop compiler features.
+- iPad/iPhone, Android and web basic structural C checks use bundled Tree-sitter C/Wasm. No compiler download is needed there. Header resolution, macro expansion, type checking and C-standard conformance remain desktop compiler features.
 
 ## Licensing
 
 ATE remains proprietary. This version uses the user's compiler rather than redistributing Clang or an Apple/Windows SDK. The bundled JavaScript packages retain their own licenses, included in THIRD-PARTY-NOTICES.txt. Any future compiler bundle needs a separate review of the exact compiler, runtime, headers, SDK and notices before distribution.
 
-## Planned optional setup
-The owner approved adding a Get free C compiler action when Clang is missing. Mac setup will use Apple’s official installation flow; Windows setup will use a verified official LLVM-MinGW download, with progress/cancel and subsequent compiler detection. Later keeps editing available without a compiler. This optional setup is not implemented yet; see SYN-13 in TODO.md.
+## Optional Windows setup
+
+Get free C compiler offers an explicit official LLVM-MinGW download with progress/cancel, Later and Choose installed compiler. The pinned 20261104 package is 191,037,046 bytes; SHA-256 `552191b5754c49a5a20723276a6fc56541ea1922c4c50b7b669022333fc1b40f`. ATE requires 3 GB free space, verifies archive integrity and standard headers, retains licenses and installs privately for ATE without administrator access or PATH changes.
+
+Run 43168469203 verified official installation/detection, diagnostics, checksum rejection, unsafe archives, cancellation and the actual Windows installer/native editor. Mac guided setup remains pending; use Apple's official Command Line Tools and an installed Clang meanwhile. See TODO.md and RELEASE-0.5.2.md.

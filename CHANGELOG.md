@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.2 — control sizing and Android file manager
+- Menus, configuration, search and syntax messages use 12pt text, headings at most 14pt. Document text keeps its independent 36px default and 10–54pt adjustment.
+- Android/Fire Open and Save use native document pickers; cancellation preserves the draft, and Save confirms the actual UTF-8 write.
+- Android 11 emulator verified the shared editor, save/cancel/reopen and exact saved bytes. Production excludes the verification driver and uses the permanent signer.
+- Rebuilt iPad/universal Mac TestFlight 0.5.2 (17), Windows installer, notarized universal Mac installer and signed Android APK. Public website downloads match release hashes.
+- Older WebView workers receive Object.hasOwn/String.replaceAll fallbacks; issue-list clearing avoids unsupported replaceChildren.
+- Retained syntax checks, indentation, Vim and optional verified Windows Clang setup. Physical acceptance remains separate; see RELEASE-0.5.2.md.
+
 ## 0.5.1 — Windows optional C compiler setup
 - Added an explicit optional LLVM-MinGW download/install with pinned SHA-256, cancellation/progress, standard-header verification and persistent ATE-only detection.
 - No administrator access, PATH changes, paid service or automatic download on launch/open. The document stays in the editor throughout setup.
@@ -121,7 +129,3 @@ Mac notarization completed: Apple returned Accepted. Recovery run 43103034568 pa
 ## iPad TestFlight 0.5.0 (15) complete
 27 Node tests, Chromium/WebKit and 101 native iPad webview checks passed. The production archive verified its bundled C Wasm/worker assets and excluded the simulator test bridge. Apple processing is VALID and the build is assigned to the existing internal tester group. Packaging run 43141713621 reused the exact app source verified in native run 43139879836 after a packaging-script-only fix. Physical iPad acceptance remains pending; desktop website downloads remain 0.4.1. See TODO.md for evidence and remaining gates.
 
-## 0.5.2 — common control sizing and Android document pickers
-- Set shared menus/configuration/control text to 12pt, headings maximum 14pt; preserve document font preferences and touch targets.
-- Android/Fire Open and Save now use native system file-manager intents instead of the iOS share sheet. Native cancellation preserves the recovery draft.
-- Retain syntax checks and Windows optional verified Clang installation. All-platform verification, signing, TestFlight and website distribution are in progress.

@@ -93,3 +93,8 @@ Implementing and verifying the approved optional LLVM-MinGW setup for Windows we
 - Set shared menus/configuration/control text to 12pt, headings maximum 14pt; preserve document font preferences and touch targets.
 - Android/Fire Open and Save now use native system file-manager intents instead of the iOS share sheet. Native cancellation preserves the recovery draft.
 - Retain syntax checks and Windows optional verified Clang installation. All-platform verification, signing, TestFlight and website distribution are in progress.
+
+## Current release — 0.5.2, 12 November 2026
+
+ATE **0.5.2 (17)** is processed VALID and assigned to the existing internal TestFlight groups for iPhone/iPad and universal Mac. Verified 0.5.2 Mac, Windows and Android downloads are published on Cuberoot. See [RELEASE-0.5.2.md](RELEASE-0.5.2.md) for exact build sources, native test runs, signatures and public-download hashes. Physical-device acceptance remains separate.
+All native control-sizing and editor gates passed. Android 11 native verification additionally covered the system document pickers, cancellation, saving exact UTF-8 bytes and reopening. Source branches share the approved editor and thin native adapters. See TODO.md for remaining physical acceptance and Mac guided compiler setup.

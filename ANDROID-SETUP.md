@@ -1,11 +1,11 @@
 # ATE Android build and Cuberoot publication
 
-Branch: android, based on the tested ios editor at version 0.3.2. The Apple app and bundle identifiers remain unchanged. Android package: io.github.willyros01.clearpage; device label ATE.
+Current coordinated release: 0.5.2 (17), built from desktop. The original Android release history is retained below. The Apple app and bundle identifiers remain unchanged. Android package: io.github.willyros01.clearpage; device label ATE.
 
 - Capacitor Android 8.6.0 and App plugin 8.1.1; locked npm dependencies, Node 22 and Java 21.
-- Shared editor, native Open/system share Save, approved launcher icon in legacy and adaptive resources.
+- Shared editor, native ACTION_OPEN_DOCUMENT / ACTION_CREATE_DOCUMENT file-manager Open/Save, approved launcher icon in legacy and adaptive resources.
 - Android Back closes an open dialog first or opens Close choices. Confirming Close clears the document and leaves the Android activity through Capacitor App.
-- Workflow: ATE Android APK, .github/workflows/android-apk.yml. It runs tests, creates the web bundle, generates Android and compiles a release APK before signing.
+- Canonical workflow: .github/workflows/all-platforms.yml; Android-only verification: .github/workflows/android-052.yml. Browser/parser and Android 11 native save/cancel/reopen gates precede production rebuilding and permanent signing.
 - First compile: https://github.com/willyros01/clear-page/actions/runs/42980450400. Compilation and four editor/regression checks passed. The initial attempt stopped at the signing gate; attempt 2 passed after the owner saved the secret. The permanent signed APK is now published.
 
 ## Permanent signing
@@ -20,13 +20,13 @@ After the owner saves the secret, rerun the failed APK job. Verify signed artifa
 ## Automatic publication
 Cuberoot main contains build/publish-ate.sh and .github/workflows/publish-ate-apk.yml. The publisher checks for a new successful artifact on a five-minute schedule (GitHub may delay schedules). It downloads the exact artifact, verifies ZIP structure, Android package/version/display name and permanent signature, then commits downloads/ate.apk, checksum and provenance metadata together. It never rebuilds or re-signs.
 
-The landing page and home app card reveal the Android download only after a valid published manifest exists. Mac/Windows are labelled coming; iPhone/iPad remains invitation-only TestFlight. No public TestFlight join link or App Store availability is claimed.
+The landing page and home app card reveal the Android download only after a valid published manifest exists. Mac/Windows downloads are available; iPhone/iPad and universal Mac remain invitation-only TestFlight. No public TestFlight join link or App Store availability is claimed.
 
 ## Documentation
 Cuberoot publishes /ate/, /ate/quick-start/, /ate/guide/ and two large-print PDFs under /guides/ate/. The full guide covers Open/Save, local recovery, settings, indentation, search/replace, copying, hardware shortcuts, Vim, Close and troubleshooting.
 
 ## Remaining acceptance
-Physical Android/Fire tablet acceptance is pending: install/update, icon, rotation, file picker, share destinations, keyboard, Vim, search, draft recovery and Back/Close.
+Physical Android/Fire tablet acceptance is pending: install/update, icon, rotation, file picker, file-manager destinations, keyboard, Vim, search, draft recovery and Back/Close.
 
 ## Verified release — 11 November 2026
 - ATE 0.3.2, Android versionCode 1; source 82f10e0521b7df338357a027e7f0027b78895aa6.
@@ -37,3 +37,7 @@ Physical Android/Fire tablet acceptance is pending: install/update, icon, rotati
 - Downloaded live APK and independently matched bytes/hash to the signed release metadata. Landing page and Cuberoot home card display active Android-logo downloads.
 - Automatic publisher remains scheduled every five minutes; GitHub scheduling delays may affect timing. Future successful signed Android builds update this same website download.
 - Physical Android/Fire device acceptance is still pending.
+
+## Current Android 0.5.2 (17) release
+
+Native Android 11 run 43175083674 passed all 141 shared mobile webview assertions plus actual DocumentsUI save/cancel/reopen and exact saved bytes. Production assets exclude the driver. The permanently signed APK is published by Cuberoot run 43176173587 and its live bytes/hash verified. Source `33b071f5510d322e149d2286d5fb1da1866af794`; APK 4112463 bytes, SHA-256 `a81ad1c096ce479bfdf56467a8109687e18c456e5da4f8c8d394fd32f45051c9`. Physical Fire HD 8 acceptance remains pending. See RELEASE-0.5.2.md.

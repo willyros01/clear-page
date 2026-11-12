@@ -1,54 +1,35 @@
-# Clear Page
+# Another Text Editor (ATE)
 
-An accessible full-screen text and code editor, version 0.3.1.
+Current release: **0.5.2**. Menus, configuration, search and syntax messages use **12pt text**, headings at most **14pt**. Document text keeps an independent **27pt / 36px default**, adjustable from 10 to 54pt.
 
-## Build and run
-Use Node.js 22 or newer. Run `npm ci`, `npm test`, then `npm run build`. Serve the generated `dist/` directory using a static web server. Dependencies are bundled locally; the editor does not load CodeMirror from a CDN.
+[Downloads](https://www.cuberoot-systems.com/ate/) · [Release verification](RELEASE-0.5.2.md) · [Progress tracking](TODO.md)
 
-## Editing
-Choose Plain text, JavaScript, HTML, CSS, or Python. Supported filename extensions select the language when the filename field loses focus. CodeMirror provides syntax highlighting, four-space automatic indentation, line numbers, bracket matching, undo/redo, and search (Ctrl/Cmd+F).
+## Build and verify
 
-Use Indent/Unindent buttons or Tab/Shift+Tab. Press Escape then Tab to move keyboard focus out of the editor. Use A−/A+ for 10–54pt text (27pt / 36px default), Light/Dark, and Full screen.
+Use Node.js 22 or newer. Run `npm ci`, `npm test`, `npm run build`, `npx playwright install --with-deps chromium webkit`, then `npm run test:browser`. Serve `dist/` using a static web server. CodeMirror, parser workers, C Wasm assets and license notices are bundled locally.
 
-Open imports a text file. Save file downloads a copy; it does not overwrite the source file. Draft recovery stays in this browser on this device, and preserves drafts from version 0.1.0. Clearing browser data removes drafts.
+The canonical release workflow is `.github/workflows/all-platforms.yml` on desktop; `android-052.yml` verifies Android separately. Native iPad/Mac/Windows webviews and Android file-manager tests gate production packaging. Verification drivers are excluded from release assets. Before a new Apple release, increment the version/build number; 0.5.2 (17) is already uploaded. Automated evidence does not replace physical-device acceptance.
 
-## Verification
-Build and automated language/indentation checks pass. Desktop Chrome checks verified JavaScript/Python automatic indentation, syntax colors, indent controls, text sizing, dark mode, draft recovery after reload, and full-screen mode. Physical iPad testing and native builds remain pending.
+## Editing and files
 
-See ROADMAP.md for the platform plan.
+CodeMirror provides keyword colors, four-space indentation, line numbers, bracket matching, undo/redo and search/replace. Menu includes language, theme, document size, optional Vim, Copy, Help and C settings. Text or icon controls retain accessible labels and touch targets of at least 44px.
 
-## Compact toolbar and exit
-Menu contains file, language, appearance, indentation and full-screen controls. Exit offers Keep editing, Save and exit, and Exit without saving. The latter clears the browser draft and shows Editor closed; existing device files are unaffected. Save and exit starts a download and retains a recovery draft because browsers cannot confirm that a user completed saving. The web app cannot close a user-opened browser tab; close it after the Editor closed screen.
+Android/Fire Open and Save use the system file manager. Choose a folder and filename; cancellation preserves the draft, and Save confirms the completed UTF-8 write. Mac/Windows use native dialogs. iOS Save uses the share sheet's Save to Files action; web Save starts a download. Open accepts UTF-8 text/code files up to 10 MB and rejects null characters.
 
-0.2.1 browser checks passed for the compact layout, menu, exit cancellation, draft discard followed by reload, save-and-exit download initiation, and restarting editing. iPad device acceptance remains pending.
+Close/Exit offers Keep editing, Save and close/exit, or discard. Discard clears the active document and recovery draft without an extra closing page. Android closes the activity, desktop quits, and iOS uses the Home gesture to leave the app.
 
-## Button style and text size
-In Menu, choose Buttons → Text or Icons. Icons retain accessible names and hover labels. Exit confirmation choices keep explicit text. Enter a Text size from 10 to 54 points, or use A−/A+ in one-point steps. These settings persist independently of drafts, including after exiting without saving. Existing pixel-based drafts migrate to the equivalent point size.
+Recovery/preferences stay on this device; no ATE account or cloud synchronization is used. Keep independent file copies before clearing app/site data or uninstalling.
 
-0.2.2 browser checks passed for both button styles, 10pt rendered at 13.333px, disabled decrease at the minimum, one-point adjustment, and preference persistence after reload.
+## Code checking and Vim
 
-## Search, Copy, Vim and online Help
-Menu now includes Search / Replace, Go to line, Select all, Copy, and Help. Search supports case sensitivity, whole words and regular expressions. Replacement can affect one match or all matches. Use Undo to revert replacement. Copy places selected text in the device clipboard; when clipboard access fails, a manual-copy window appears.
+Menu → Check syntax opens line/column issues; select an issue to jump to it. Check while typing is optional. JavaScript, TypeScript syntax, JSON, YAML, HTML and CSS use bundled offline parsers. Python, SQL and Markdown currently provide highlighting only.
 
-Editing → Vim enables optional Vim key bindings; Standard remains the default. Esc returns to normal mode, i inserts, / searches, : starts an Ex command, :25 jumps to a line, and :%s/old/new/g replaces across the document. :w downloads, :q opens the exit choices, and :wq starts a download and exits. Vim yanks use an internal register; Copy uses the system clipboard.
+C on iPad/iPhone, Android and web uses a bundled structural parser, without header resolution, macro expansion, type checks or compiler-standard enforcement. Desktop C uses local Clang with `-fsyntax-only`, project/include/macro settings and an optional verified Windows LLVM-MinGW download. See [C-CHECKING.md](C-CHECKING.md). Checks stay local and never run user programs or send source to a remote compiler.
 
-Menu → Help is the bundled online user guide, with topic links and command tables in large text. Browser checks verified Replace all, system clipboard content, Vim substitution and quit, returning to Standard mode, Help content, and go-to-line. Physical-device acceptance remains pending.
+Optional Vim works best with a hardware keyboard: `i` inserts, Escape returns to Normal, `/word` searches, `n/N` repeats, `:` opens commands, `:25` jumps, `:%s/old/new/g` replaces, `:w` saves, `:q` opens closing choices and `:wq` saves then closes. Vim's yank register is separate from the system clipboard; use Menu → Copy for another app.
 
-0.3.1 fixes Vim command-input contrast and width, including explicit WebKit text-fill colors. Visual confirmation on iPad remains pending.
+## Distribution and licensing
 
-## Desktop 0.4.1 verification — 11 November 2026
-The desktop repair passes Tauri's style nonce to CodeMirror. Without it, Tauri's strict policy rejected the generated styles and the editor lost its whitespace, layout, syntax colors and readable Vim controls.
+iPhone/iPad and universal Mac use the existing internal TestFlight groups. Mac, Windows and signed Android downloads use Cuberoot. TestFlight processing does not imply public App Store release or review approval. [RELEASE-0.5.2.md](RELEASE-0.5.2.md) records exact binary sources, build IDs, hashes and remaining physical acceptance.
 
-Run `npm ci`, `npm test`, `npm run build`, `npx playwright install --with-deps chromium webkit`, then `npm run test:browser`. The browser checks use built assets and a nonce policy matching the desktop policy. Native CI builds with `--features editor-verification` and checks the actual Mac/Windows webviews before rebuilding distribution binaries without that feature. The test bridge is excluded from distributed builds.
-
-Run 43087543526 passed both browser engines and both native webviews, including 36px text, monospaced layout, preserved spaces, JavaScript highlighting, Enter/Tab/Shift-Tab indentation, Vim delete/undo/substitution/go-to-line and dark appearance. Run 43087885350 downloaded the exact public 0.4.0 Windows installer, verified SHA-256, installed and launched it on Windows. This does not resolve the user's device-specific rejection or establish interactive browser/SmartScreen acceptance; request the exact message and downloaded filename. No physical-device acceptance is claimed.
-
-## Syntax checking (0.5.0 development)
-See [TODO.md](TODO.md) for progress and acceptance evidence. The syntax-checking work adds bundled offline parsers for JavaScript, TypeScript (syntax only), JSON, YAML, HTML and CSS. Menu → Check syntax opens large line/column diagnostics; selecting an issue returns to the relevant text. Check while typing is optional. C checking in the desktop apps uses an existing local Clang installation; see [C-CHECKING.md](C-CHECKING.md). Python, SQL and Markdown retain highlighting only.
-
-`npm test` covers parser behavior and cancellation. `npm run test:browser` checks the bundled worker, diagnostics and editing regressions in Chromium/WebKit under a strict nonce policy. `.github/workflows/syntax-verification.yml` also tests Clang and the real native Mac/Windows webviews. Browser evidence does not replace physical-device acceptance. Third-party licenses are included in `THIRD-PARTY-NOTICES.txt`; regenerate with `node scripts/third-party-notices.mjs` when updating dependencies.
-
-## iPad syntax checking — TestFlight 0.5.0 (15)
-The iPad-first build is processed VALID and assigned to the existing internal tester group. It includes JavaScript, TypeScript syntax, JSON, YAML, HTML, CSS and a bundled basic C parser. C needs no separate download on iPad; full header/type/macro checks require a real compiler. Menu → Check syntax opens results, and Check while typing is optional.
-
-27 Node tests, Chromium/WebKit and 101 native iPad checks passed. Production assets exclude the simulator verification driver. Physical iPad acceptance remains pending. See TODO.md and IOS-SETUP.md for evidence; desktop website downloads remain 0.4.1.
+ATE remains proprietary; dependency licenses are included in `THIRD-PARTY-NOTICES.txt`. Regenerate with `node scripts/third-party-notices.mjs` after dependency changes. Platform details: [iOS](IOS-SETUP.md), [desktop](DESKTOP-SETUP.md), [Android](ANDROID-SETUP.md).

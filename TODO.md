@@ -1,10 +1,12 @@
 # ATE syntax checking TODO
 
-Last updated: 2026-11-11 (America/Toronto).
+Last updated: 12 November 2026 (UTC).
 
-## Progress
+## Current progress
 
-Implementation is committed on `syntax-checking`, reviewed through [PR #1](https://github.com/willyros01/clear-page/pull/1). **11 of 13 tasks verified within their documented scope**. SYN-12 remains in progress for installer/iPad/physical acceptance and release; SYN-13 tracks the newly approved optional compiler download/setup. ATE 0.5.0 (15) is processed VALID and assigned to the existing internal TestFlight tester group for iPad/iPhone. Universal Mac TestFlight 0.5.0 (16) is also processed VALID and assigned to the existing internal tester group. Desktop website downloads remain 0.4.1. iPad uses a bundled basic C parser rather than a desktop compiler installer.
+ATE **0.5.2 (17)** is processed VALID and assigned to the existing internal TestFlight groups for iPhone/iPad and universal Mac. Verified 0.5.2 Mac, Windows and Android downloads are published on Cuberoot. See [RELEASE-0.5.2.md](RELEASE-0.5.2.md) for exact build sources, native test runs, signatures and public-download hashes. Physical-device acceptance remains separate.
+
+Menus, search, syntax messages and Clang/compiler configuration use 12pt controls (headings at most 14pt). Document text retains its independent 36px default and adjustment.
 
 Statuses: Pending → In progress → Implemented → Verified. Assessed records a documented feasibility decision. Use Blocked when a dependency prevents work. Mark a task Verified only with evidence; automated checks and physical-device acceptance must be recorded separately. Update this table and the progress log with each change.
 
@@ -12,11 +14,11 @@ Statuses: Pending → In progress → Implemented → Verified. Assessed records
 
 - Add code checking based on document language, distinct from syntax highlighting and indentation already available in several modes.
 - Initial target: JavaScript, JSON, HTML, CSS, YAML and C. Additional candidates: TypeScript, Python, SQL and Markdown.
-- C desktop recommendation: Clang/LLVM; Apple Command Line Tools on Mac, LLVM-MinGW on Windows. Compiler integration is implemented; optional download/setup and distribution acceptance remain pending.
+- C desktop recommendation: Clang/LLVM; Apple Command Line Tools on Mac, LLVM-MinGW on Windows. Compiler integration and optional Windows setup are implemented and CI verified; Mac guided setup and physical acceptance remain pending.
 - Keep ATE proprietary. Retain required third-party licenses/notices; do not change ATE's license.
 - Prefer local/offline checking. Do not execute user programs as part of checking or upload document contents.
 - Keep shared editor behavior with thin native adapters. Preserve 36px default text, adjustable sizing, themes and Vim behavior.
-- The owner authorized implementation on 11 November 2026. Changes are verified on `syntax-checking` before integration into the release branch; production downloads remain 0.4.1 until release verification.
+- The owner authorized implementation on 11 November 2026. Changes are verified on `syntax-checking` before integration into the release branch; the current verified release is 0.5.2.
 
 ## Tracked tasks
 
@@ -33,11 +35,19 @@ Statuses: Pending → In progress → Implemented → Verified. Assessed records
 | SYN-09 | Support C headers, include paths, macros and project compiler settings. | Verified | Five native Rust tests pass on both OSes, including project/local/additional headers and macros. |
 | SYN-10 | Decide compiler setup/distribution and document licenses. | Verified | Decision: user-installed tools; no compiler/SDK bundle. JS notices bundled and proprietary ATE licensing retained. |
 | SYN-11 | Assess TypeScript, Python, SQL, Markdown and iPad C checking. | Verified (assessment) | TypeScript syntax implemented; Python ast.parse and Markdown lint candidates assessed; SQL dialect and iPad C deferred explicitly. |
-| SYN-12 | Verify, document and release approved changes across platforms. | In progress | iPad native checks and TestFlight 0.5.0 (15) complete; universal Mac TestFlight 0.5.0 (16), Apple VALID and internal tester assignment verified in run 43147595044. Physical acceptance and desktop website builds/publication remain pending. |
+| SYN-12 | Verify, document and release approved changes across platforms. | Release verified; physical acceptance pending | 0.5.2 (17) iPad/Mac TestFlight VALID; Mac/Windows/Android website downloads verified. Exact evidence is in RELEASE-0.5.2.md. |
 
-| SYN-13 | Offer optional free compiler download/setup when C checking cannot find Clang. | In progress (Windows) | 0.5.1 implements pinned official LLVM-MinGW download, progress/cancel/retry, checksum/header checks and persistent detection; CI verification pending. Mac setup remains pending. |
+| SYN-13 | Offer optional free compiler download/setup when C checking cannot find Clang. | Windows verified; Mac pending | Official LLVM-MinGW installation, cancellation, checksum rejection, standard headers, detection and installer/native editor passed in run 43168469203. Mac uses an installed Clang/Apple Command Line Tools. |
 
-## Acceptance record
+## 0.5.2 release tasks
+
+| ID | Work | Status | Evidence |
+| --- | --- | --- | --- |
+| UI-01 | 12pt controls, headings max 14pt, preserve adjustable document text | Verified in automated environments | Chromium/WebKit and iPad/Mac/Windows/Android native sizing checks passed. |
+| AND-01 | Android file-manager Open/Save, cancellation, exact bytes and reopen | Verified on Android 11 emulator | Run 43175083674; permanent signer preserved. Physical Fire HD 8 acceptance pending. |
+| REL-052 | Rebuild and publish every existing platform distribution | Verified | iPad/Mac TestFlight 0.5.2 (17), website Mac/Windows/Android 0.5.2; RELEASE-0.5.2.md. |
+
+## Historical acceptance record
 
 [Verification run 43134841430](https://github.com/willyros01/clear-page/actions/runs/43134841430) passed all three jobs on code commit `75a55d599d493a4c3071ef5e438e736b2c51b899`:
 
@@ -67,9 +77,9 @@ No physical-device syntax-checking acceptance yet. Existing Windows 0.4.1 accept
 
 ## Implementation notes
 
-- SYN-01–06: language detection/manual selection, 26px issue list with jump-to-error, underlines, debounced worker checks, manual checks, stale-result cancellation and size/time limits are implemented. JavaScript/TypeScript/JSON/YAML/HTML/CSS use bundled offline parsers.
+- SYN-01–06: language detection/manual selection, 12pt issue list with jump-to-error, underlines, debounced worker checks, manual checks, stale-result cancellation and size/time limits are implemented. JavaScript/TypeScript/JSON/YAML/HTML/CSS use bundled offline parsers.
 - SYN-07–09: C mode/standard and native Clang syntax-only adapter are implemented, with stdin for unsaved text, optional source folder, include directories and macros. Native checks are serialized and bounded; no source files or executables are produced. Five Rust integration tests cover real standard/project headers, macros, invalid code and setup validation. Compiler/project selection is session-only.
-- SYN-10: the implemented baseline uses an existing user-installed compiler. SYN-13 adds the approved optional download/setup path; it is not implemented yet. Mac: Apple Command Line Tools; Windows: LLVM-MinGW. No compiler or SDK is redistributed and no paid signing service is activated. ATE remains proprietary. Bundled JS package licenses are recorded in THIRD-PARTY-NOTICES.txt and included in the app assets.
+- SYN-10: the implemented baseline uses an existing user-installed compiler. SYN-13 implements the optional Windows path; Mac guided setup remains pending. Mac: Apple Command Line Tools; Windows: LLVM-MinGW. No compiler or SDK is redistributed and no paid signing service is activated. ATE remains proprietary. Bundled JS package licenses are recorded in THIRD-PARTY-NOTICES.txt and included in the app assets.
 - SYN-11: TypeScript syntax checking implemented; type checking deferred. Python candidate: a user-installed CPython `ast.parse` adapter (must parse the buffer without executing it). SQL requires a chosen dialect and matching validator before a checker can be promised. Markdown candidate: markdownlint, with selected document-style rules rather than compiler syntax checks. These three retain highlighting only. iPad now has a basic structural C checker in development, using bundled Tree-sitter C/WebAssembly. It does not resolve headers, expand macros or check types; full compiler support remains deferred.
 - SYN-12: version 0.5.0 prepared; Help updated; isolated browser/native verification workflow added. Release and physical acceptance remain outstanding.
 
@@ -77,9 +87,10 @@ No physical-device syntax-checking acceptance yet. Existing Windows 0.4.1 accept
 
 - [ ] Validate the recommended LLVM-MinGW setup on a clean Windows machine.
 - [x] Build/verify the iPhone/iPad package with bundled workers/Wasm and real iPad webview checks. Physical airplane-mode acceptance remains pending.
-- [ ] Integrate the reviewed feature into the release branch, build installers, sign/notarize Mac and verify exact download checksums.
+- [x] Integrate the reviewed feature into the release branch, build installers, sign/notarize Mac and verify exact download checksums.
 - [ ] Obtain physical-device acceptance for syntax checking, project headers, large text and Vim. Test the distributed Mac TestFlight edition separately from the website edition.
-- [ ] Complete remaining platform acceptance and desktop publication. iPad TestFlight 0.5.0 (15) is available; its physical acceptance is pending.
+- [x] Complete 0.5.2 TestFlight and website publication for every existing distribution.
+- [ ] Obtain physical acceptance of the distributed builds, including Fire HD 8 file-manager behavior.
 
 iPad/iPhone TestFlight 0.5.0 (15) is uploaded, processed VALID and assigned. No 0.5.0 desktop installer or website publication has been performed.
 
@@ -94,7 +105,7 @@ Approved product behavior: when an explicit C check cannot find Clang, show a la
 
 Acceptance evidence must cover missing/existing compilers, a successful official download/setup, wrong checksum, cancellation/interrupted downloads, unsupported platform/architecture, successful re-detection, and C diagnostics after setup. Licensing, download size and exact clean-machine Windows setup are recorded before release.
 
-**Status: desktop setup planned only.** No compiler download or installation has been performed for SYN-13. The separate iPad basic checker is bundled in TestFlight 0.5.0 (15) and needs no compiler setup.
+**Current status: Windows setup verified in run 43168469203; Mac guided setup pending.** The separate iPad basic checker is bundled in TestFlight 0.5.0 (15) and needs no compiler setup.
 
 ## iPad-first implementation checkpoint
 
@@ -119,3 +130,8 @@ Acceptance evidence must cover missing/existing compilers, a successful official
 
 ## 0.5.2 coordinated rebuild — 12 November 2026
 Owner authorized every platform build and publication. Menus, dialogs, Clang settings and compiler setup now use 12pt text (headings max 14pt); document text retains its independent 36px default/adjustment. Android Open/Save use native Storage Access Framework document pickers, preserving cancel/recovery behavior; Android Back behavior retained. Build/test/publication is in progress for iOS, universal Mac TestFlight, signed/notarized Mac website, Windows with optional compiler setup, and permanently signed Android APK. No physical Fire acceptance is claimed from emulator tests.
+
+## 12 November 2026 release checkpoint
+
+ATE **0.5.2 (17)** is processed VALID and assigned to the existing internal TestFlight groups for iPhone/iPad and universal Mac. Verified 0.5.2 Mac, Windows and Android downloads are published on Cuberoot. See [RELEASE-0.5.2.md](RELEASE-0.5.2.md) for exact build sources, native test runs, signatures and public-download hashes. Physical-device acceptance remains separate.
+Android native verification: run 43175083674, source `33b071f5510d322e149d2286d5fb1da1866af794`. Public APK SHA-256 `a81ad1c096ce479bfdf56467a8109687e18c456e5da4f8c8d394fd32f45051c9` (4112463 bytes). Cuberoot publisher run 43176173587 verified the live download. Remaining work: physical platform acceptance, Mac guided compiler setup, and separately planned language checkers.

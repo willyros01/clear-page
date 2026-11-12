@@ -101,7 +101,7 @@ The simulator workflow remains separate. The Clear Page TestFlight workflow now 
 - Evidence artifact: ATE-release-evidence, 13836142998.
 - Physical iPad acceptance of new icon, Close behavior and native keyboard dismissal remains pending.
 
-## Current iPad-first release — 0.5.0 (15)
+## Historical iPad-first release — 0.5.0 (15)
 
 Completed 11 November 2026 (America/Toronto). Apple processing **VALID**, build ID `5c151092-9797-4e1a-9aae-51d40dbbd387`; assignment to the existing internal tester group verified.
 
@@ -111,3 +111,7 @@ Completed 11 November 2026 (America/Toronto). Apple processing **VALID**, build 
 - The test driver is included only when `ATE_IOS_VERIFICATION=1`; production builds use the normal app entry. C parser/runtime assets and their licenses are bundled. No remote compiler or extra compiler download is used on iPad.
 
 Next physical acceptance: update in TestFlight, check a malformed C/JS file, tap an issue to jump to it, correct the error, repeat with airplane mode, confirm font/appearance/Vim and ordinary file save/close/recovery. The iPad C checker is basic structure only; headers, types, macros and compiler-standard conformance are not checked. Desktop optional compiler installation remains a separate pending task.
+
+## Current release — 0.5.2 (17)
+
+Run 43168469203 passed browser/parser and actual iPad webview gates before archive/sign/upload. Apple processed build `81ffd03e-0758-480d-acb0-372cf2e4b712` as VALID and assignment to the existing internal group was verified. Menu/configuration text is 12pt, headings max 14pt; document text remains independent. The production archive verifies worker/Wasm assets and excludes the driver. Universal Mac TestFlight 0.5.2 (17) is also VALID and assigned to the existing group, build `b8cbbf95-9e20-4324-9a9a-2ca2843538dd`. See RELEASE-0.5.2.md for actual sources and remaining physical acceptance.
