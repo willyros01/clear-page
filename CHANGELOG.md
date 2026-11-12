@@ -97,3 +97,7 @@ Mac notarization completed: Apple returned Accepted. Recovery run 43103034568 pa
 - Native/browser CI and physical acceptance are tracked in TODO.md; no 0.5.0 release claimed yet.
 
 0.5.0 verification checkpoint: 23 Node tests, Chromium/WebKit, five Clang tests on each native OS, native Mac/Windows UI and a Mac App Sandbox probe pass in run 43134841430. No 0.5.0 publication or physical acceptance is claimed. See TODO.md.
+
+## Optional C compiler setup plan
+- Recorded the owner-approved missing-compiler download/setup flow in TODO.md (SYN-13): official Apple setup on Mac and a verified LLVM-MinGW download on Windows, with Later, cancellation and re-detection.
+- Planning only; no compiler download/installation or application release performed.
