@@ -7,5 +7,5 @@ const checkC=createCChecker(async name=>{
 });
 self.onmessage=async({data})=>{
  try{self.postMessage({id:data.id,result:data.request.language==='c'?await checkC(data.request):checkSyntax(data.request)})}
- catch{self.postMessage({id:data.id,result:{status:'unavailable',diagnostics:[],message:'The checker could not process this document. Editing and saving still work.'}})}
+ catch(error){console.error('Bundled checker failed:',error?.name,error?.message);self.postMessage({id:data.id,result:{status:'unavailable',diagnostics:[],message:'The checker could not process this document. Editing and saving still work.'}})}
 };

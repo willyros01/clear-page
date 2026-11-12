@@ -8,7 +8,9 @@ export function createCChecker(loadAsset) {
  return async ({text})=>{
   if(text.length>MAX_CHECK_LENGTH)return {status:'skipped',diagnostics:[],message:'Checking is limited to 512K characters.'};
   ready??=Promise.all([loadAsset('web-tree-sitter.wasm'),loadAsset('tree-sitter-c.wasm')]).then(async([runtime,grammar])=>{
-   await Parser.init({wasmBinary:runtime});
+   // The bytes are already bundled/loaded. Avoid import.meta URL resolution in
+   // the classic worker bundle, including Capacitor's custom app URL scheme.
+   await Parser.init({wasmBinary:runtime,locateFile:name=>name});
    return Language.load(grammar);
   });
   const language=await ready,parser=new Parser();

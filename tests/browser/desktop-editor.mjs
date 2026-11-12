@@ -24,6 +24,7 @@ try{
   const browser=await engine.launch(name==='chromium'&&process.env.CHROMIUM_PATH?{executablePath:process.env.CHROMIUM_PATH}:{});
   try{
    const page=await browser.newPage({viewport:{width:1200,height:850}});
+   page.on('console',message=>{if(message.type()==='error')console.error(name+': '+message.text())});
    const errors=[];page.on('pageerror',e=>errors.push(e.message));
    await page.goto(url);
    await page.waitForSelector('.cm-content');
