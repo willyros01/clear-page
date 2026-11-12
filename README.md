@@ -1,14 +1,14 @@
 # Another Text Editor (ATE)
 
-Preparing desktop release **0.5.3 (18)** with the built-in C parser as default and Clang as an optional advanced mode. iOS and Android remain **0.5.2 (17)**. Menus, configuration, search and syntax messages use **12pt text**, headings at most **14pt**. Document text keeps an independent **27pt / 36px default**, adjustable from 10 to 54pt.
+Current desktop release: **0.5.3 (Mac TestFlight build 18)** with the built-in C parser as default and Clang as an optional advanced mode. iOS and Android remain **0.5.2 (17)**. Menus, configuration, search and syntax messages use **12pt text**, headings at most **14pt**. Document text keeps an independent **27pt / 36px default**, adjustable from 10 to 54pt.
 
-[Downloads](https://www.cuberoot-systems.com/ate/) · [Release verification](RELEASE-0.5.2.md) · [Progress tracking](TODO.md)
+[Downloads](https://www.cuberoot-systems.com/ate/) · [Release verification](RELEASE-0.5.3.md) · [Progress tracking](TODO.md)
 
 ## Build and verify
 
 Use Node.js 22 or newer. Run `npm ci`, `npm test`, `npm run build`, `npx playwright install --with-deps chromium webkit`, then `npm run test:browser`. Serve `dist/` using a static web server. CodeMirror, parser workers, C Wasm assets and license notices are bundled locally.
 
-Desktop-only release workflow: `.github/workflows/desktop-basic.yml` (Mac TestFlight/website and Windows website). The coordinated workflow is `.github/workflows/all-platforms.yml` on desktop; `android-052.yml` verifies Android separately. Native iPad/Mac/Windows webviews and Android file-manager tests gate production packaging. Verification drivers are excluded from release assets. Before a new Apple release, increment the version/build number; 0.5.2 (17) is already uploaded. Automated evidence does not replace physical-device acceptance.
+Desktop-only release workflow: `.github/workflows/desktop-basic.yml` (Mac TestFlight/website and Windows website). The coordinated workflow is `.github/workflows/all-platforms.yml` on desktop; `android-052.yml` verifies Android separately. Native iPad/Mac/Windows webviews and Android file-manager tests gate production packaging. Verification drivers are excluded from release assets. Before a new Apple release, increment the version/build number; Mac 0.5.3 (18) and iOS 0.5.2 (17) are already uploaded. Automated evidence does not replace physical-device acceptance.
 
 ## Editing and files
 
@@ -30,6 +30,6 @@ Optional Vim works best with a hardware keyboard: `i` inserts, Escape returns to
 
 ## Distribution and licensing
 
-iPhone/iPad and universal Mac use the existing internal TestFlight groups. Mac, Windows and signed Android downloads use Cuberoot. TestFlight processing does not imply public App Store release or review approval. [RELEASE-0.5.2.md](RELEASE-0.5.2.md) records exact binary sources, build IDs, hashes and remaining physical acceptance.
+iPhone/iPad and universal Mac use the existing internal TestFlight groups. Mac, Windows and signed Android downloads use Cuberoot. TestFlight processing does not imply public App Store release or review approval. [RELEASE-0.5.3.md](RELEASE-0.5.3.md) records current desktop sources, build IDs, public hashes and remaining physical acceptance. Mobile evidence remains in [RELEASE-0.5.2.md](RELEASE-0.5.2.md).
 
 ATE remains proprietary; dependency licenses are included in `THIRD-PARTY-NOTICES.txt`. Regenerate with `node scripts/third-party-notices.mjs` after dependency changes. Platform details: [iOS](IOS-SETUP.md), [desktop](DESKTOP-SETUP.md), [Android](ANDROID-SETUP.md).

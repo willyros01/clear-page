@@ -1,5 +1,7 @@
 # ATE desktop release
 
+Desktop 0.5.3 uses the bundled offline C parser by default. Installed Clang is an optional Advanced mode under Menu → C settings → C checking. No compiler installation is needed for Basic checks. Release verification is tracked in [RELEASE-0.5.3.md](RELEASE-0.5.3.md); older checkpoints below are historical.
+
 The `desktop` branch starts from the accepted iOS 0.3.2 editor. Version 0.4.0 keeps CodeMirror, Vim, search/replace, large text and help in the shared `src/` code. Capacitor remains the iPhone/iPad shell; Tauri is the Windows and macOS shell. Existing Android releases remain on `android` until the shared release is reconciled there.
 
 ## One coordinated workflow
@@ -62,3 +64,7 @@ The user explicitly authorized credential creation. Developer ID Application cer
 ## Approved signing upload completed
 
 The user explicitly authorized upload of the private signing package to the named Mac GitHub Actions secret. GitHub confirmed `MAC_DEVELOPER_ID_SIGNING` was added to `willyros01/clear-page`. Coordinated release run `43055226935`, source `8669c38a87810d6b88a1ad8d10e3b94436379bb7`, is using the approved package for the website channel. Private key material is not committed to this repository or included in public artifacts.
+
+## 0.5.3 desktop release — 12 November 2026
+
+Run 43222957484 passed native Mac/Windows editor gates and production packaging. Universal Mac TestFlight 0.5.3 (18) is VALID, IN_BETA_TESTING and assigned to the existing internal group. Mac website signing/notarization/stapling and publisher Gatekeeper checks passed. Windows installed/launched in CI. Publisher 43226821763 verified both public installer hashes and lengths. See RELEASE-0.5.3.md; physical-device acceptance remains separate. iOS/Android remain 0.5.2 (17).

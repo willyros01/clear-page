@@ -140,9 +140,9 @@ Android native verification: run 43175083674, source `33b071f5510d322e149d2286d5
 
 | ID | Work | Status | Evidence / remaining work |
 | --- | --- | --- | --- |
-| SYN-14 | Assess Zig C compatibility and final disk footprint on Windows and both Mac architectures | Assessment verified; integration pending | Zig 0.17.1 embeds Clang 22.1.8. All 44 adapted direct-frontend fixtures and 21 system-Clang comparisons passed in run 43216011773. Normal zig cc syntax-only failed/timed out; it is not an ATE drop-in. Toolchain allocation roughly 430–459 MB, plus measured driver cache about 50–60 MB; plan 600 MB installed/cache and 1 GB free for fresh setup. Windows allocation is estimated for 4 KB clusters. See assessment/RESULTS.md. |
+| SYN-14 | Assess Zig C compatibility and final disk footprint on Windows and both Mac architectures | Assessment verified; integration deferred | Zig 0.17.1 embeds Clang 22.1.8. All 44 adapted direct-frontend fixtures and 21 system-Clang comparisons passed in run 43216011773. Normal zig cc syntax-only failed/timed out; it is not an ATE drop-in. Toolchain allocation roughly 430–459 MB, plus measured driver cache about 50–60 MB; plan 600 MB installed/cache and 1 GB free for fresh setup. Windows allocation is estimated for 4 KB clusters. See assessment/RESULTS.md. |
 
-No application binary or installed compiler changed. Optional Zig integration, the Mac TestFlight sandbox, download integrity/installation and physical acceptance remain future work. This focused suite is not full ISO C conformance certification.
+The assessment changed no application binary or installed compiler. The owner subsequently selected the bundled offline parser as the desktop default (C-DEFAULT below). Zig integration is deferred; no Zig download or adapter is part of this release. This focused suite is not full ISO C conformance certification.
 
 ## Desktop offline C default — 0.5.3 (18)
 
@@ -150,5 +150,7 @@ Owner approved implementation on 12 November 2026.
 
 | ID | Work | Status | Evidence / next step |
 | --- | --- | --- | --- |
-| C-DEFAULT | Reuse bundled offline C parser as desktop default; installed Clang remains optional | Implemented; release verification in progress | 30 local Node tests pass, including default worker routing, explicit advanced selection, persistence and no default compiler setup/download. Native Mac/Windows gates cover Wasm under actual CSP, zero basic-mode compiler invocations, and advanced Clang diagnostics. |
-| REL-053 | Rebuild universal Mac TestFlight/website and Windows website | In progress | Target 0.5.3 (18); iOS/Android need no rebuild. |
+| C-DEFAULT | Reuse bundled offline C parser as desktop default; installed Clang remains optional | Complete; physical acceptance pending | Run 43222957484 passed 30 Node tests, Chromium/WebKit, native Mac/Windows Basic Wasm, zero basic-mode compiler calls, explicit Advanced Clang diagnostics and preference persistence. No default compiler setup/download. |
+| REL-053 | Rebuild universal Mac TestFlight/website and Windows website | Complete; physical acceptance pending | Mac 0.5.3 (18) VALID / IN_BETA_TESTING in the existing group. Notarized/stapled universal Mac and Windows 0.5.3 published; publisher 43226821763 verified public hashes/bytes. iOS/Android remain 0.5.2 (17). See RELEASE-0.5.3.md. |
+
+Desktop release 0.5.3 is complete. Online and large-print PDF guides now explain Basic/Advanced mode selection. Remaining device acceptance is tracked separately; no Zig/TinyCC integration or mobile rebuild occurred.

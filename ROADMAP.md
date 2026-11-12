@@ -94,7 +94,7 @@ Implementing and verifying the approved optional LLVM-MinGW setup for Windows we
 - Android/Fire Open and Save now use native system file-manager intents instead of the iOS share sheet. Native cancellation preserves the recovery draft.
 - Retain syntax checks and Windows optional verified Clang installation. All-platform verification, signing, TestFlight and website distribution are in progress.
 
-## Current release — 0.5.2, 12 November 2026
+## 0.5.2 release checkpoint — 12 November 2026
 
 ATE **0.5.2 (17)** is processed VALID and assigned to the existing internal TestFlight groups for iPhone/iPad and universal Mac. Verified 0.5.2 Mac, Windows and Android downloads are published on Cuberoot. See [RELEASE-0.5.2.md](RELEASE-0.5.2.md) for exact build sources, native test runs, signatures and public-download hashes. Physical-device acceptance remains separate.
 All native control-sizing and editor gates passed. Android 11 native verification additionally covered the system document pickers, cancellation, saving exact UTF-8 bytes and reopening. Source branches share the approved editor and thin native adapters. See TODO.md for remaining physical acceptance and Mac guided compiler setup.
@@ -108,4 +108,4 @@ Native Windows x64, Intel Mac and Apple silicon assessment completed in run 4321
 
 ## Desktop 0.5.3 — offline C by default
 
-Owner approved using the existing mobile C parser as the Mac/Windows default. Added an explicit persisted Basic/Advanced Clang selector; compiler setup is available only in Advanced mode. Browser CSP now comes from the actual Tauri configuration, which permits bundled worker/Wasm loading without enabling general unsafe evaluation. Native verification covers Basic checks without compiler IPC and explicit Advanced checks. Local 30-test/build gates pass; desktop packaging/publication is in progress. Mobile distributions remain 0.5.2 (17).
+Owner approved using the existing mobile C parser as the Mac/Windows default. Added an explicit persisted Basic/Advanced Clang selector; compiler setup is available only in Advanced mode. Browser CSP now comes from the actual Tauri configuration, which permits bundled worker/Wasm loading without enabling general unsafe evaluation. Native verification covers Basic checks without compiler IPC and explicit Advanced checks. Run 43222957484 passed all browser/compiler/native and desktop distribution gates. Universal Mac TestFlight 0.5.3 (18) is VALID and IN_BETA_TESTING in the existing group. Universal Mac website 0.5.3 is Developer ID signed, notarized and stapled; Windows 0.5.3 installed/launched in CI. Cuberoot publisher 43226821763 verified both live public downloads against their release hashes/bytes. Online/PDF guides are updated. Mobile distributions remain 0.5.2 (17); physical acceptance remains separate. See RELEASE-0.5.3.md.
