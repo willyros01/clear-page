@@ -6,7 +6,7 @@ Last updated: 2026-11-11 (America/Toronto).
 
 Implementation started on `syntax-checking`. **0 of 12 tasks verified**; 10 implemented and awaiting platform verification, 1 assessed, 1 in progress.
 
-Statuses: Pending → In progress → Implemented → Verified. Use Blocked when a dependency prevents work. Mark a task Verified only with evidence; automated checks and physical-device acceptance must be recorded separately. Update this table and the progress log with each change.
+Statuses: Pending → In progress → Implemented → Verified. Assessed records a documented feasibility decision. Use Blocked when a dependency prevents work. Mark a task Verified only with evidence; automated checks and physical-device acceptance must be recorded separately. Update this table and the progress log with each change.
 
 ## Scope and decisions
 
@@ -56,7 +56,7 @@ Local Node checks pass for valid/invalid parser fixtures, mixed HTML, Unicode Cl
 ## Implementation notes
 
 - SYN-01–06: language detection/manual selection, 26px issue list with jump-to-error, underlines, debounced worker checks, manual checks, stale-result cancellation and size/time limits are implemented. JavaScript/TypeScript/JSON/YAML/HTML/CSS use bundled offline parsers.
-- SYN-07–09: C mode/standard and native Clang syntax-only adapter are implemented, with stdin for unsaved text, optional source folder, include directories and macros. Native checks are serialized and bounded; no source files or executables are produced. Compiler/project selection is session-only.
+- SYN-07–09: C mode/standard and native Clang syntax-only adapter are implemented, with stdin for unsaved text, optional source folder, include directories and macros. Native checks are serialized and bounded; no source files or executables are produced. Six Rust integration tests cover real standard/project headers, macros, invalid code and setup validation. Compiler/project selection is session-only.
 - SYN-10: use an existing user-installed compiler for this release. Mac: Apple Command Line Tools; Windows: LLVM-MinGW. No compiler or SDK is redistributed and no paid signing service is activated. ATE remains proprietary. Bundled JS package licenses are recorded in THIRD-PARTY-NOTICES.txt and included in the app assets.
-- SYN-11: TypeScript syntax checking implemented; type checking deferred. Python needs a Python parser/runtime integration; SQL needs a selected dialect and validator; Markdown needs lint rules rather than compiler syntax checks. These three retain highlighting only. iPad C needs an evaluated on-device compiler/runtime; no remote service or embedded compiler added.
+- SYN-11: TypeScript syntax checking implemented; type checking deferred. Python candidate: a user-installed CPython `ast.parse` adapter (must parse the buffer without executing it). SQL requires a chosen dialect and matching validator before a checker can be promised. Markdown candidate: markdownlint, with selected document-style rules rather than compiler syntax checks. These three retain highlighting only. iPad C needs an evaluated on-device compiler/runtime; no remote service or embedded compiler added.
 - SYN-12: version 0.5.0 prepared; Help updated; isolated browser/native verification workflow added. Release and physical acceptance remain outstanding.

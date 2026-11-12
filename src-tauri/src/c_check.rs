@@ -61,7 +61,7 @@ pub fn check(tools: &CTools, text: String, standard: String, includes: Vec<Strin
     let output=String::from_utf8_lossy(&reader.join().unwrap_or_default()).into_owned();
     let Some(status)=status else{return unavailable("C syntax checking timed out after 10 seconds.")};
     if !matches!(write_result,Ok(Ok(()))) && status.success(){return unavailable("Clang did not receive the full document. Please check again.")}
-    let checked=status.success() || output.contains("<stdin>:") || output.contains(": error:") || output.contains(": fatal error:");
+    let checked=status.success() || output.contains("<stdin>:");
     CResult {status:if checked {"checked"}else{"unavailable"}.into(),output,message:if checked {"C syntax and compiler diagnostics only; the program was not built or run."}else{"Clang could not check this document. Check the compiler, C standard and header settings."}.into()}
 }
 
@@ -70,6 +70,20 @@ mod tests {
     use super::*;
     #[test] fn rejects_compiler_options_in_macro_names(){let r=check(&CTools::default(),"".into(),"c17".into(),vec![],vec!["-include=bad".into()]);assert_eq!(r.status,"unavailable");assert!(r.message.contains("Macros"));}
     #[test] fn requires_project_for_relative_headers(){let r=check(&CTools::default(),"".into(),"c17".into(),vec!["include".into()],vec![]);assert!(r.message.contains("project folder"));}
+    #[test] fn missing_compiler_is_setup_failure(){
+        let tools=CTools::default();*tools.compiler.lock().unwrap()=Some(PathBuf::from("ate-compiler-that-does-not-exist"));
+        let r=check(&tools,"int x;".into(),"c17".into(),vec![],vec![]);assert_eq!(r.status,"unavailable");assert!(r.message.contains("could not start"));
+    }
+    #[test] fn real_clang_resolves_project_and_additional_headers(){
+        let root=std::env::temp_dir().join(format!("ate-c-test-{}-{}",std::process::id(),std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+        std::fs::create_dir_all(root.join("include")).unwrap();
+        std::fs::write(root.join("local.h"),"#define LOCAL_VALUE 1\n").unwrap();
+        std::fs::write(root.join("include").join("extra.h"),"int declared_function(int value);\n").unwrap();
+        let tools=CTools::default();*tools.project.lock().unwrap()=Some(root.clone());
+        let result=check(&tools,"#include \"local.h\"\n#include <extra.h>\nint f(void) { return declared_function(LOCAL_VALUE); }".into(),"c17".into(),vec!["include".into()],vec![]);
+        let _=std::fs::remove_dir_all(root);
+        assert_eq!(result.status,"checked","{result:?}");assert!(!result.output.contains("error:"),"{result:?}");
+    }
     #[test] fn real_clang_checks_headers_macros_and_unsaved_errors(){
         let tools=CTools::default();
         let r=check(&tools,"#include <stdio.h>\n#ifndef ATE_TEST\n#error Missing macro\n#endif\nint main(void) { puts(\"hello\"); return ATE_TEST; }".into(),"c17".into(),vec![],vec!["ATE_TEST=0".into()]);

@@ -19,7 +19,7 @@ function css(text) {
  tokenize(text,(type,start,end)=>{
   if(pairs.has(type))stack.push({type,start});
   else if([T.RightCurlyBracket,T.RightSquareBracket,T.RightParenthesis].includes(type)){
-   if(stack.length&&pairs.get(stack.at(-1).type)[0]===type)stack.pop();
+   if(stack.length&&pairs.get(stack[stack.length-1].type)[0]===type)stack.pop();
    else errors.push(diagnostic(text,start,end,'Unexpected closing '+text.slice(start,end)));
   } else if(type===T.BadString||type===T.BadUrl)errors.push(diagnostic(text,start,end,'Malformed CSS string or URL'));
   else if(type===T.Comment&&!text.slice(start,end).endsWith('*/'))errors.push(diagnostic(text,start,end,'Unclosed CSS comment'));
