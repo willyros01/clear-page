@@ -1,0 +1,27 @@
+name: ATE release build coordination
+on:
+  push:
+    branches: [desktop]
+    paths: ['.github/workflows/release-coordination.yml']
+permissions:
+  contents: read
+  actions: write
+jobs:
+  cancel-duplicate-legacy-run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cancel only the superseded legacy release run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node --input-type=module <<'JS'
+          const base='https://api.github.com/repos/willyros01/clear-page/actions/runs/43331741842';
+          const headers={Authorization:'Bearer '+process.env.GH_TOKEN,Accept:'application/vnd.github+json'};
+          const response=await fetch(base,{headers});if(!response.ok)throw Error('Run lookup failed');
+          const run=await response.json();
+          if(run.head_sha!=='5ebaab65208bfbaf51d2f0769f6b30ea2a1bd711'||run.path!=='.github/workflows/desktop-build.yml'||run.head_branch!=='desktop')throw Error('Unexpected run identity');
+          if(run.status==='completed'){console.log('Legacy run already completed');process.exit(0)}
+          const cancelled=await fetch(base+'/cancel',{method:'POST',headers});
+          if(cancelled.status!==202&&cancelled.status!==409)throw Error('Cancel failed HTTP '+cancelled.status);
+          console.log('Cancelled duplicate legacy run; coordinated release 43331741817 continues.');
+          JS
