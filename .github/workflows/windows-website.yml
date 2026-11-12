@@ -47,6 +47,7 @@ jobs:
           cache-on-failure: true
       - run: npm ci
       - run: npm run desktop:icons
+      - run: npm run build
       - name: Check cancellation, wrong checksum, partial download and unsafe archive
         shell: powershell
         run: ./tests/windows-compiler.ps1
