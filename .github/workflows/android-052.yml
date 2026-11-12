@@ -10,7 +10,7 @@ permissions:
   contents: read
 concurrency:
   group: ate-android-052
-  cancel-in-progress: false
+  cancel-in-progress: true
 env:
   ATE_BUILD_NUMBER: "17"
 jobs:
