@@ -88,3 +88,12 @@ Mac notarization completed: Apple returned Accepted. Recovery run 43103034568 pa
 ## Syntax checking plan — 11 November 2026
 - Added TODO.md with 12 tracked tasks covering language detection, diagnostics, JavaScript/JSON/HTML/CSS/YAML checks, C support through Clang/LLVM, compiler setup/licensing, additional languages and platform acceptance.
 - Documentation only; syntax checking is not implemented and no application build or release is initiated.
+
+## 0.5.0 — syntax checking (in verification)
+- Added language detection and modes for C, JSON, YAML, TypeScript, SQL and Markdown.
+- Added local parser checks for JavaScript/TypeScript/JSON/YAML/HTML/CSS, with manual and automatic checking, underlines and large clickable line/column diagnostics.
+- Added desktop C checking through an installed Clang compiler, C standard selection, source/include folders and macros. Uses syntax-only stdin checks; never builds or runs the program.
+- Added worker cancellation, size/time limits, bundled third-party notices, Help and verification tests. Python/SQL/Markdown checking and iPad C remain deferred.
+- Native/browser CI and physical acceptance are tracked in TODO.md; no 0.5.0 release claimed yet.
+
+0.5.0 verification checkpoint: 23 Node tests, Chromium/WebKit, five Clang tests on each native OS, native Mac/Windows UI and a Mac App Sandbox probe pass in run 43134841430. No 0.5.0 publication or physical acceptance is claimed. See TODO.md.

@@ -68,3 +68,8 @@ Mac 0.4.1 website recovery: Apple accepted notarization 06073ae2-3718-46f1-a9c2-
 
 ## Planned syntax checking
 See [TODO.md](TODO.md) for language-aware syntax checking, free Clang/LLVM integration for C on Mac/Windows, platform limitations and task-by-task progress. Planning recorded on 11 November 2026; implementation not started (0/12 complete).
+
+## Syntax checking implementation — 0.5.0
+Implementation is on `syntax-checking`: shared parser workers and readable diagnostics, C Clang adapter/settings, additional language modes and bundled license notices. See TODO.md for per-task progress and remaining browser/native/device acceptance. Production downloads remain 0.4.1 pending verification.
+
+Verification checkpoint: SYN-01–11 are verified at the scope recorded in TODO.md. Final run 43134841430 passed Chromium/WebKit, native Mac/Windows and a Mac sandbox probe. Implementation is in PR #1; 0.5.0 packaging, physical acceptance and publication remain outstanding.
