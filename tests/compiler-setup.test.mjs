@@ -1,0 +1,36 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {JSDOM} from 'jsdom';
+import {setupCompilerInstall} from '../src/compiler-setup-ui.js';
+test('optional compiler setup requires confirmation, supports cancellation/retry and preserves the draft',async()=>{
+ const dom=new JSDOM(readFileSync(new URL('../index.html',import.meta.url),'utf8'),{url:'https://example.test'});
+ const {document}=dom.window;globalThis.document=document;
+ dom.window.HTMLDialogElement.prototype.showModal=function(){this.open=true};
+ dom.window.HTMLDialogElement.prototype.close=function(){this.open=false};
+ dom.window.localStorage.setItem('draft','int main(void) { return 0; }');
+ let installs=0,cancels=0,retries=0,choose=0,reject,resolve;
+ const api=setupCompilerInstall({desktop:true,info:async()=>({supported:true,bytes:191037046,destination:'C:\\Users\\Test\\ATE',ready:false}),install:()=>{installs++;return new Promise((r,j)=>{resolve=r;reject=j})},cancel:async()=>{cancels++;reject(Error('Setup cancelled. Your document is kept.'))},chooseCompiler:async()=>{choose++;return 'clang.exe'},ready:()=>retries++});
+ const settle=()=>new Promise(r=>setTimeout(r,0));await settle();
+ assert.equal(installs,0);api.missing(true);assert.equal(document.getElementById('syntaxGetCompiler').hidden,false);
+ document.getElementById('syntaxGetCompiler').click();await settle();
+ assert.equal(installs,0);assert.match(document.getElementById('compilerInstallDescription').textContent,/191 MB/);
+ document.getElementById('compilerInstallLater').click();assert.equal(installs,0);
+ document.getElementById('getCompiler').click();document.getElementById('installCompiler').click();assert.equal(installs,1);
+ assert.equal(document.getElementById('compilerInstallLater').disabled,true);
+ document.getElementById('cancelCompilerInstall').click();await settle();assert.equal(cancels,1);assert.equal(retries,0);
+ assert.match(document.getElementById('compilerInstallStatus').textContent,/cancelled/);
+ document.getElementById('installCompiler').click();resolve('C compiler ready. Standard headers verified.');await settle();
+ assert.equal(installs,2);assert.equal(retries,1);assert.equal(document.getElementById('syntaxGetCompiler').hidden,true);
+ assert.equal(dom.window.localStorage.getItem('draft'),'int main(void) { return 0; }');
+ document.getElementById('compilerInstallChoose').click();await settle();assert.equal(choose,1);
+ dom.window.close();delete globalThis.document;
+});
+test('iPad and unsupported desktop setup never show or initiate a compiler download',async()=>{
+ const dom=new JSDOM(readFileSync(new URL('../index.html',import.meta.url),'utf8'));globalThis.document=dom.window.document;
+ let calls=0;const no=()=>{calls++;throw Error('must not install')};
+ const api=setupCompilerInstall({desktop:false,info:no,install:no,cancel:no,chooseCompiler:no,ready:no});
+ api.missing(true);document.getElementById('getCompiler').click();document.getElementById('installCompiler').click();
+ assert.equal(calls,0);assert.equal(document.getElementById('syntaxGetCompiler').hidden,true);
+ dom.window.close();delete globalThis.document;
+});

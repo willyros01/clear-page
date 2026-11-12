@@ -3,7 +3,7 @@ import {saveText,native,desktop,closePlatform,handleDesktopExit} from './platfor
 import {createEditor, languageForName} from './editor.js';
 import {languages} from './editor.js';
 import {setupSyntax} from './syntax-ui.js';
-import {checkC,chooseCCompiler,chooseCProject} from './desktop.js';
+import {checkC,chooseCCompiler,chooseCProject,compilerSetupInfo,installCCompiler,cancelCompilerSetup} from './desktop.js';
 const $=id=>document.getElementById(id);
 let loading=true,syntax=null,languageManual=false;
 const editor=createEditor($('editor'),()=>{if(!loading){dirty=true;counts();persist();syntax?.changed()}});let font=27,dirty=false,pending=null;const key='clear-page-draft-v1';const prefsKey='clear-page-preferences-v1';
@@ -66,5 +66,5 @@ $('closeCopy').onclick=()=>{$('copyDialog').close();editor.focus()};
 $('helpButton').onclick=()=>{$('menu').close();$('help').showModal();$('help').scrollTop=0};
 $('closeHelp').onclick=()=>{$('help').close();editor.focus()};
 editor.commands(save,()=>{$('exitDialog').showModal()},async()=>{if(await save())closeEditor(true)});
-syntax=setupSyntax({editor,getDocument:()=>({text:editor.value,language:$('language').value,name:$('name').value}),nativeCheck:checkC,chooseCompiler:chooseCCompiler,chooseProject:chooseCProject,desktop});
+syntax=setupSyntax({editor,getDocument:()=>({text:editor.value,language:$('language').value,name:$('name').value}),nativeCheck:checkC,chooseCompiler:chooseCCompiler,chooseProject:chooseCProject,compilerSetupInfo,installCCompiler,cancelCompilerSetup,desktop});
 

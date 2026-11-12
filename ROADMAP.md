@@ -85,3 +85,6 @@ The owner prioritized iPad. `ipad-syntax` bundles a basic C parser alongside the
 
 ## Mac TestFlight 0.5.0
 Mac-only release workflow verifies browser behavior, local Clang integration and the native Mac webview before universal distribution signing/upload. Universal Mac 0.5.0 (16) completed in run 43147595044: automated browser/compiler/native checks passed, Apple processing VALID, and existing internal tester assignment verified. Physical Mac acceptance remains pending.
+
+## Windows 0.5.1 optional compiler
+Implementing and verifying the approved optional LLVM-MinGW setup for Windows website distribution. Pinned release 20261104 (191,037,046 bytes), app-private install, retained upstream licenses, 3 GB free-space requirement, no admin/PATH change. Native/installer/publication results remain pending until CI completes. Mac/iPad 0.5.0 TestFlight builds are separate releases.

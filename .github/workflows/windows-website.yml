@@ -1,0 +1,157 @@
+name: ATE Windows website release
+on:
+  push:
+    branches: [windows-compiler]
+    paths: ['src/**','src-tauri/**','scripts/**','tests/**','index.html','package*.json','.github/workflows/windows-website.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ate-windows-website
+  cancel-in-progress: false
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium webkit
+      - run: npm run test:browser
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-browser-evidence
+          path: editor-evidence/*
+  windows:
+    needs: browser
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+          cache-on-failure: true
+      - run: npm ci
+      - run: npm run desktop:icons
+      - name: Check cancellation, wrong checksum, partial download and unsafe archive
+        shell: powershell
+        run: ./tests/windows-compiler.ps1
+      - name: Verify cancellation of actual setup and a clean official toolchain installation
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $script=(Resolve-Path scripts/install-windows-compiler.ps1).Path
+          $cancelRoot=Join-Path $env:RUNNER_TEMP 'compiler-cancel-test'
+          New-Item -ItemType Directory -Force $cancelRoot | Out-Null
+          $cancel=Join-Path $cancelRoot 'cancel'
+          $status=Join-Path $cancelRoot 'status.txt'
+          $arguments=@('-NoLogo','-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',"`"$script`"",'-Destination',"`"$cancelRoot`"",'-StatusPath',"`"$status`"",'-CancelPath',"`"$cancel`"")
+          $process=Start-Process powershell.exe -ArgumentList $arguments -PassThru
+          Start-Sleep -Seconds 2
+          Set-Content $cancel 'cancel'
+          if (!$process.WaitForExit(30000)) { Stop-Process -Id $process.Id; throw 'Cancellation timed out' }
+          if ($process.ExitCode -eq 0) { throw 'Cancelled setup unexpectedly succeeded' }
+          if (Test-Path (Join-Path $cancelRoot 'llvm-mingw-20261104-ucrt-x86_64/ate-verified.txt')) { throw 'Cancelled setup was activated' }
+          if (Test-Path (Join-Path $cancelRoot '.compiler-setup')) { throw 'Cancelled download was not cleaned up' }
+          'PASS: actual setup cancellation and cleanup' | Set-Content "$env:RUNNER_TEMP/compiler-setup-evidence.txt"
+          $destination=Join-Path $env:LOCALAPPDATA 'io.github.willyros01.clearpage/toolchains'
+          & powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $script -Destination $destination -StatusPath "$env:RUNNER_TEMP/compiler-status.txt" -CancelPath "$env:RUNNER_TEMP/no-cancel"
+          if ($LASTEXITCODE -ne 0) { throw 'Official compiler download/setup failed' }
+          'PASS: official 191037046-byte LLVM-MinGW archive checksum verified; local installation and standard headers verified' | Add-Content "$env:RUNNER_TEMP/compiler-setup-evidence.txt"
+      - name: Verify compiler and project settings
+        run: cargo test --locked --manifest-path src-tauri/Cargo.toml --target x86_64-pc-windows-msvc c_check::tests -- --nocapture
+      - name: Build native Windows verification app
+        run: npm run tauri -- build --target x86_64-pc-windows-msvc --no-bundle --features editor-verification
+      - name: Verify native editing, syntax and persistent managed compiler detection
+        shell: pwsh
+        run: |
+          $env:ATE_VERIFICATION_REPORT=Join-Path $env:RUNNER_TEMP 'windows-native.txt'
+          $app=Start-Process src-tauri/target/x86_64-pc-windows-msvc/release/ate-desktop.exe -PassThru
+          if (!$app.WaitForExit(90000)) { Stop-Process -Id $app.Id; throw 'Native editor checks timed out' }
+          $report=Get-Content $env:ATE_VERIFICATION_REPORT -Raw
+          $report
+          if ($app.ExitCode -ne 0 -or $report -notmatch 'Managed Windows compiler detected after app startup' -or $report -notmatch 'Native Clang diagnostic maps') { throw 'Native editor or managed compiler detection failed' }
+      - name: Build Windows installer without verification controls
+        run: npm run tauri -- build --target x86_64-pc-windows-msvc --bundles nsis
+      - name: Install and launch the exact distributable
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $setup=@(Get-ChildItem src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe)
+          if ($setup.Count -ne 1) { throw 'Expected one installer' }
+          $destination=Join-Path $env:RUNNER_TEMP 'ATE-installed'
+          $process=Start-Process $setup[0].FullName -ArgumentList @('/S',"/D=$destination") -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw 'Installation failed' }
+          $exe=Join-Path $destination 'ATE.exe'
+          if (!(Test-Path $exe)) { $exe=Join-Path $destination 'ate-desktop.exe' }
+          $app=Start-Process $exe -PassThru
+          Start-Sleep -Seconds 8
+          if ($app.HasExited) { throw 'Installed app exited unexpectedly' }
+          Stop-Process -Id $app.Id
+          'PASS: exact Windows installer installed and app launched; physical acceptance pending' | Add-Content "$env:RUNNER_TEMP/compiler-setup-evidence.txt"
+      - name: Stage verified installer and checksum manifest
+        shell: bash
+        run: |
+          node build/stage-desktop.mjs
+          node --input-type=module <<'JS'
+          import {readFileSync,writeFileSync} from 'node:fs';
+          const path='desktop-artifacts/manifest.json',m=JSON.parse(readFileSync(path));
+          m.optional_c_compiler={toolchain:'LLVM-MinGW',release:'20261104',sha256:'552191b5754c49a5a20723276a6fc56541ea1922c4c50b7b669022333fc1b40f',download_bytes:191037046,verification:'official-download-standard-headers-native-detection'};
+          writeFileSync(path,JSON.stringify(m,null,2)+'\n');
+          JS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ate-windows-x64
+          path: desktop-artifacts/*
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-compiler-evidence
+          path: |
+            ${{ runner.temp }}/compiler-setup-evidence.txt
+            ${{ runner.temp }}/compiler-status.txt
+            ${{ runner.temp }}/windows-native.txt
+  report:
+    needs: windows
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Publish verified Windows release report
+        shell: bash
+        run: |
+          node --input-type=module <<'JS'
+          import {readFileSync,writeFileSync} from 'node:fs';
+          const r=await fetch('https://api.github.com/repos/'+process.env.GITHUB_REPOSITORY+'/actions/runs/'+process.env.GITHUB_RUN_ID+'/artifacts',{headers:{Authorization:'Bearer '+process.env.GITHUB_TOKEN}});
+          if(!r.ok)throw Error('Artifact lookup failed');
+          const artifacts=(await r.json()).artifacts.filter(x=>x.name==='ate-windows-x64'&&!x.expired);
+          if(artifacts.length!==1)throw Error('Expected one verified Windows artifact');
+          writeFileSync(process.env.RUNNER_TEMP+'/ate-windows-report.json',JSON.stringify({app:'ATE',workflow:'ATE Windows website release',branch:process.env.GITHUB_REF_NAME,run_id:Number(process.env.GITHUB_RUN_ID),source_sha:process.env.GITHUB_SHA,version:JSON.parse(readFileSync('package.json')).version,windows_artifact_id:artifacts[0].id,mac_artifact_id:null},null,2)+'\n');
+          JS
+          git fetch origin desktop-releases
+          git checkout -B desktop-releases origin/desktop-releases
+          cp "$RUNNER_TEMP/ate-windows-report.json" ate-desktop-last-run.json
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ate-desktop-last-run.json
+          git commit -m "Record verified Windows release $GITHUB_RUN_ID"
+          git push origin HEAD:desktop-releases

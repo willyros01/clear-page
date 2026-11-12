@@ -35,7 +35,7 @@ Statuses: Pending → In progress → Implemented → Verified. Assessed records
 | SYN-11 | Assess TypeScript, Python, SQL, Markdown and iPad C checking. | Verified (assessment) | TypeScript syntax implemented; Python ast.parse and Markdown lint candidates assessed; SQL dialect and iPad C deferred explicitly. |
 | SYN-12 | Verify, document and release approved changes across platforms. | In progress | iPad native checks and TestFlight 0.5.0 (15) complete; universal Mac TestFlight 0.5.0 (16), Apple VALID and internal tester assignment verified in run 43147595044. Physical acceptance and desktop website builds/publication remain pending. |
 
-| SYN-13 | Offer optional free compiler download/setup when C checking cannot find Clang. | Pending | Implement the flow below; validate downloads, cancellation, automatic detection and platform restrictions. |
+| SYN-13 | Offer optional free compiler download/setup when C checking cannot find Clang. | In progress (Windows) | 0.5.1 implements pinned official LLVM-MinGW download, progress/cancel/retry, checksum/header checks and persistent detection; CI verification pending. Mac setup remains pending. |
 
 ## Acceptance record
 

@@ -56,6 +56,8 @@
   mode('standard');
   $('theme').click();await wait(100);
   assert(document.body.classList.contains('dark'),'Native dark appearance works');
+  const setup=await window.__TAURI_INTERNALS__.invoke('compiler_setup_info');
+  if(setup.ready){assert(setup.supported,'Managed Windows compiler detected after app startup');assert(!document.getElementById('getCompiler').hidden,'Optional compiler setup action is visible');}
   // Real bundled worker, lint UI and local compiler, inside the native webview.
   const until=async predicate=>{for(let i=0;i<120&&!predicate();i++)await wait(100);assert(predicate(),'Native syntax result arrived')};
   await open('const = 1;');

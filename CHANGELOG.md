@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.1 — Windows optional C compiler setup
+- Added an explicit optional LLVM-MinGW download/install with pinned SHA-256, cancellation/progress, standard-header verification and persistent ATE-only detection.
+- No administrator access, PATH changes, paid service or automatic download on launch/open. The document stays in the editor throughout setup.
+- Added Windows-only website release gates for download failure, checksum mismatch, cancellation, unsafe archives, official toolchain install, native diagnostics and exact installer installation/launch. Release evidence pending.
+
 ## 0.5.0 — Mac TestFlight
 - Added a Mac-only TestFlight workflow using the current shared syntax-checking editor.
 - Requires browser, compiler and native Mac webview checks before building a universal Intel/Apple silicon release.

@@ -4,6 +4,8 @@ use tauri::{Emitter, Manager};
 use tauri_plugin_dialog::DialogExt;
 use std::io::Write;
 mod c_check;
+mod compiler_setup;
+use compiler_setup::{compiler_setup_info,install_c_compiler,cancel_compiler_setup};
 
 #[tauri::command]
 async fn check_c(app: tauri::AppHandle, text: String, standard: String, includes: Vec<String>, defines: Vec<String>) -> Result<c_check::CResult, String> {
@@ -64,20 +66,21 @@ fn editor_verification_result(app: tauri::AppHandle, passed: bool, report: Strin
 
 fn main() {
     let builder = tauri::Builder::default()
+        .manage(compiler_setup::SetupState::default())
         .manage(ExitAllowed(AtomicBool::new(false)))
         .manage(c_check::CTools::default())
         .plugin(tauri_plugin_dialog::init())
         ;
     #[cfg(feature = "editor-verification")]
     let builder = builder
-        .invoke_handler(tauri::generate_handler![save_document, exit_editor, check_c, choose_c_compiler, choose_c_project, editor_verification_result])
+        .invoke_handler(tauri::generate_handler![save_document, exit_editor, check_c, choose_c_compiler, choose_c_project, compiler_setup_info, install_c_compiler, cancel_compiler_setup, editor_verification_result])
         .on_page_load(|webview, payload| {
             if matches!(payload.event(), tauri::webview::PageLoadEvent::Finished) {
                 let _ = webview.eval(include_str!("../../tests/native-editor.js"));
             }
         });
     #[cfg(not(feature = "editor-verification"))]
-    let builder = builder.invoke_handler(tauri::generate_handler![save_document, exit_editor, check_c, choose_c_compiler, choose_c_project]);
+    let builder = builder.invoke_handler(tauri::generate_handler![save_document, exit_editor, check_c, choose_c_compiler, choose_c_project, compiler_setup_info, install_c_compiler, cancel_compiler_setup]);
     let app = builder
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
@@ -89,6 +92,7 @@ fn main() {
         })
         .build(tauri::generate_context!())
         .expect("Could not start ATE");
+    if let Some(compiler)=compiler_setup::installed(app.handle()) { *app.state::<c_check::CTools>().compiler.lock().unwrap()=Some(compiler); }
     app.run(|handle, event| {
         if let tauri::RunEvent::ExitRequested { api, .. } = event {
             if !handle.state::<ExitAllowed>().0.load(Ordering::SeqCst) {

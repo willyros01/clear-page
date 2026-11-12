@@ -1,8 +1,9 @@
+import {setupCompilerInstall} from './compiler-setup-ui.js';
 import {createCheckRunner} from './check-runner.js';
 import {checkableLanguages,MAX_CHECK_LENGTH} from './syntax-common.js';
 import {languageLabels} from './languages.js';
 
-export function setupSyntax({editor,getDocument,nativeCheck,chooseCompiler,chooseProject,desktop}) {
+export function setupSyntax({editor,getDocument,nativeCheck,chooseCompiler,chooseProject,compilerSetupInfo,installCCompiler,cancelCompilerSetup,desktop}) {
  const $=id=>document.getElementById(id),settingsKey='ate-syntax-preferences-v1';
  let revision=0,timer,diagnostics=[],settings={automatic:true,standard:'c17',includes:'',defines:''};
  try{Object.assign(settings,JSON.parse(localStorage.getItem(settingsKey))||{})}catch{}
@@ -16,7 +17,9 @@ export function setupSyntax({editor,getDocument,nativeCheck,chooseCompiler,choos
  if(!desktop)for(const id of ['chooseCompiler','compilerChoice','chooseProject','projectChoice','cStandard','cIncludes','cDefines'])($(id).closest('label')||$(id)).hidden=true;
  const runner=createCheckRunner({workerFactory:()=>new Worker(new URL('syntax-worker.js',document.baseURI)),nativeCheck:desktop?nativeCheck:null});
  function options(){return {standard:$('cStandard').value,includes:$('cIncludes').value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean),defines:$('cDefines').value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean)}}
+ const compilerInstall=setupCompilerInstall({desktop,info:compilerSetupInfo,install:installCCompiler,cancel:cancelCompilerSetup,chooseCompiler,ready:()=>check()});
  function render(result) {
+  compilerInstall.missing(result.setupNeeded===true);
   diagnostics=result.diagnostics||[];editor.diagnostics(diagnostics);
   const count=diagnostics.length,label=languageLabels[getDocument().language];
   const summary=result.status==='checked'?(count?`${count} syntax issue${count===1?'':'s'}`:`${label}: no syntax errors found`):result.status==='checking'?'Checking syntax…':result.status==='pending'?'Syntax: not checked':'Syntax: check unavailable';
@@ -49,7 +52,7 @@ export function setupSyntax({editor,getDocument,nativeCheck,chooseCompiler,choos
  $('syntaxStatus').onclick=()=>{$('syntaxDialog').showModal()};
  $('checkAgain').onclick=check;
  $('closeSyntax').onclick=()=>{$('syntaxDialog').close();editor.focus()};
- $('cSettingsButton').onclick=()=>{$('menu').close();$('cSettings').showModal()};
+ $('cSettingsButton').onclick=()=>{$('menu').close();compilerInstall.refresh();$('cSettings').showModal()};
  $('closeCSettings').onclick=()=>{$('cSettings').close();saveSettings();editor.focus()};
  for(const [id,choose,label] of [['chooseCompiler',chooseCompiler,'compilerChoice'],['chooseProject',chooseProject,'projectChoice']])$(id).onclick=async()=>{
   try{const path=await choose();if(path){$(label).textContent=path;changed()}}catch{$(label).textContent='Selection could not complete. Please try again.'}

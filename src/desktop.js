@@ -3,6 +3,9 @@ import {listen} from '@tauri-apps/api/event';
 import {clangDiagnostics} from './syntax-common.js';
 
 export const desktop=isTauri();
+export const compilerSetupInfo=()=>invoke('compiler_setup_info');
+export const installCCompiler=()=>invoke('install_c_compiler');
+export const cancelCompilerSetup=()=>invoke('cancel_compiler_setup');
 export const chooseCCompiler=()=>invoke('choose_c_compiler');
 export const chooseCProject=()=>invoke('choose_c_project');
 export async function checkC(request){
@@ -10,7 +13,7 @@ export async function checkC(request){
  const result=await invoke('check_c',{text:request.text,standard:request.standard,includes:request.includes,defines:request.defines});
  const parsed=clangDiagnostics(request.text,result.output);
  const missing=/file not found|cannot find|invalid value.*-std|unsupported option/i.test(result.output);
- return {status:missing||parsed.external.length?'unavailable':result.status,diagnostics:parsed.diagnostics,message:[missing?'Header or compiler setup needs attention. Check C settings.':'',result.message,...parsed.external,(!parsed.diagnostics.length&&result.status!=='checked')?result.output:''].filter(Boolean).join('\n')};
+ return {setupNeeded:result.status==='unavailable'&&/Clang could not start/.test(result.message),status:missing||parsed.external.length?'unavailable':result.status,diagnostics:parsed.diagnostics,message:[missing?'Header or compiler setup needs attention. Check C settings.':'',result.message,...parsed.external,(!parsed.diagnostics.length&&result.status!=='checked')?result.output:''].filter(Boolean).join('\n')};
 }
 export async function saveDesktop(text,name){
  const result=await invoke('save_document',{text,name});
