@@ -16,7 +16,8 @@ $CancelPath=Join-Path $testRoot 'cancel'
 [IO.File]::WriteAllText($CancelPath,'cancel')
 Must-Fail { Assert-NotCancelled } 'cancelled'
 Remove-Item -LiteralPath $CancelPath
-Add-Type -AssemblyName System.IO.Compression.FileSystem
+Add-Type -AssemblyName System.IO.Compression
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
 $unsafe=Join-Path $testRoot 'unsafe.zip'
 $zip=[IO.Compression.ZipFile]::Open($unsafe,[IO.Compression.ZipArchiveMode]::Create)
 $entry=$zip.CreateEntry('../escape.exe');$writer=New-Object IO.StreamWriter ($entry.Open());$writer.Write('never execute');$writer.Dispose();$zip.Dispose()

@@ -53,6 +53,7 @@ function Receive-Compiler([string]$Url,[string]$Path,[long]$ExpectedBytes) {
     }
 }
 function Expand-VerifiedCompiler([string]$Archive,[string]$Root) {
+    Add-Type -AssemblyName System.IO.Compression
     Add-Type -AssemblyName System.IO.Compression.FileSystem
     $zip = [IO.Compression.ZipFile]::OpenRead($Archive)
     try {
