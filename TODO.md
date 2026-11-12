@@ -4,7 +4,7 @@ Last updated: 2026-11-11 (America/Toronto).
 
 ## Progress
 
-Implementation is committed on `syntax-checking`, reviewed through [PR #1](https://github.com/willyros01/clear-page/pull/1). **11 of 13 tasks verified within their documented scope**. SYN-12 remains in progress for installer/iPad/physical acceptance and release; SYN-13 tracks the newly approved optional compiler download/setup. ATE 0.5.0 (15) is processed VALID and assigned to the existing internal TestFlight tester group for iPad/iPhone. Desktop website downloads remain 0.4.1. iPad uses a bundled basic C parser rather than a desktop compiler installer.
+Implementation is committed on `syntax-checking`, reviewed through [PR #1](https://github.com/willyros01/clear-page/pull/1). **11 of 13 tasks verified within their documented scope**. SYN-12 remains in progress for installer/iPad/physical acceptance and release; SYN-13 tracks the newly approved optional compiler download/setup. ATE 0.5.0 (15) is processed VALID and assigned to the existing internal TestFlight tester group for iPad/iPhone. Universal Mac TestFlight 0.5.0 (16) is also processed VALID and assigned to the existing internal tester group. Desktop website downloads remain 0.4.1. iPad uses a bundled basic C parser rather than a desktop compiler installer.
 
 Statuses: Pending → In progress → Implemented → Verified. Assessed records a documented feasibility decision. Use Blocked when a dependency prevents work. Mark a task Verified only with evidence; automated checks and physical-device acceptance must be recorded separately. Update this table and the progress log with each change.
 
@@ -33,7 +33,7 @@ Statuses: Pending → In progress → Implemented → Verified. Assessed records
 | SYN-09 | Support C headers, include paths, macros and project compiler settings. | Verified | Five native Rust tests pass on both OSes, including project/local/additional headers and macros. |
 | SYN-10 | Decide compiler setup/distribution and document licenses. | Verified | Decision: user-installed tools; no compiler/SDK bundle. JS notices bundled and proprietary ATE licensing retained. |
 | SYN-11 | Assess TypeScript, Python, SQL, Markdown and iPad C checking. | Verified (assessment) | TypeScript syntax implemented; Python ast.parse and Markdown lint candidates assessed; SQL dialect and iPad C deferred explicitly. |
-| SYN-12 | Verify, document and release approved changes across platforms. | In progress | iPad native checks and TestFlight 0.5.0 (15) complete; physical acceptance, current desktop builds and publication remain pending. |
+| SYN-12 | Verify, document and release approved changes across platforms. | In progress | iPad native checks and TestFlight 0.5.0 (15) complete; universal Mac TestFlight 0.5.0 (16), Apple VALID and internal tester assignment verified in run 43147595044. Physical acceptance and desktop website builds/publication remain pending. |
 
 | SYN-13 | Offer optional free compiler download/setup when C checking cannot find Clang. | Pending | Implement the flow below; validate downloads, cancellation, automatic detection and platform restrictions. |
 
@@ -112,3 +112,7 @@ Acceptance evidence must cover missing/existing compilers, a successful official
 - Apple processing: **VALID**. Build ID: `5c151092-9797-4e1a-9aae-51d40dbbd387`. Assignment to the existing internal TestFlight group was verified.
 - Simulator screenshot inspected: large C error text, missing-semicolon location, syntax colors and dark appearance. This is simulator evidence; physical-device acceptance is not claimed.
 - C on iPad is structural syntax checking only. Headers, macro expansion, types, standard conformance and building/running remain outside that checker. No compiler download is needed on iPad. SYN-13 optional desktop compiler setup remains Pending.
+
+### Mac TestFlight release
+
+2026-11-11 (America/Toronto): [run 43147595044](https://github.com/willyros01/clear-page/actions/runs/43147595044) passed browser, 27 Node, five Clang/project and native Mac webview checks. The universal distribution app contains arm64 and x86_64 architectures. Apple processed ATE 0.5.0 (16) as VALID (build `59ad98c2-da97-4545-a850-07b24d74c2d4`) and assignment to the existing internal tester group was verified. Physical Mac acceptance remains pending; website downloads were not changed.

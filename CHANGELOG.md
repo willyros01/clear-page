@@ -3,7 +3,8 @@
 ## 0.5.0 — Mac TestFlight
 - Added a Mac-only TestFlight workflow using the current shared syntax-checking editor.
 - Requires browser, compiler and native Mac webview checks before building a universal Intel/Apple silicon release.
-- Release 0.5.0 (16) processing and tester assignment must be verified; physical Mac acceptance remains pending.
+- Universal Mac 0.5.0 (16) uploaded; Apple processing VALID and assignment to the existing internal tester group verified. Build ID: `59ad98c2-da97-4545-a850-07b24d74c2d4`.
+- [Release run 43147595044](https://github.com/willyros01/clear-page/actions/runs/43147595044) passed 27 Node tests, Chromium/WebKit checks, five Clang/project tests and native Mac editing/syntax checks. Both arm64 and x86_64 binary architectures verified. Physical Mac acceptance remains pending.
 
 ## 0.3.2 — Another Text Editor (ATE)
 - Renamed the product to Another Text Editor (ATE), retaining its existing app identity and recovery data.
