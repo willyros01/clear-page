@@ -1,0 +1,35 @@
+name: ATE Zig compiler assessment
+on:
+  push:
+    branches: [zig-assessment-0171]
+    paths: ['assessment/zig-check.py', '.github/workflows/zig-assessment.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  assess:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-26
+            target: aarch64-macos
+          - runner: macos-15-intel
+            target: x86_64-macos
+          - runner: windows-latest
+            target: x86_64-windows
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Measure official package and native Clang compatibility
+        run: python assessment/zig-check.py --platform ${{ matrix.target }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: zig-${{ matrix.target }}-assessment
+          path: zig-evidence/report.json
+          if-no-files-found: error
