@@ -56,7 +56,8 @@ fn exit_editor(app: tauri::AppHandle) {
 #[tauri::command]
 fn editor_verification_result(app: tauri::AppHandle, passed: bool, report: String) {
     let path = std::env::var("ATE_VERIFICATION_REPORT").expect("Verification report path required");
-    std::fs::write(path, report).expect("Could not write verification report");
+    println!("{report}");
+    let _ = std::fs::write(path, report);
     app.state::<ExitAllowed>().0.store(true, Ordering::SeqCst);
     app.exit(if passed { 0 } else { 1 });
 }

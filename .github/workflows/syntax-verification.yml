@@ -72,6 +72,31 @@ jobs:
           if (!$app.WaitForExit(90000)) { Stop-Process -Id $app.Id; throw 'Native checks timed out' }
           Get-Content $env:ATE_VERIFICATION_REPORT
           if ($app.ExitCode -ne 0) { throw 'Native checks failed' }
+      - name: Probe Mac App Sandbox compiler support
+        if: runner.os == 'macOS'
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/syntax-sandbox.plist" <<'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>com.apple.security.app-sandbox</key><true/><key>com.apple.security.files.user-selected.read-write</key><true/><key>com.apple.security.network.client</key><true/></dict></plist>
+          PLIST
+          codesign --force --sign - --entitlements "$RUNNER_TEMP/syntax-sandbox.plist" src-tauri/target/release/ate-desktop
+          export ATE_VERIFICATION_REPORT="$RUNNER_TEMP/syntax-sandbox-write.txt"
+          src-tauri/target/release/ate-desktop > "$RUNNER_TEMP/syntax-sandbox.txt" 2>&1 &
+          ATE_PID=$!
+          for attempt in {1..60}; do
+            if ! kill -0 "$ATE_PID" 2>/dev/null; then break; fi
+            sleep 1
+          done
+          if kill -0 "$ATE_PID" 2>/dev/null; then kill "$ATE_PID"; fi
+          cat "$RUNNER_TEMP/syntax-sandbox.txt"
+          wait "$ATE_PID"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: syntax-sandbox-${{ runner.os }}
+          path: ${{ runner.temp }}/syntax-sandbox.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
