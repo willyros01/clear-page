@@ -1,6 +1,12 @@
 # Changelog
 
-## Unreleased — automatic language detection
+## 0.6.0 (19) — coordinated release in verification
+- Preserve explicit and extensionless filenames; remove automatic .txt appending. Android native Save avoids MIME-derived suffix suggestions. The unsaved rename report was not reproduced; no speculative root cause is claimed.
+- Add bundled offline Python 3.14 syntax parsing with Ruff Wasm, SQLite SQL parsing, and selected Markdown lint warnings. No Python interpreter, database, compiler download or source execution is required.
+- Retain existing offline JavaScript, TypeScript, JSON, HTML, CSS, YAML and Basic C checks; keep optional desktop Clang.
+- Synchronize all platform versions/builds using release.json and one coordinated native verification/release workflow. Preserve 12pt controls and independent editor sizing.
+
+## Automatic language detection (included in 0.6.0)
 - Detect supported languages from filename first, then a bounded local content scan for C, JavaScript, TypeScript, JSON, HTML, CSS, YAML, Python, SQL and Markdown; ambiguous content remains plain text.
 - Recognize source filenames ending in .txt without renaming them; re-detect restored automatic drafts instead of retaining a stale plain-text mode. Explicit manual selection survives recovery, filename edits and Save As.
 - Detection never writes or renames a source file. The reported unsolicited .txt suffix remains unresolved; native reproduction and release verification are pending.

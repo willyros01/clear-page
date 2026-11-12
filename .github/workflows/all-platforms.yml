@@ -9,10 +9,10 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: ate-all-platforms
+  group: ate-coordinated-release
   cancel-in-progress: false
 env:
-  ATE_BUILD_NUMBER: "17"
+  ATE_BUILD_NUMBER: "19"
 jobs:
   browser:
     runs-on: ubuntu-latest
@@ -32,7 +32,6 @@ jobs:
         with:
           name: windows-browser-evidence
           path: editor-evidence/*
-    if: ${{ !contains(github.event.head_commit.message, '[android-only]') }}
   ipad-native:
     needs: browser
     runs-on: macos-26
@@ -315,7 +314,7 @@ jobs:
             ${{ runner.temp }}/compiler-status.txt
             ${{ runner.temp }}/windows-native.txt
   report:
-    if: ${{ always() && !contains(github.event.head_commit.message, '[android-only]') }}
+    if: ${{ always() }}
     needs:
       - windows
       - mac-release
@@ -396,11 +395,13 @@ jobs:
             adb shell uiautomator dump /sdcard/ate-ui.xml
             adb pull /sdcard/ate-ui.xml android-ui.xml
             adb shell run-as io.github.willyros01.clearpage cat files/ate-ipad-syntax-verification.json > android-webview-report.json || true
-            cat android-webview-report.json
+            node -e 'const r=JSON.parse(require("fs").readFileSync("android-webview-report.json"));if(!r.passed)throw Error(r.error);console.log("PASS: Android offline parsers and editor webview");'
             cat android-ui.xml
             grep 'DocumentFiles' android-logcat.txt || true
             grep -q "OK (1 test)" android-instrumentation.txt
             adb pull /sdcard/Download/ate-storage-check.c android-saved.c
+            adb pull /sdcard/Download/ate-no-extension android-saved-extensionless
+            cmp android-saved.c android-saved-extensionless
             node -e 'const s=require("fs").readFileSync("android-saved.c","utf8");if(s!=="int main(void) { return 0 }")throw Error("Saved text differs");'
             adb shell screencap -p /sdcard/ate-native.png
             adb pull /sdcard/ate-native.png android-native.png
@@ -452,5 +453,3 @@ jobs:
             android-native.png
             android-saved.c
             android/app/build/outputs/androidTest-results/**
-
-# Verify native Save activation, callback, exact bytes and reopen.

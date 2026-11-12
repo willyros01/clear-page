@@ -40,7 +40,13 @@ test('desktop Save cancellation/error preserves text and recovery; Save and Exit
   fail=true;document.getElementById('saveExit').click();await settle();
   assert.equal(exits,0);assert.equal(view.state.doc.toString(),'Keep my unsaved work');
   // Save As updates automatic language detection, while a manual override stays chosen.
-  fail=false;destination='code.json';document.getElementById('save').click();await settle();
+  fail=false;
+  for(const name of ['program','program.c','PROGRAM.C','script.js','notes.custom']){
+   document.getElementById('name').value=name;destination=name;
+   document.getElementById('save').click();await settle();
+   assert.equal(requests.filter(x=>x.cmd==='save_document').at(-1).payload.name,name,'Save must preserve '+name);
+  }
+  destination='code.json';document.getElementById('save').click();await settle();
   assert.equal(document.getElementById('name').value,'code.json');
   assert.equal(document.getElementById('language').value,'json');
   document.getElementById('language').value='javascript';document.getElementById('language').dispatchEvent(new window.Event('change'));
@@ -51,6 +57,12 @@ test('desktop Save cancellation/error preserves text and recovery; Save and Exit
   destination='Notes.txt';document.getElementById('saveExit').click();await settle();
   assert.equal(exits,1);assert.equal(view.state.doc.toString(),'');
   assert.match(localStorage.getItem('clear-page-draft-v1'),/Keep my unsaved work/);
+  const saves=requests.filter(x=>x.cmd==='save_document').length;
+  await open('program.c','int main(void) { return 0; }');
+  view.dispatch({changes:{from:0,insert:'/* unsaved */'}});
+  document.getElementById('discardExit').click();await settle();
+  assert.equal(requests.filter(x=>x.cmd==='save_document').length,saves,'Discard must never call Save');
+  assert.equal(localStorage.getItem('clear-page-draft-v1'),null);
   assert.deepEqual(Object.keys(requests.find(x=>x.cmd==='save_document').payload).sort(),['name','text']);
  }finally{view.destroy();clearMocks();delete globalThis.isTauri;dom.window.close()}
 });

@@ -1,5 +1,5 @@
 export const MAX_CHECK_LENGTH=512*1024;
-export const checkableLanguages=new Set(['javascript','typescript','json','html','css','yaml','c']);
+export const checkableLanguages=new Set(['javascript','typescript','json','html','css','yaml','c','python','sql','markdown']);
 const limit=100;
 export function diagnostic(text,from,to,message,severity='error') {
  from=Math.max(0,Math.min(text.length,from||0));

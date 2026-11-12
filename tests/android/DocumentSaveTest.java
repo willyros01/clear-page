@@ -60,6 +60,19 @@ public class DocumentSaveTest {
         UiObject2 saved=device.wait(Until.findObject(By.text("ate-storage-check.c")),10000);
         assertNotNull("Saved document missing from file manager",saved);saved.click();
         assertTrue("Native file open did not complete",device.wait(Until.hasObject(By.textContains("Opened ate-storage-check.c")),15000));
+        click(device,"Save file");
+        assertTrue(device.wait(Until.hasObject(By.pkg(DOCUMENTS)),15000));
+        filename=device.wait(Until.findObject(By.clazz("android.widget.EditText")),10000);
+        assertNotNull("Extensionless filename field missing",filename);filename.setText("ate-no-extension");
+        device.waitForIdle();
+        if(device.hasObject(By.pkg(Pattern.compile(".*inputmethod.*")))){device.pressBack();device.waitForIdle();}
+        clickSelector(device,nativeSave,"Extensionless Save");
+        assertTrue("Extensionless save notice missing",device.wait(Until.hasObject(By.textContains("Saved ate-no-extension.")),15000));
+        click(device,"Menu");click(device,"Open");click(device,"Continue");
+        assertTrue(device.wait(Until.hasObject(By.pkg(DOCUMENTS)),15000));
+        UiObject2 extensionless=device.wait(Until.findObject(By.text("ate-no-extension")),10000);
+        assertNotNull("Provider appended or changed the extensionless filename",extensionless);extensionless.click();
+        assertTrue(device.wait(Until.hasObject(By.textContains("Opened ate-no-extension")),15000));
         System.out.println("PASS: ACTION_CREATE_DOCUMENT picker, cancel preserves draft, filename/destination save and reopen succeed");
     }
     private void click(UiDevice device,String text){clickSelector(device,By.text(text),text);}

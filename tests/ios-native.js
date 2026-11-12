@@ -40,6 +40,8 @@ import {Filesystem,Directory,Encoding} from '@capacitor/filesystem';
    ['fixture.html','<script>const = 1;</script>','<p>Hello</p>'],
    ['fixture.css','body { color red; }','body { color: red; }'],
    ['fixture.ts','const a: = 1;','const a: number = 1;'],
+   ['fixture.py','def greet(name)\n    return name','def greet(name):\n    return name'],
+   ['fixture.sql','SELECT x FROM WHERE x=1;','SELECT name FROM people;'],
    ['fixture.c','int main(void) { return 0 }','#include <stdio.h>\nint main(void) { return 0; }']
   ]){
    await open(invalid,name);await check();
@@ -53,6 +55,13 @@ import {Filesystem,Directory,Encoding} from '@capacitor/filesystem';
    assert(!document.querySelector('.cm-lintRange-error, .cm-lintPoint-error'),'iPad stale error markers cleared');
    $('closeSyntax').click();
   }
+  await open('## Twice\n\n## Twice\n\n```py\npass','fixture.md');await check();
+  assert($('syntaxIssues').children.length>0&&$('syntaxSummary').textContent.includes('lint issue'),'iPad Markdown reports lint warnings');
+  $('closeSyntax').click();
+  await open('# Title\n\n- item','fixture.md');await check();
+  assert($('syntaxSummary').textContent.includes('no lint issues'),'iPad Markdown clears warnings');$('closeSyntax').click();
+  await open('int main(void) { return 0; }','program.c.txt');
+  assert($('language').value==='c'&&$('name').value==='program.c.txt','Content detection never renames the file');
   $('cSettingsButton').click();
   assert($('cPlatformNote').textContent.includes('No compiler download'),'iPad C needs no download');
   assert($('chooseCompiler').hidden,'iPad does not offer a desktop executable installer');

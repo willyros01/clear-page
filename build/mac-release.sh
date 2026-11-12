@@ -5,7 +5,7 @@ set -euo pipefail
 CHANNEL="${1:?testflight or website}"
 case "$CHANNEL" in testflight|website) ;; *) exit 2;; esac
 export VERSION="$(node -p "require('./package.json').version")"
-export BUILD="${ATE_BUILD_NUMBER:-${GITHUB_RUN_NUMBER:?}}"
+export BUILD="${ATE_BUILD_NUMBER:-$(node -p "require('./release.json').build")}"
 export RELEASE_DIR="$RUNNER_TEMP/ate-mac-$CHANNEL"
 mkdir -p "$RELEASE_DIR"
 KEY_DIR=$(mktemp -d "$RUNNER_TEMP/ate-mac-key.XXXXXX")
@@ -112,7 +112,7 @@ else
  node --input-type=module <<'JS'
 import {readFileSync,writeFileSync} from 'node:fs';import {createHash} from 'node:crypto';
 const name='ATE-'+process.env.VERSION+'-universal.dmg',bytes=readFileSync('public-desktop/'+name);
-writeFileSync('public-desktop/manifest.json',JSON.stringify({app:'ATE',platform:'mac-universal',version:process.env.VERSION,run_id:Number(process.env.GITHUB_RUN_ID),source_sha:process.env.GITHUB_SHA,file:name,sha256:createHash('sha256').update(bytes).digest('hex'),bytes:bytes.length,team_id:process.env.APPLE_TEAM_ID,signature:'developer-id',notarization:'Accepted',stapled:true},null,2)+'\n');
+writeFileSync('public-desktop/manifest.json',JSON.stringify({app:'ATE',platform:'mac-universal',version:process.env.VERSION,build:Number(process.env.BUILD),run_id:Number(process.env.GITHUB_RUN_ID),source_sha:process.env.GITHUB_SHA,file:name,sha256:createHash('sha256').update(bytes).digest('hex'),bytes:bytes.length,team_id:process.env.APPLE_TEAM_ID,signature:'developer-id',notarization:'Accepted',stapled:true},null,2)+'\n');
 JS
  echo 'PASS: Developer ID-signed universal Mac DMG notarized and stapled.' >> "$GITHUB_STEP_SUMMARY"
 fi

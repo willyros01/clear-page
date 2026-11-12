@@ -10,7 +10,7 @@ export async function saveText(text,name){
  if(desktop)return saveDesktop(text,name);
  if(Capacitor.getPlatform()==='android')return saveAndroid(text,name);
  if(native){
-  const safeName=name.replace(/[\\/\u0000-\u001f:]/g,'_')||'Untitled.txt';
+  const safeName=name.replace(/[\\/\u0000-\u001f:]/g,'_')||'Untitled';
   const result=await Filesystem.writeFile({path:'exports/'+safeName,data:text,directory:Directory.Cache,encoding:Encoding.UTF8,recursive:true});
   await Share.share({title:'Save '+safeName,files:[result.uri],dialogTitle:'Save or share your text file'});
   return 'Save/share sheet closed. Your recovery draft is kept on this device.';

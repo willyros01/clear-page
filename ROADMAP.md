@@ -2,7 +2,10 @@
 
 Work in small, reviewable steps. Keep one shared editor for all platforms.
 
-## Automatic language detection — unreleased
+## Coordinated 0.6.0 (19) release
+Owner authorized filename preservation, all supported language detection, offline Python/SQLite parsers and Markdown linting together. Source implementation and 40 Node tests pass; native verification and distribution publication are in progress. See TODO.md and RELEASE-0.6.0.md for current gates.
+
+## Automatic language detection — included in 0.6.0
 Implemented filename-first and conservative content detection across all supported languages, with manual overrides and stale automatic draft recovery covered by automated checks. Shared app build and 36 Node tests pass. Native device acceptance and distribution rebuilds remain pending; no installed app has been updated. Unsolicited .txt filename changes remain a separate unresolved report.
 
 ## Step 1 — Baseline

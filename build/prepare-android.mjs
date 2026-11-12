@@ -3,7 +3,7 @@ import {existsSync,readFileSync,writeFileSync,mkdirSync} from 'node:fs';
 if(!existsSync('android/app/build.gradle'))execFileSync('npx',['--no-install','cap','add','android'],{stdio:'inherit'});
 execFileSync('npx',['--no-install','cap','sync','android'],{stdio:'inherit'});
 const version=JSON.parse(readFileSync('package.json')).version;
-const build=Number(process.env.ATE_BUILD_NUMBER||process.env.GITHUB_RUN_NUMBER||1);
+const build=Number(process.env.ATE_BUILD_NUMBER||JSON.parse(readFileSync('release.json')).build);
 if(!Number.isSafeInteger(build)||build<1)throw Error('Invalid Android build number');
 const gradle='android/app/build.gradle';let text=readFileSync(gradle,'utf8');
 text=text.replace(/versionCode\s+\d+/,`versionCode ${build}`).replace(/versionName\s+"[^"]*"/,`versionName "${version}"`);writeFileSync(gradle,text);

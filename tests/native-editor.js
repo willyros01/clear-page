@@ -18,8 +18,8 @@
     active.dispatchEvent(new Event('input',{bubbles:true}));
    }else key(char);
   }};
-  const open=async value=>{
-   const transfer=new DataTransfer();transfer.items.add(new File([value],'native-fixture.js',{type:'text/javascript'}));
+  const open=async(value,name='native-fixture.js')=>{
+   const transfer=new DataTransfer();transfer.items.add(new File([value],name,{type:'text/javascript'}));
    $('file').files=transfer.files;$('file').dispatchEvent(new Event('change'));
    for(let i=0;i<50&&text()!==value;i++)await wait(50);
    assert(text()===value,'File import preserves text and indentation');
@@ -83,6 +83,17 @@
   await until(()=>$('syntaxSummary').textContent.includes('no syntax errors'));
   assert(!document.querySelector('.cm-lintRange-error'),'Native fixed code clears old errors');
   $('closeSyntax').click();
+  for(const [name,invalid,valid] of [
+   ['offline.py','def greet(name)\n    return name','def greet(name):\n    return name'],
+   ['offline.sql','SELECT x FROM WHERE x=1;','SELECT name FROM people;'],
+   ['offline.md','## Twice\n\n## Twice\n\n```py\npass','# Title\n\n- item']
+  ]){
+   await open(invalid,name);$('checkSyntax').click();await until(()=>$('syntaxIssues').children.length>0);
+   assert(!$('syntaxSummary').textContent.includes('unavailable'),'Native offline checker works for '+name);
+   $('closeSyntax').click();await open(valid,name);$('checkSyntax').click();
+   await until(()=>$('syntaxSummary').textContent.includes(name.endsWith('.md')?'no lint issues':'no syntax errors'));
+   assert($('syntaxIssues').children.length===0,'Native corrected '+name+' clears diagnostics');$('closeSyntax').click();
+  }
   await open('int main(void) { return 0 }');
   $('language').value='c';$('language').dispatchEvent(new Event('change'));
   $('checkSyntax').click();

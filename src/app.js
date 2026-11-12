@@ -17,7 +17,7 @@ function persistPreferences(){try{localStorage.setItem(prefsKey,JSON.stringify({
 function updateSize(){$('editor').style.fontSize=font+'pt';$('fontSize').value=font;$('smaller').disabled=font<=10;$('larger').disabled=font>=54}
 function setFont(value){if(!Number.isFinite(value)){updateSize();return}font=Math.min(54,Math.max(10,Math.round(value)));updateSize();persistPreferences();persist()}
 function themeLabel(){editor.setDark(document.body.classList.contains('dark'));const label=document.body.classList.contains('dark')?'Light':'Dark';$('theme').querySelector('.control-label').textContent=label;$('theme').setAttribute('aria-label','Switch to '+label.toLowerCase()+' appearance');$('theme').title=$('theme').getAttribute('aria-label')}
-try{let d=JSON.parse(localStorage.getItem(key));if(d){languageManual=!!d.languageManual;editor.value=typeof d.text==='string'?d.text:''; $('language').value=languageManual&&Object.prototype.hasOwnProperty.call(languages,d.language)?d.language:languageForDocument(d.name||'',editor.value);$('name').value=d.name||'Untitled.txt';font=Math.min(54,Math.max(10,Number(d.fontPt)||(Number(d.font)||36)*.75));document.body.classList.toggle('dark',!!d.dark)}}catch(e){$('status').textContent='Use Save file to keep your work'}try{const p=JSON.parse(localStorage.getItem(prefsKey));if(p){font=Math.min(54,Math.max(10,Number(p.fontPt)||font));$('buttonStyle').value=p.buttonStyle==='icons'?'icons':'text';$('editingMode').value=p.editingMode==='vim'?'vim':'standard';document.body.classList.toggle('dark',!!p.dark)}}catch(e){}
+try{let d=JSON.parse(localStorage.getItem(key));if(d){languageManual=!!d.languageManual;editor.value=typeof d.text==='string'?d.text:''; $('language').value=languageManual&&Object.prototype.hasOwnProperty.call(languages,d.language)?d.language:languageForDocument(d.name||'',editor.value);$('name').value=d.name||'Untitled';font=Math.min(54,Math.max(10,Number(d.fontPt)||(Number(d.font)||36)*.75));document.body.classList.toggle('dark',!!d.dark)}}catch(e){$('status').textContent='Use Save file to keep your work'}try{const p=JSON.parse(localStorage.getItem(prefsKey));if(p){font=Math.min(54,Math.max(10,Number(p.fontPt)||font));$('buttonStyle').value=p.buttonStyle==='icons'?'icons':'text';$('editingMode').value=p.editingMode==='vim'?'vim':'standard';document.body.classList.toggle('dark',!!p.dark)}}catch(e){}
 if(native){$('exit').textContent='Close';$('exit').setAttribute('aria-label','Close document');$('exitTitle').textContent='Close the document?';$('saveExit').textContent='Save and close';$('discardExit').textContent='Close without saving'}
 setupIcons();applyButtonStyle();
 loading=false;editor.setLanguage($('language').value);counts();updateSize();themeLabel();editor.setVim($('editingMode').value==='vim');
@@ -27,7 +27,7 @@ $('language').onchange=()=>{languageManual=true;editor.setLanguage($('language')
 $('indent').onclick=()=>editor.indent();$('unindent').onclick=()=>editor.unindent();
 $('smaller').onclick=()=>setFont(font-1);$('larger').onclick=()=>setFont(font+1);$('fontSize').oninput=()=>{const value=$('fontSize').valueAsNumber;if(Number.isFinite(value)&&value>=10&&value<=54){font=value;$('editor').style.fontSize=font+'pt';$('smaller').disabled=font<=10;$('larger').disabled=font>=54;persistPreferences();persist()}};$('fontSize').onchange=()=>setFont($('fontSize').valueAsNumber);$('buttonStyle').onchange=()=>{applyButtonStyle();persistPreferences()};$('theme').onclick=()=>{document.body.classList.toggle('dark');themeLabel();persistPreferences();persist()};
 let saving=false;
-async function save(){if(saving)return false;saving=true;try{let name=$('name').value.trim()||'Untitled.txt';if(!/\.[a-z0-9]+$/i.test(name))name+='.txt';const result=await saveText(editor.value,name);notice(typeof result==='string'?result:result.message);if(result?.name&&result.name!==$('name').value){$('name').value=result.name;if(!languageManual)setLanguage(languageForDocument(result.name,editor.value));}dirty=false;persist();return true}catch(e){notice('Save was cancelled or could not complete. Your draft is kept.');return false}finally{saving=false}}
+async function save(){if(saving)return false;saving=true;try{let name=$('name').value||'Untitled';const result=await saveText(editor.value,name);notice(typeof result==='string'?result:result.message);if(result?.name&&result.name!==$('name').value){$('name').value=result.name;if(!languageManual)setLanguage(languageForDocument(result.name,editor.value));}dirty=false;persist();return true}catch(e){notice('Save was cancelled or could not complete. Your draft is kept.');return false}finally{saving=false}}
 $('save').onclick=save;
 $('menuButton').onclick=()=>{$('menu').showModal()};
 $('closeMenu').onclick=()=>{$('menu').close();editor.focus()};
@@ -36,7 +36,7 @@ $('exitCancel').onclick=()=>{$('exitDialog').close();editor.focus()};
 async function closeEditor(saved){
  try{if(!saved)localStorage.removeItem(key)}catch(e){notice('Could not discard the draft. Please keep editing or clear this app’s data.');$('exitDialog').close();return}
  loading=true;editor.value='';loading=false;dirty=false;pending=null;
- $('name').value='Untitled.txt';setLanguage('plain');counts();notice('');
+ $('name').value='Untitled';setLanguage('plain');counts();notice('');
  for(const dialog of document.querySelectorAll('dialog[open]'))dialog.close();
  leave();
  const active=document.activeElement;if(active instanceof HTMLElement)active.blur();
@@ -49,7 +49,7 @@ $('saveExit').onclick=async()=>{if(await save())closeEditor(true)};
 
 function guard(action,title){if(editor.value){pending=action;$('dialogTitle').textContent=title;$('confirm').showModal()}else action()}
 $('cancel').onclick=()=>{$('confirm').close();pending=null};$('proceed').onclick=()=>{const fn=pending;pending=null;$('confirm').close();if(fn)fn()};
-$('new').onclick=()=>{$('menu').close();guard(()=>{editor.value='';$('name').value='Untitled.txt';setLanguage('plain');dirty=false;counts();persist();notice('');editor.focus()},'Start a new document?')};
+$('new').onclick=()=>{$('menu').close();guard(()=>{editor.value='';$('name').value='Untitled';setLanguage('plain');dirty=false;counts();persist();notice('');editor.focus()},'Start a new document?')};
 function opened(text,name){editor.value=text;$('name').value=name;setLanguage(languageForDocument(name,text));dirty=false;counts();persist();notice('Opened '+name);editor.focus()}
 async function chooseOpen(){if(Capacitor.getPlatform()==='android'){try{const result=await openAndroid();opened(result.text,result.name)}catch(error){notice(error.message||'Open was cancelled. Your draft is kept.')}}else $('file').click()}
 $('open').onclick=()=>{$('menu').close();guard(chooseOpen,'Open another document?')};$('file').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{if(f.size>10*1024*1024)throw new Error('Please choose a text file smaller than 10 MB.');const text=await f.text();if(text.includes('\u0000'))throw new Error('This does not look like a plain-text file.');opened(text,f.name)}catch(err){notice(err.message||'Could not open this file.')}finally{e.target.value=''}};

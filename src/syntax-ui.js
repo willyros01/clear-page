@@ -29,7 +29,8 @@ export function setupSyntax({editor,getDocument,nativeCheck,chooseCompiler,choos
   compilerInstall.missing(result.setupNeeded===true);
   diagnostics=result.diagnostics||[];editor.diagnostics(diagnostics);
   const count=diagnostics.length,label=languageLabels[getDocument().language];
-  const summary=result.status==='checked'?(count?`${count} syntax issue${count===1?'':'s'}`:`${label}: no syntax errors found`):result.status==='checking'?'Checking syntax…':result.status==='pending'?'Syntax: not checked':'Syntax: check unavailable';
+  const lint=getDocument().language==='markdown';
+  const summary=result.status==='checked'?(count?`${count} ${lint?'lint':'syntax'} issue${count===1?'':'s'}`:`${label}: ${lint?'no lint issues found':'no syntax errors found'}`):result.status==='checking'?'Checking syntax…':result.status==='pending'?'Syntax: not checked':'Syntax: check unavailable';
   $('syntaxStatus').textContent=summary;$('syntaxSummary').textContent=summary;
   $('syntaxDetails').textContent=result.message||'';
   $('syntaxIssues').textContent='';

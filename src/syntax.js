@@ -4,6 +4,7 @@ import {parseAllDocuments} from 'yaml';
 import {parse as parseCSS,tokenize,tokenTypes as T} from 'css-tree';
 import {parse as parseHTML} from 'parse5';
 
+import {sqlDiagnostics,markdownDiagnostics} from './extra-syntax.js';
 import {MAX_CHECK_LENGTH,checkableLanguages,diagnostic} from './syntax-common.js';
 const limit=100;
 function javascript(text,typescript=false,jsx=false) {
@@ -31,11 +32,16 @@ function css(text) {
 }
 export function checkSyntax({text,language,name=''}) {
  if(text.length>MAX_CHECK_LENGTH)return {diagnostics:[],status:'skipped',message:'Syntax checking is limited to 512K characters. Editing and saving still work.'};
+ if(language==='python')return {status:'unavailable',diagnostics:[],message:'Python parsing is provided by the bundled offline worker.'};
  if(!checkableLanguages.has(language)||language==='c')return {diagnostics:[],status:'unavailable',message:language==='c'?'C syntax checking needs a local desktop Clang compiler.':'No syntax checker is available for this language.'};
  let diagnostics=[],message='';
  if(language==='javascript'||language==='typescript') {
   diagnostics=javascript(text,language==='typescript',/\.[jt]sx$/i.test(name));
   if(language==='typescript')message='Syntax only; TypeScript type checking is not included.';
+ } else if(language==='sql') {
+  diagnostics=sqlDiagnostics(text);message='Offline SQLite SQL syntax only. Other SQL dialects, table/column existence and database behavior are not checked. No statements are executed.';
+ } else if(language==='markdown') {
+  diagnostics=markdownDiagnostics(text);message='Markdown lint: duplicate headings, unclosed fenced code blocks and trailing whitespace. Markdown permits flexible syntax; these are warnings, not compiler errors.';
  } else if(language==='json') {
   const errors=[];parseJSON(text,errors,{allowTrailingComma:false,disallowComments:true,allowEmptyContent:false});
   diagnostics=errors.map(e=>diagnostic(text,e.offset,e.offset+e.length,printParseErrorCode(e.error).replace(/([a-z])([A-Z])/g,'$1 $2')));

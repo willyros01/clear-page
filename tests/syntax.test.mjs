@@ -50,7 +50,7 @@ test('YAML supports multiple documents and reports duplicate keys',()=>{
  assert.ok(check('yaml','a: 1\na: 2').diagnostics.length);
 });
 test('unsupported languages and large documents cannot produce a false success',()=>{
- for(const language of ['python','sql','markdown','plain','c'])assert.equal(check(language,'hello').status,'unavailable');
+ for(const language of ['python','plain','c'])assert.equal(check(language,'hello').status,'unavailable');
  assert.equal(check('javascript',' '.repeat(MAX_CHECK_LENGTH+1)).status,'skipped');
  assert.equal(check('typescript','const x: string = 123;').diagnostics.length,0,'Type checking is explicitly outside syntax checking');
 });

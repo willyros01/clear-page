@@ -13,5 +13,5 @@ if(process.platform==='darwin'){
  const name='ATE-'+version+'-windows-x64-setup.exe';
  copyFileSync(dir+'/'+files[0],'desktop-artifacts/'+name);
  const bytes=readFileSync('desktop-artifacts/'+name);
- writeFileSync('desktop-artifacts/manifest.json',JSON.stringify({app:'ATE',platform:'windows-x64',version,run_id:Number(process.env.GITHUB_RUN_ID),source_sha:process.env.GITHUB_SHA,file:name,sha256:createHash('sha256').update(bytes).digest('hex'),bytes:bytes.length,signature:'unsigned',verification:'ci-installed-and-launched'},null,2)+'\n');
+ writeFileSync('desktop-artifacts/manifest.json',JSON.stringify({app:'ATE',platform:'windows-x64',version,build:JSON.parse(readFileSync('release.json')).build,run_id:Number(process.env.GITHUB_RUN_ID),source_sha:process.env.GITHUB_SHA,file:name,sha256:createHash('sha256').update(bytes).digest('hex'),bytes:bytes.length,signature:'unsigned',verification:'ci-installed-and-launched'},null,2)+'\n');
 }

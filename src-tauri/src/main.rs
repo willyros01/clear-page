@@ -39,7 +39,7 @@ struct ExitAllowed(AtomicBool);
 #[tauri::command]
 async fn save_document(app: tauri::AppHandle, text: String, name: String) -> Result<Option<String>, String> {
     let safe_name: String = name.chars().map(|c| if c.is_control() || "/\\:".contains(c) { '_' } else { c }).collect();
-    let file_name = if safe_name.trim().is_empty() { "Untitled.txt" } else { &safe_name };
+    let file_name = if safe_name.trim().is_empty() { "Untitled" } else { &safe_name };
     let selected = app.dialog().file().set_title("Save ATE document").set_file_name(file_name).blocking_save_file();
     let Some(selected) = selected else { return Ok(None) };
     let path = selected.into_path().map_err(|_| "Choose a local file destination".to_string())?;

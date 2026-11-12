@@ -2,6 +2,19 @@
 
 Last updated: 12 November 2026 (UTC).
 
+## Coordinated 0.6.0 (19) update — in verification
+
+Owner authorized the combined update after being unable to reproduce the unsaved .txt report. No cause for that report is claimed. All distributions will use release.json: version 0.6.0, build 19.
+
+| Item | Implementation | Verification / release |
+| --- | --- | --- |
+| Exact filenames | Removed shared .txt append rule; defaults use Untitled. Android Save uses application/octet-stream to avoid MIME-based suffix insertion. | Native Save/cancel/discard, explicit extensions and extensionless names gated in CI; physical acceptance pending. |
+| Language detection | Filename first; bounded content fallback for all supported code languages; manual override retained; automatic drafts re-detected. | Automated regression tests pass; native checks included. |
+| Offline Python | Bundled MIT Ruff 0.17.5 Wasm, Python 3.14 parser, no execution/import/type checking. | Missing colon, indentation, Unicode, malformed strings and valid modern Python tested; native worker gates pending. |
+| Offline SQL | Bundled Apache-2.0 node-sql-parser 5.4.0 SQLite grammar. No database or execution. Other dialects not promised. | Valid multi-statements and malformed SQL tested; native worker gates pending. |
+| Markdown | Bundled MIT Lezer parser; duplicate-heading, unclosed-fence and trailing-whitespace lint warnings. | Valid/invalid fixtures tested; native gates pending. |
+| One release | iOS, universal Mac TestFlight/website, Windows and Android use the coordinated workflow. Existing JS/TS/JSON/HTML/CSS/YAML/Basic C retained. | 40 Node tests and shared build pass. Distribution results not yet available. |
+
 ## Current progress
 
 ATE **0.5.2 (17)** is processed VALID and assigned to the existing internal TestFlight groups for iPhone/iPad and universal Mac. Verified 0.5.2 Mac, Windows and Android downloads are published on Cuberoot. See [RELEASE-0.5.2.md](RELEASE-0.5.2.md) for exact build sources, native test runs, signatures and public-download hashes. Physical-device acceptance remains separate.

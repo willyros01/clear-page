@@ -5,7 +5,6 @@ import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
 import android.provider.OpenableColumns;
-import android.webkit.MimeTypeMap;
 import androidx.activity.result.ActivityResult;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
@@ -47,7 +46,7 @@ public class DocumentFilesPlugin extends Plugin {
                 while((count=input.read(buffer))!=-1){if(bytes.size()+count>10*1024*1024)throw new IllegalArgumentException("Choose a text file smaller than 10 MB.");bytes.write(buffer,0,count);}
                 String text=StandardCharsets.UTF_8.newDecoder().onMalformedInput(java.nio.charset.CodingErrorAction.REPORT).decode(java.nio.ByteBuffer.wrap(bytes.toByteArray())).toString();
                 if(text.indexOf('\0')>=0)throw new IllegalArgumentException("This does not look like a plain-text file.");
-                String name="Untitled.txt";
+                String name="Untitled";
                 try(Cursor cursor=getContext().getContentResolver().query(uri,new String[]{OpenableColumns.DISPLAY_NAME},null,null,null)){if(cursor!=null&&cursor.moveToFirst())name=cursor.getString(0);}
                 JSObject response=new JSObject();response.put("text",text);response.put("name",name);call.resolve(response);
             }catch(Exception error){call.reject(error instanceof IllegalArgumentException?error.getMessage():"Could not open this UTF-8 text file. Your draft is kept.");}
@@ -58,13 +57,12 @@ public class DocumentFilesPlugin extends Plugin {
     @PluginMethod
     public void saveDocument(PluginCall call) {
         if (saving.getAndSet(true)) { call.reject("A save is already open"); return; }
-        String name = call.getString("name", "Untitled.txt").replaceAll("[\\\\/\\p{Cntrl}:]", "_");
-        if (name.trim().isEmpty()) name = "Untitled.txt";
+        String name = call.getString("name", "Untitled").replaceAll("[\\\\/\\p{Cntrl}:]", "_");
+        if (name.trim().isEmpty()) name = "Untitled";
         Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
-        String extension=name.contains(".")?name.substring(name.lastIndexOf('.')+1).toLowerCase(java.util.Locale.ROOT):"txt";
-        String mime=MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension);
-        intent.setType(mime==null?"text/plain":mime);
+        // Avoid MIME-derived suffixes: preserve explicit and extensionless names.
+        intent.setType("application/octet-stream");
         intent.putExtra(Intent.EXTRA_TITLE, name);
         intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION);
         try { startActivityForResult(call, intent, "documentSaved"); }
@@ -87,7 +85,7 @@ public class DocumentFilesPlugin extends Plugin {
                     output.write(text.getBytes(StandardCharsets.UTF_8));
                     output.flush();
                 }
-                String name = call.getString("name", "Untitled.txt");
+                String name = call.getString("name", "Untitled");
                 try (Cursor cursor = getContext().getContentResolver().query(uri, new String[]{OpenableColumns.DISPLAY_NAME}, null, null, null)) {
                     if (cursor != null && cursor.moveToFirst()) name = cursor.getString(0);
                 } catch (Exception ignored) { /* The write succeeded; the provider's display name is optional. */ }
