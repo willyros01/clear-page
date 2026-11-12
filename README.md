@@ -1,6 +1,6 @@
 # Another Text Editor (ATE)
 
-Current release: **0.5.2**. Menus, configuration, search and syntax messages use **12pt text**, headings at most **14pt**. Document text keeps an independent **27pt / 36px default**, adjustable from 10 to 54pt.
+Preparing desktop release **0.5.3 (18)** with the built-in C parser as default and Clang as an optional advanced mode. iOS and Android remain **0.5.2 (17)**. Menus, configuration, search and syntax messages use **12pt text**, headings at most **14pt**. Document text keeps an independent **27pt / 36px default**, adjustable from 10 to 54pt.
 
 [Downloads](https://www.cuberoot-systems.com/ate/) · [Release verification](RELEASE-0.5.2.md) · [Progress tracking](TODO.md)
 
@@ -8,7 +8,7 @@ Current release: **0.5.2**. Menus, configuration, search and syntax messages use
 
 Use Node.js 22 or newer. Run `npm ci`, `npm test`, `npm run build`, `npx playwright install --with-deps chromium webkit`, then `npm run test:browser`. Serve `dist/` using a static web server. CodeMirror, parser workers, C Wasm assets and license notices are bundled locally.
 
-The canonical release workflow is `.github/workflows/all-platforms.yml` on desktop; `android-052.yml` verifies Android separately. Native iPad/Mac/Windows webviews and Android file-manager tests gate production packaging. Verification drivers are excluded from release assets. Before a new Apple release, increment the version/build number; 0.5.2 (17) is already uploaded. Automated evidence does not replace physical-device acceptance.
+Desktop-only release workflow: `.github/workflows/desktop-basic.yml` (Mac TestFlight/website and Windows website). The coordinated workflow is `.github/workflows/all-platforms.yml` on desktop; `android-052.yml` verifies Android separately. Native iPad/Mac/Windows webviews and Android file-manager tests gate production packaging. Verification drivers are excluded from release assets. Before a new Apple release, increment the version/build number; 0.5.2 (17) is already uploaded. Automated evidence does not replace physical-device acceptance.
 
 ## Editing and files
 
@@ -24,7 +24,7 @@ Recovery/preferences stay on this device; no ATE account or cloud synchronizatio
 
 Menu → Check syntax opens line/column issues; select an issue to jump to it. Check while typing is optional. JavaScript, TypeScript syntax, JSON, YAML, HTML and CSS use bundled offline parsers. Python, SQL and Markdown currently provide highlighting only.
 
-C on iPad/iPhone, Android and web uses a bundled structural parser, without header resolution, macro expansion, type checks or compiler-standard enforcement. Desktop C uses local Clang with `-fsyntax-only`, project/include/macro settings and an optional verified Windows LLVM-MinGW download. See [C-CHECKING.md](C-CHECKING.md). Checks stay local and never run user programs or send source to a remote compiler.
+C on iPad/iPhone, Android and web uses a bundled structural parser, without header resolution, macro expansion, type checks or compiler-standard enforcement. Desktop C uses the same bundled structural parser by default. Choose C settings → C checking → Advanced: installed Clang for local Clang with `-fsyntax-only`, project/include/macro settings and an optional verified Windows LLVM-MinGW download. See [C-CHECKING.md](C-CHECKING.md). Checks stay local and never run user programs or send source to a remote compiler.
 
 Optional Vim works best with a hardware keyboard: `i` inserts, Escape returns to Normal, `/word` searches, `n/N` repeats, `:` opens commands, `:25` jumps, `:%s/old/new/g` replaces, `:w` saves, `:q` opens closing choices and `:wq` saves then closes. Vim's yank register is separate from the system clipboard; use Menu → Copy for another app.
 

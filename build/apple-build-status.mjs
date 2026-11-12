@@ -40,7 +40,9 @@ async function main() {
     if(!assigned.data.some(x=>x.id===entry.id)) await call('betaGroups/'+groupId+'/relationships/builds','POST',{data:[{type:'builds',id:entry.id}]});
     assigned=await call('betaGroups/'+groupId+'/builds?limit=200');
     if(!assigned.data.some(x=>x.id===entry.id)) throw Error('New build tester assignment not verified');
-    report('PASS: updated build assigned to the existing internal tester group. Physical-device acceptance remains pending.');
+    const detail=await call('builds/'+entry.id+'/buildBetaDetail');
+    if(detail.data.attributes.internalBuildState!=='IN_BETA_TESTING')throw Error('Build assigned but internal testing is not active: '+detail.data.attributes.internalBuildState);
+    report('PASS: updated build is IN_BETA_TESTING and assigned to the existing internal tester group. Device visibility remains unverified.');
     return;
    }
    if(['INVALID','FAILED'].includes(state)) throw Error('Apple processing rejected build: '+state);

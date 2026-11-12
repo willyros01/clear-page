@@ -6,13 +6,14 @@ import {chromium, webkit} from 'playwright';
 // Exercise the built assets under the nonce policy Tauri applies to its assets.
 // A plain development server misses the desktop-only stylesheet failure.
 const nonce='ate-test-nonce-2026';
+const csp=JSON.parse(await readFile(new URL('../../src-tauri/tauri.conf.json',import.meta.url),'utf8')).app.security.csp.replace("style-src 'self' 'unsafe-inline'","style-src 'self' 'nonce-"+nonce+"'");
 const server=createServer(async(req,res)=>{
  try{
   const path=req.url.split('?')[0];
   let data=await readFile(new URL('../../dist/'+(path==='/'?'index.html':path.slice(1)),import.meta.url));
   if(path==='/')data=Buffer.from(data.toString().replace('<style>',`<style nonce="${nonce}">`));
   res.setHeader('Content-Type',path.endsWith('.js')?'application/javascript':path.endsWith('.wasm')?'application/wasm':'text/html');
-  res.setHeader('Content-Security-Policy',`default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' 'nonce-${nonce}'; img-src 'self' data:; object-src 'none'`);
+  res.setHeader('Content-Security-Policy',csp);
   res.end(data);
  }catch{res.writeHead(404);res.end()}
 });

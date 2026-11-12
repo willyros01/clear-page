@@ -72,8 +72,8 @@ test('worker cancellation resolves obsolete requests and terminates the old work
 test('native checks are serialized and intermediate obsolete requests are skipped',async()=>{
  let release;const calls=[];
  const runner=createCheckRunner({workerFactory:()=>{},nativeCheck:request=>{calls.push(request.text);return request.text==='first'?new Promise(r=>release=r):Promise.resolve({status:'checked'})}});
- const first=runner.run({language:'c',text:'first'});await Promise.resolve();
- const obsolete=runner.run({language:'c',text:'obsolete'}),last=runner.run({language:'c',text:'last'});
+ const first=runner.run({language:'c',cChecker:'clang',text:'first'});await Promise.resolve();
+ const obsolete=runner.run({language:'c',cChecker:'clang',text:'obsolete'}),last=runner.run({language:'c',cChecker:'clang',text:'last'});
  release({status:'checked'});await first;assert.equal((await obsolete).status,'cancelled');await last;
  assert.deepEqual(calls,['first','last']);runner.cancel();
 });

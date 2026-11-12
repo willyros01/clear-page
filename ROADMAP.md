@@ -105,3 +105,7 @@ All native control-sizing and editor gates passed. Android 11 native verificatio
 ## Lightweight compiler assessment — Zig 0.17.1
 
 Native Windows x64, Intel Mac and Apple silicon assessment completed in run 43216011773. Zig embeds Clang 22.1.8; adapted direct syntax-check invocation passed 44 focused fixtures. The ordinary zig cc driver failed/timed out with ATE's syntax-only path. Final toolchain allocation is about 430–459 MB (Windows estimated), with 600 MB a practical toolchain/test-cache allowance and 1 GB free for fresh installation. No application integration or binary release occurred. See assessment/RESULTS.md and SYN-14 in TODO.md.
+
+## Desktop 0.5.3 — offline C by default
+
+Owner approved using the existing mobile C parser as the Mac/Windows default. Added an explicit persisted Basic/Advanced Clang selector; compiler setup is available only in Advanced mode. Browser CSP now comes from the actual Tauri configuration, which permits bundled worker/Wasm loading without enabling general unsafe evaluation. Native verification covers Basic checks without compiler IPC and explicit Advanced checks. Local 30-test/build gates pass; desktop packaging/publication is in progress. Mobile distributions remain 0.5.2 (17).

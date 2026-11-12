@@ -143,3 +143,12 @@ Android native verification: run 43175083674, source `33b071f5510d322e149d2286d5
 | SYN-14 | Assess Zig C compatibility and final disk footprint on Windows and both Mac architectures | Assessment verified; integration pending | Zig 0.17.1 embeds Clang 22.1.8. All 44 adapted direct-frontend fixtures and 21 system-Clang comparisons passed in run 43216011773. Normal zig cc syntax-only failed/timed out; it is not an ATE drop-in. Toolchain allocation roughly 430–459 MB, plus measured driver cache about 50–60 MB; plan 600 MB installed/cache and 1 GB free for fresh setup. Windows allocation is estimated for 4 KB clusters. See assessment/RESULTS.md. |
 
 No application binary or installed compiler changed. Optional Zig integration, the Mac TestFlight sandbox, download integrity/installation and physical acceptance remain future work. This focused suite is not full ISO C conformance certification.
+
+## Desktop offline C default — 0.5.3 (18)
+
+Owner approved implementation on 12 November 2026.
+
+| ID | Work | Status | Evidence / next step |
+| --- | --- | --- | --- |
+| C-DEFAULT | Reuse bundled offline C parser as desktop default; installed Clang remains optional | Implemented; release verification in progress | 30 local Node tests pass, including default worker routing, explicit advanced selection, persistence and no default compiler setup/download. Native Mac/Windows gates cover Wasm under actual CSP, zero basic-mode compiler invocations, and advanced Clang diagnostics. |
+| REL-053 | Rebuild universal Mac TestFlight/website and Windows website | In progress | Target 0.5.3 (18); iOS/Android need no rebuild. |

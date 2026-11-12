@@ -4,6 +4,9 @@
  const assert=(condition,message)=>{if(!condition)throw Error(message);checks.push(message)};
  const wait=ms=>new Promise(r=>setTimeout(r,ms));
  const $=id=>document.getElementById(id);
+ let nativeCRequests=0;
+ const invoke=window.__TAURI_INTERNALS__.invoke.bind(window.__TAURI_INTERNALS__);
+ window.__TAURI_INTERNALS__.invoke=(command,...args)=>{if(command==='check_c')nativeCRequests++;return invoke(command,...args)};
  try{
   for(let i=0;i<100&&!document.querySelector('.cm-content');i++)await wait(100);
   const content=document.querySelector('.cm-content');
@@ -65,7 +68,9 @@
   $('theme').click();await wait(100);
   assert(document.body.classList.contains('dark'),'Native dark appearance works');
   const setup=await window.__TAURI_INTERNALS__.invoke('compiler_setup_info');
-  if(setup.ready){assert(setup.supported,'Managed Windows compiler detected after app startup');assert(!document.getElementById('getCompiler').hidden,'Optional compiler setup action is visible');}
+  if(setup.ready)assert(setup.supported,'Managed Windows compiler detected after app startup');
+  assert($('cChecker').value==='basic','Desktop defaults to the built-in C parser');
+  assert($('getCompiler').hidden,'Basic checks do not offer a compiler download');
   // Real bundled worker, lint UI and local compiler, inside the native webview.
   const until=async predicate=>{for(let i=0;i<120&&!predicate();i++)await wait(100);assert(predicate(),'Native syntax result arrived')};
   await open('const = 1;');
@@ -83,9 +88,35 @@
   await open('int main(void) { return 0 }');
   $('language').value='c';$('language').dispatchEvent(new Event('change'));
   $('checkSyntax').click();
+  await until(()=>$('syntaxIssues').children.length>0);
+  assert($('syntaxDetails').textContent.includes('Basic C syntax check only'),'Native offline C parser and Wasm work under desktop CSP');
+  $('closeSyntax').click();
+  await open('#include <missing_header_for_basic_mode.h>\nint main(void) { return 0; }');
+  $('language').value='c';$('language').dispatchEvent(new Event('change'));
+  $('checkSyntax').click();
+  await until(()=>$('syntaxSummary').textContent.includes('no syntax errors'));
+  assert($('syntaxDetails').textContent.includes('Headers, macros, types and C-standard conformance are not checked'),'Basic mode discloses header limitations');
+  $('closeSyntax').click();
+  assert(nativeCRequests===0,'Basic C checks do not invoke a native compiler');
+  $('cSettingsButton').click();
+  $('cChecker').value='clang';$('cChecker').dispatchEvent(new Event('change'));
+  assert(!$('cAdvanced').hidden,'Advanced Clang controls appear only after selection');
+  for(const e of $('cAdvanced').querySelectorAll('button,input,select,textarea,label,p')){
+   if(e.getBoundingClientRect().width)assert(parseFloat(getComputedStyle(e).fontSize)<=18.67,'Advanced controls stay at most 14pt');
+  }
+  $('closeCSettings').click();
+  await open('int main(void) { return 0 }');
+  $('language').value='c';$('language').dispatchEvent(new Event('change'));
+  $('checkSyntax').click();
   await until(()=>$('syntaxIssues').textContent.includes("expected ';'"));
   assert(/Line 1/.test($('syntaxIssues').textContent),'Native Clang diagnostic maps into the open unsaved buffer');
+  assert(nativeCRequests>0,'Clang runs only after explicit advanced selection');
   $('closeSyntax').click();
+  $('cSettingsButton').click();
+  $('cChecker').value='basic';$('cChecker').dispatchEvent(new Event('change'));
+  assert($('cAdvanced').hidden,'Switching back to Basic hides compiler configuration');
+  assert(JSON.parse(localStorage.getItem('ate-syntax-preferences-v1')).cChecker==='basic','C checker preference is persisted');
+  $('closeCSettings').click();
   await window.__TAURI_INTERNALS__.invoke('editor_verification_result',{passed:true,report:checks.map(x=>'PASS: '+x).join('\n')});
  }catch(error){
   await window.__TAURI_INTERNALS__.invoke('editor_verification_result',{passed:false,report:checks.map(x=>'PASS: '+x).join('\n')+'\nFAIL: '+error.stack});

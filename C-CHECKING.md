@@ -1,8 +1,10 @@
 # C syntax checking in ATE
 
-iPad/iPhone TestFlight **0.5.0 (15)** includes a basic C syntax checker. It is bundled in the app and needs no compiler download. It catches structural syntax errors such as missing semicolons/braces; it does not resolve headers, expand macros, check types, enforce a C standard or build/run code. Choose Menu → Check syntax, or enable Check while typing.
+Desktop 0.5.3 makes the bundled offline parser the default on Mac and Windows. iOS/Android 0.5.2 already use this parser. It catches structural syntax errors such as missing semicolons/braces and malformed expressions. It does not resolve headers, expand macros, check types or enforce a C standard. No compiler is needed.
 
-The following compiler setup instructions apply to the desktop edition, which uses installed Clang. The desktop 0.5.0 release remains pending. See TODO.md for platform status.
+Use Menu → Check syntax, or enable Check while typing. On desktop, Menu → C settings → C checking offers Basic offline parser (default) and Advanced: installed Clang. The selection is remembered. Existing preferences without this choice start in Basic mode.
+
+Compiler/project/standard/include/macro settings and the optional Windows download are shown only in Advanced mode. The following instructions apply only to that optional mode. Build/publication status is tracked in TODO.md.
 
 ## Free compiler setup
 
@@ -20,7 +22,7 @@ Download tools from their official sources:
 ## Use in ATE
 
 1. Open a `.c` or `.h` file, or choose **Language → C** in Menu.
-2. Open **Menu → C settings**. Select your installed Clang compiler if needed. C17 is the default; C99, C11 and C23 are also selectable. Older Clang versions may not accept C23.
+2. Open **Menu → C settings → C checking → Advanced: installed Clang**. Select your installed Clang compiler if needed. C17 is the default; C99, C11 and C23 are also selectable. Older Clang versions may not accept C23.
 3. For quoted relative headers, choose the folder containing the current source file. Enter additional include directories one per line; relative entries resolve from this selected folder.
 4. Enter any preprocessor macros one per line, using `NAME` or `NAME=value`.
 5. Choose **Menu → Check syntax**, or enable **Check while typing**. Select an issue to jump to its line.

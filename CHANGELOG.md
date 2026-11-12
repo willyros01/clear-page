@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.3 — desktop offline C parser by default
+- Mac and Windows now default to the bundled basic offline C parser, with no compiler required.
+- Added C settings → C checking → Advanced: installed Clang for optional header/type/macro checks. The explicit choice is remembered; compiler setup/download appears only in Advanced mode.
+- Added desktop worker/Wasm CSP allowances, mode-routing/persistence tests and native default/basic/advanced verification. Preserve 12pt controls, headings max 14pt and independent editor font sizing.
+- Preparing universal Mac TestFlight/website and Windows website releases. iOS/Android remain 0.5.2 (17).
+
 ## Compiler research — no application release
 - Measured official Zig 0.17.1 archives and tested native Windows, Intel Mac and Apple silicon C checking. Embedded Clang 22.1.8 passed 44 direct-frontend fixtures and 21 system-Clang comparisons.
 - Recorded the normal-driver syntax-only failure/timeout and the tested direct-frontend alternative, footprint/cache measurements and integration limits in assessment/RESULTS.md. ATE 0.5.2 binaries and existing compiler choices are unchanged.

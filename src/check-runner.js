@@ -5,7 +5,7 @@ export function createCheckRunner({workerFactory,nativeCheck}) {
  const cancel=()=>{sequence++;clearTimeout(timer);worker?.terminate();worker=null;pending?.({status:'cancelled',diagnostics:[]});pending=null};
  async function run(request) {
   cancel();const id=sequence;
-  if(request.language==='c'&&nativeCheck) {
+  if(request.language==='c'&&request.cChecker==='clang'&&nativeCheck) {
    const task=nativeQueue.then(()=>id===sequence?nativeCheck(request):{status:'cancelled',diagnostics:[]});
    nativeQueue=task.catch(()=>{});return task;
   }
