@@ -154,3 +154,11 @@ Owner approved implementation on 12 November 2026.
 | REL-053 | Rebuild universal Mac TestFlight/website and Windows website | Complete; physical acceptance pending | Mac 0.5.3 (18) VALID / IN_BETA_TESTING in the existing group. Notarized/stapled universal Mac and Windows 0.5.3 published; publisher 43226821763 verified public hashes/bytes. iOS/Android remain 0.5.2 (17). See RELEASE-0.5.3.md. |
 
 Desktop release 0.5.3 is complete. Online and large-print PDF guides now explain Basic/Advanced mode selection. Remaining device acceptance is tracked separately; no Zig/TinyCC integration or mobile rebuild occurred.
+
+## Website download reporting and location — planned
+
+| ID | Work | Status | Scope / acceptance |
+| --- | --- | --- | --- |
+| ATE-DOWNLOAD-REPORT | Add ATE Windows, ATE Mac Universal and ATE Android to website click tracking, daily email and download cockpit | Planned; implementation pending | Separate period/lifetime counts for each platform; retain seven existing categories and reconcile ten-category totals. Record click time/build/browser timezone and show approximate, unverified area in the cockpit with app/date filtering. Extend counter-only Firebase permissions and verify homepage/ATE-page tracking and email rendering. Keep 09:17 America/Toronto, existing cron/Resend and prior-day 09:17-to-current-day 09:17 window. No GPS, app rebuild or fabricated historical counts. |
+
+Owner requested TODO tracking on 12 November 2026. Daily email remains a counts report; timezone-based location details appear in the cockpit. Implementation details and checkboxes: [Cuberoot download reporting TODO](https://github.com/willyros01/Cuberoot/blob/main/docs/APK-COCKPIT.md#ate-download-reporting-and-location--todo-12-november-2026). Editor/parser development remains paused for owner testing.
