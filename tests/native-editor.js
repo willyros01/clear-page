@@ -4,9 +4,7 @@
  const assert=(condition,message)=>{if(!condition)throw Error(message);checks.push(message)};
  const wait=ms=>new Promise(r=>setTimeout(r,ms));
  const $=id=>document.getElementById(id);
- let nativeCRequests=0;
- const invoke=window.__TAURI_INTERNALS__.invoke.bind(window.__TAURI_INTERNALS__);
- window.__TAURI_INTERNALS__.invoke=(command,...args)=>{if(command==='check_c')nativeCRequests++;return invoke(command,...args)};
+ const nativeCRequests=()=>window.__TAURI_INTERNALS__.invoke('c_verification_calls');
  try{
   for(let i=0;i<100&&!document.querySelector('.cm-content');i++)await wait(100);
   const content=document.querySelector('.cm-content');
@@ -97,7 +95,7 @@
   await until(()=>$('syntaxSummary').textContent.includes('no syntax errors'));
   assert($('syntaxDetails').textContent.includes('Headers, macros, types and C-standard conformance are not checked'),'Basic mode discloses header limitations');
   $('closeSyntax').click();
-  assert(nativeCRequests===0,'Basic C checks do not invoke a native compiler');
+  assert(await nativeCRequests()===0,'Basic C checks do not invoke a native compiler');
   $('cSettingsButton').click();
   $('cChecker').value='clang';$('cChecker').dispatchEvent(new Event('change'));
   assert(!$('cAdvanced').hidden,'Advanced Clang controls appear only after selection');
@@ -110,7 +108,7 @@
   $('checkSyntax').click();
   await until(()=>$('syntaxIssues').textContent.includes("expected ';'"));
   assert(/Line 1/.test($('syntaxIssues').textContent),'Native Clang diagnostic maps into the open unsaved buffer');
-  assert(nativeCRequests>0,'Clang runs only after explicit advanced selection');
+  assert(await nativeCRequests()>0,'Clang runs only after explicit advanced selection');
   $('closeSyntax').click();
   $('cSettingsButton').click();
   $('cChecker').value='basic';$('cChecker').dispatchEvent(new Event('change'));

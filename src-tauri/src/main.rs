@@ -9,6 +9,8 @@ use compiler_setup::{compiler_setup_info,install_c_compiler,cancel_compiler_setu
 
 #[tauri::command]
 async fn check_c(app: tauri::AppHandle, text: String, standard: String, includes: Vec<String>, defines: Vec<String>) -> Result<c_check::CResult, String> {
+    #[cfg(feature = "editor-verification")]
+    app.state::<CVerificationCalls>().0.fetch_add(1, Ordering::SeqCst);
     tauri::async_runtime::spawn_blocking(move || c_check::check(&app.state::<c_check::CTools>(), text, standard, includes, defines)).await.map_err(|_|"C checker could not complete".into())
 }
 
@@ -55,6 +57,15 @@ fn exit_editor(app: tauri::AppHandle) {
 
 // The verification bridge is excluded from all distribution builds.
 #[cfg(feature = "editor-verification")]
+struct CVerificationCalls(std::sync::atomic::AtomicUsize);
+
+#[cfg(feature = "editor-verification")]
+#[tauri::command]
+fn c_verification_calls(app: tauri::AppHandle) -> usize {
+    app.state::<CVerificationCalls>().0.load(Ordering::SeqCst)
+}
+
+#[cfg(feature = "editor-verification")]
 #[tauri::command]
 fn editor_verification_result(app: tauri::AppHandle, passed: bool, report: String) {
     let path = std::env::var("ATE_VERIFICATION_REPORT").expect("Verification report path required");
@@ -73,7 +84,8 @@ fn main() {
         ;
     #[cfg(feature = "editor-verification")]
     let builder = builder
-        .invoke_handler(tauri::generate_handler![save_document, exit_editor, check_c, choose_c_compiler, choose_c_project, compiler_setup_info, install_c_compiler, cancel_compiler_setup, editor_verification_result])
+        .manage(CVerificationCalls(std::sync::atomic::AtomicUsize::new(0)))
+        .invoke_handler(tauri::generate_handler![save_document, exit_editor, check_c, choose_c_compiler, choose_c_project, compiler_setup_info, install_c_compiler, cancel_compiler_setup, editor_verification_result, c_verification_calls])
         .on_page_load(|webview, payload| {
             if matches!(payload.event(), tauri::webview::PageLoadEvent::Finished) {
                 let _ = webview.eval(include_str!("../../tests/native-editor.js"));

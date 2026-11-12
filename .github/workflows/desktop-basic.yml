@@ -1,4 +1,5 @@
 name: ATE Apple and Desktop
+# Native compiler call counts are collected in the verification-only Rust bridge.
 on:
   push:
     branches:
