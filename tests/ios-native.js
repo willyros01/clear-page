@@ -19,7 +19,8 @@ import {Filesystem,Directory,Encoding} from '@capacitor/filesystem';
   const check=async()=>{
    $('checkSyntax').click();
    await until(()=>!$('syntaxSummary').textContent.includes('Checking')&&!$('syntaxSummary').textContent.includes('not checked'),'iPad checker completed');
-   assert(!$('syntaxSummary').textContent.includes('unavailable'),$('syntaxDetails').textContent||'Checker unavailable');
+   if($('syntaxSummary').textContent.includes('unavailable'))throw Error('iPad checker unavailable: '+$('syntaxDetails').textContent);
+   checks.push('iPad checker is available');
   };
   assert(getComputedStyle(content).fontSize==='36px','iPad defaults to large 36px editor text');
   assert(/monospace/.test(getComputedStyle(content.closest('.cm-scroller')).fontFamily),'iPad uses monospaced code');
@@ -35,13 +36,13 @@ import {Filesystem,Directory,Encoding} from '@capacitor/filesystem';
   ]){
    await open(invalid,name);await check();
    assert($('syntaxIssues').children.length>0,'iPad '+name+' reports syntax errors');
-   assert(!!document.querySelector('.cm-lintRange-error'),'iPad '+name+' underlines errors');
+   await until(()=>!!document.querySelector('.cm-lintRange-error, .cm-lintPoint-error'),'iPad '+name+' shows an error range or end-of-file marker');
    assert(getComputedStyle($('syntaxIssues').querySelector('button')).fontSize==='26px','iPad error messages use large text');
    if(name.endsWith('.c'))assert($('syntaxDetails').textContent.includes('Basic C syntax check only'),'iPad C explains parser limits');
    $('syntaxIssues').querySelector('button').click();assert(!$('syntaxDialog').open,'iPad issue selection returns to text');
    await open(valid,name);await check();
    assert($('syntaxSummary').textContent.includes('no syntax errors'),'iPad '+name+' clears corrected errors');
-   assert(!document.querySelector('.cm-lintRange-error'),'iPad stale underlines cleared');
+   assert(!document.querySelector('.cm-lintRange-error, .cm-lintPoint-error'),'iPad stale error markers cleared');
    $('closeSyntax').click();
   }
   $('cSettingsButton').click();
@@ -59,6 +60,6 @@ import {Filesystem,Directory,Encoding} from '@capacitor/filesystem';
   $('theme').click();assert(document.body.classList.contains('dark'),'iPad dark theme works');
   await open('int main(void) { return 0 }','final.c');await check();
   passed=true;
- }catch(e){error=e.stack||String(e)}
+ }catch(e){error=(e.message||String(e))+'\n'+(e.stack||'')}
  await Filesystem.writeFile({path:'ate-ipad-syntax-verification.json',directory:Directory.Data,encoding:Encoding.UTF8,data:JSON.stringify({marker,passed,checks,error},null,2)});
 })();
