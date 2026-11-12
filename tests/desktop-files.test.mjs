@@ -16,12 +16,22 @@ test('desktop Save cancellation/error preserves text and recovery; Save and Exit
  const {mockIPC,clearMocks}=await import('@tauri-apps/api/mocks');
  let destination=null,fail=false,exits=0;const requests=[];
  mockIPC((cmd,payload)=>{requests.push({cmd,payload});if(cmd==='save_document'){if(fail)throw Error('disk full');return destination}if(cmd==='exit_editor')exits++},{shouldMockEvents:true});
+ localStorage.setItem('clear-page-draft-v1',JSON.stringify({name:'Recovered.C',text:'int main(void) { return 0; }',language:'plain',languageManual:false}));
  await import('../src/app.js');
  const {EditorView}=await import('@codemirror/view');
  const view=EditorView.findFromDOM(document.querySelector('.cm-editor'));
  const settle=()=>new Promise(r=>setTimeout(r,30));
  try{
-  view.dispatch({changes:{from:0,insert:'Keep my unsaved work'}});
+  assert.equal(document.getElementById('language').value,'c','Recovery must re-detect an automatic language');
+  const input=document.getElementById('file');
+  const open=async(name,text)=>input.onchange({target:{files:[{name,size:text.length,text:async()=>text}],value:name}});
+  for(const [name,text,language] of [['program.c.txt','int main(void){return 0;}','c'],['source','SELECT name FROM people;','sql'],['script.py','Hello','python']]){
+   await open(name,text);
+   assert.equal(document.getElementById('name').value,name,'Detection must not rename a document');
+   assert.equal(document.getElementById('language').value,language);
+  }
+  assert.equal(requests.filter(x=>x.cmd==='save_document').length,0,'Opening must not save');
+  view.dispatch({changes:{from:0,to:view.state.doc.length,insert:'Keep my unsaved work'}});
   document.getElementById('exit').click();
   document.getElementById('saveExit').click();await settle();
   assert.equal(exits,0);assert.equal(view.state.doc.toString(),'Keep my unsaved work');
@@ -34,6 +44,8 @@ test('desktop Save cancellation/error preserves text and recovery; Save and Exit
   assert.equal(document.getElementById('name').value,'code.json');
   assert.equal(document.getElementById('language').value,'json');
   document.getElementById('language').value='javascript';document.getElementById('language').dispatchEvent(new window.Event('change'));
+  document.getElementById('name').value='manual.py';document.getElementById('name').dispatchEvent(new window.Event('change'));
+  assert.equal(document.getElementById('language').value,'javascript','Manual language survives filename edits');
   destination='custom.txt';document.getElementById('save').click();await settle();
   assert.equal(document.getElementById('language').value,'javascript');
   destination='Notes.txt';document.getElementById('saveExit').click();await settle();

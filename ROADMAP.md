@@ -2,6 +2,9 @@
 
 Work in small, reviewable steps. Keep one shared editor for all platforms.
 
+## Automatic language detection — unreleased
+Implemented filename-first and conservative content detection across all supported languages, with manual overrides and stale automatic draft recovery covered by automated checks. Shared app build and 36 Node tests pass. Native device acceptance and distribution rebuilds remain pending; no installed app has been updated. Unsolicited .txt filename changes remain a separate unresolved report.
+
 ## Step 1 — Baseline
 - Preserve the original standalone HTML/CSS/JavaScript editor as index.html.
 - Current capabilities: 36px default text, 24–72px adjustment, light/dark appearance, focus/full-screen mode, text-file import/download, local browser draft recovery, word/character counts.

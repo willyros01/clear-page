@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased — automatic language detection
+- Detect supported languages from filename first, then a bounded local content scan for C, JavaScript, TypeScript, JSON, HTML, CSS, YAML, Python, SQL and Markdown; ambiguous content remains plain text.
+- Recognize source filenames ending in .txt without renaming them; re-detect restored automatic drafts instead of retaining a stale plain-text mode. Explicit manual selection survives recovery, filename edits and Save As.
+- Detection never writes or renames a source file. The reported unsolicited .txt suffix remains unresolved; native reproduction and release verification are pending.
+
 ## 0.5.3 — desktop offline C parser by default
 - Mac and Windows now default to the bundled basic offline C parser, with no compiler required.
 - Added C settings → C checking → Advanced: installed Clang for optional header/type/macro checks. The explicit choice is remembered; compiler setup/download appears only in Advanced mode.

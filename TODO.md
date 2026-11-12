@@ -24,7 +24,7 @@ Statuses: Pending → In progress → Implemented → Verified. Assessed records
 
 | ID | Work | Status | Completion evidence / next step |
 | --- | --- | --- | --- |
-| SYN-01 | Detect language from extension and provide a manual selector for new/ambiguous files. | Verified | Node/Chromium/WebKit and Save As tests pass; manual choice survives recovery and native Save As. |
+| SYN-01 | Detect language from extension and provide a manual selector for new/ambiguous files. | Enhancement implemented; native acceptance pending | Unreleased: filename-first detection plus bounded content fallback for all ten supported code languages; wrapped .txt source names recognized without renaming. Stale automatic recovery corrected; manual override retained. Shared build and 36 Node tests pass. |
 | SYN-02 | Add readable error underlines, line/column messages, error list and jump-to-error. | Verified | Chromium/WebKit and native Mac/Windows diagnostics, underlines, jump, themes/Vim pass; narrow layout inspected. |
 | SYN-03 | Add Check Syntax command and debounced checks while typing. | Verified | Worker and native queue cancellation tests pass; manual/automatic checks, limits and unavailable states verified. |
 | SYN-04 | Implement JavaScript and JSON checking. | Verified | Valid/invalid JS/JSON fixtures and live diagnostics pass; JSX file modes and non-execution tested. |
