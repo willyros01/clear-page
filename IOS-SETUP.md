@@ -100,3 +100,14 @@ The simulator workflow remains separate. The Clear Page TestFlight workflow now 
 - New build membership verified in the existing internal tester group; no new invitation is needed for the existing tester.
 - Evidence artifact: ATE-release-evidence, 13836142998.
 - Physical iPad acceptance of new icon, Close behavior and native keyboard dismissal remains pending.
+
+## Current iPad-first release — 0.5.0 (15)
+
+Completed 11 November 2026 (America/Toronto). Apple processing **VALID**, build ID `5c151092-9797-4e1a-9aae-51d40dbbd387`; assignment to the existing internal tester group verified.
+
+- Native/browser verification: run 43139879836, source `87c8b940a15ef474d0bb354ff1529135c2301ace`; editor and ipad-native jobs passed, with 101 assertions inside the iPad simulator's Capacitor webview. Coverage includes all seven checkers, issue markers, correction/jump, large text, C parser limitations, indentation and Vim.
+- Signing/upload/processing: run 43141713621, source `8d0c931c08c95e5c8a378f9dbdc1793d873ac69f`; this recovery corrected only packaging/workflow code and verified unchanged app/dependency source and the native evidence.
+- Archive gates: app ID/version/build/device families, nonblank icon, root privacy manifest, signature, exact bundled checker/Wasm hashes and exclusion of `ATE_IPAD_SYNTAX_VERIFICATION_ONLY`.
+- The test driver is included only when `ATE_IOS_VERIFICATION=1`; production builds use the normal app entry. C parser/runtime assets and their licenses are bundled. No remote compiler or extra compiler download is used on iPad.
+
+Next physical acceptance: update in TestFlight, check a malformed C/JS file, tap an issue to jump to it, correct the error, repeat with airplane mode, confirm font/appearance/Vim and ordinary file save/close/recovery. The iPad C checker is basic structure only; headers, types, macros and compiler-standard conformance are not checked. Desktop optional compiler installation remains a separate pending task.

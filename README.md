@@ -47,3 +47,8 @@ Run 43087543526 passed both browser engines and both native webviews, including 
 See [TODO.md](TODO.md) for progress and acceptance evidence. The syntax-checking work adds bundled offline parsers for JavaScript, TypeScript (syntax only), JSON, YAML, HTML and CSS. Menu → Check syntax opens large line/column diagnostics; selecting an issue returns to the relevant text. Check while typing is optional. C checking in the desktop apps uses an existing local Clang installation; see [C-CHECKING.md](C-CHECKING.md). Python, SQL and Markdown retain highlighting only.
 
 `npm test` covers parser behavior and cancellation. `npm run test:browser` checks the bundled worker, diagnostics and editing regressions in Chromium/WebKit under a strict nonce policy. `.github/workflows/syntax-verification.yml` also tests Clang and the real native Mac/Windows webviews. Browser evidence does not replace physical-device acceptance. Third-party licenses are included in `THIRD-PARTY-NOTICES.txt`; regenerate with `node scripts/third-party-notices.mjs` when updating dependencies.
+
+## iPad syntax checking — TestFlight 0.5.0 (15)
+The iPad-first build is processed VALID and assigned to the existing internal tester group. It includes JavaScript, TypeScript syntax, JSON, YAML, HTML, CSS and a bundled basic C parser. C needs no separate download on iPad; full header/type/macro checks require a real compiler. Menu → Check syntax opens results, and Check while typing is optional.
+
+27 Node tests, Chromium/WebKit and 101 native iPad checks passed. Production assets exclude the simulator verification driver. Physical iPad acceptance remains pending. See TODO.md and IOS-SETUP.md for evidence; desktop website downloads remain 0.4.1.
