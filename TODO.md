@@ -4,7 +4,7 @@ Last updated: 2026-11-11 (America/Toronto).
 
 ## Progress
 
-Implementation is committed on `syntax-checking`, reviewed through [PR #1](https://github.com/willyros01/clear-page/pull/1). **11 of 13 tasks verified within their documented scope**. SYN-12 remains in progress for installer/iPad/physical acceptance and release; SYN-13 tracks the newly approved optional compiler download/setup. Production downloads remain 0.4.1.
+Implementation is committed on `syntax-checking`, reviewed through [PR #1](https://github.com/willyros01/clear-page/pull/1). **11 of 13 tasks verified within their documented scope**. SYN-12 remains in progress for installer/iPad/physical acceptance and release; SYN-13 tracks the newly approved optional compiler download/setup. Production downloads remain 0.4.1. The owner prioritized the iPad implementation; work continues on `ipad-syntax` with a bundled basic C parser rather than a desktop compiler installer.
 
 Statuses: Pending → In progress → Implemented → Verified. Assessed records a documented feasibility decision. Use Blocked when a dependency prevents work. Mark a task Verified only with evidence; automated checks and physical-device acceptance must be recorded separately. Update this table and the progress log with each change.
 
@@ -70,7 +70,7 @@ No physical-device syntax-checking acceptance yet. Existing Windows 0.4.1 accept
 - SYN-01–06: language detection/manual selection, 26px issue list with jump-to-error, underlines, debounced worker checks, manual checks, stale-result cancellation and size/time limits are implemented. JavaScript/TypeScript/JSON/YAML/HTML/CSS use bundled offline parsers.
 - SYN-07–09: C mode/standard and native Clang syntax-only adapter are implemented, with stdin for unsaved text, optional source folder, include directories and macros. Native checks are serialized and bounded; no source files or executables are produced. Five Rust integration tests cover real standard/project headers, macros, invalid code and setup validation. Compiler/project selection is session-only.
 - SYN-10: the implemented baseline uses an existing user-installed compiler. SYN-13 adds the approved optional download/setup path; it is not implemented yet. Mac: Apple Command Line Tools; Windows: LLVM-MinGW. No compiler or SDK is redistributed and no paid signing service is activated. ATE remains proprietary. Bundled JS package licenses are recorded in THIRD-PARTY-NOTICES.txt and included in the app assets.
-- SYN-11: TypeScript syntax checking implemented; type checking deferred. Python candidate: a user-installed CPython `ast.parse` adapter (must parse the buffer without executing it). SQL requires a chosen dialect and matching validator before a checker can be promised. Markdown candidate: markdownlint, with selected document-style rules rather than compiler syntax checks. These three retain highlighting only. iPad C needs an evaluated on-device compiler/runtime; no remote service or embedded compiler added.
+- SYN-11: TypeScript syntax checking implemented; type checking deferred. Python candidate: a user-installed CPython `ast.parse` adapter (must parse the buffer without executing it). SQL requires a chosen dialect and matching validator before a checker can be promised. Markdown candidate: markdownlint, with selected document-style rules rather than compiler syntax checks. These three retain highlighting only. iPad now has a basic structural C checker in development, using bundled Tree-sitter C/WebAssembly. It does not resolve headers, expand macros or check types; full compiler support remains deferred.
 - SYN-12: version 0.5.0 prepared; Help updated; isolated browser/native verification workflow added. Release and physical acceptance remain outstanding.
 
 ## Remaining release gates (SYN-12)
@@ -95,3 +95,11 @@ Approved product behavior: when an explicit C check cannot find Clang, show a la
 Acceptance evidence must cover missing/existing compilers, a successful official download/setup, wrong checksum, cancellation/interrupted downloads, unsupported platform/architecture, successful re-detection, and C diagnostics after setup. Licensing, download size and exact clean-machine Windows setup are recorded before release.
 
 **Status: planned only.** No compiler download, installation or new build was performed for this decision.
+
+## iPad-first implementation checkpoint
+
+- Owner requested iPad first. Bundle the structural C parser with the app; no optional desktop compiler download/install is offered on iPad. SYN-13 remains a desktop setup task.
+- Basic C checks use Tree-sitter C 0.24.1 and web-tree-sitter 0.27.2, both with bundled licenses. Both Wasm assets are included in the app. Missing semicolons/braces, malformed expressions, valid C fixtures and Unicode positions pass local tests. Full header/type/preprocessor/C-standard checks remain exclusive to a real compiler.
+- 27 Node tests pass locally. Native iPad worker/Wasm, all seven checkers, error correction/jump, large text, indentation and Vim are required before TestFlight upload.
+- The release gate verifies archived asset hashes and excludes the simulator-only verification bridge. Website Mac/Windows releases are skipped on `ipad-syntax`; this does not publish a desktop update.
+- Status: implementation in progress; iPad simulator/TestFlight evidence pending.

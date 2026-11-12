@@ -34,7 +34,7 @@ Only the editor buffer is passed to the compiler, through standard input. Includ
 - Checks are limited to 512K characters, 32 include directories, 32 macros, 10 seconds of compiler time and bounded diagnostic output. Stale results are ignored, and requests are serialized.
 - No arbitrary compiler flags, shell commands, plugins or build scripts are accepted by this integration. A compiler selected through the native file chooser must be a trusted local executable.
 - Checks stay on the device. ATE does not send source text to a remote compiler.
-- C highlighting and indentation are available on other platforms, but C compiler checking on iPad/web remains deferred.
+- iPad/web basic structural C checks are being added with bundled Tree-sitter C/Wasm. No compiler download is needed there. Header resolution, macro expansion, type checking and C-standard conformance remain desktop compiler features.
 
 ## Licensing
 

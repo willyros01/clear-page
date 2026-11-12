@@ -76,3 +76,6 @@ Verification checkpoint: SYN-01–11 are verified at the scope recorded in TODO.
 
 ## Optional C compiler setup approved
 SYN-13 in TODO.md tracks an optional missing-compiler offer: official Apple Command Line Tools setup on Mac, or a verified official LLVM-MinGW download on Windows. Keep Later and Choose installed compiler options; no automatic install at launch. This is planned, not implemented.
+
+## iPad-first syntax checking
+The owner prioritized iPad. `ipad-syntax` bundles a basic C parser alongside the six existing parser-based checkers, adds a simulator native-worker/diagnostics gate, and uploads to TestFlight only after verification. Full compiler setup/download stays a desktop feature; the iPad UI explains its basic checker limits.

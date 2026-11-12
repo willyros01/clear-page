@@ -101,3 +101,8 @@ Mac notarization completed: Apple returned Accepted. Recovery run 43103034568 pa
 ## Optional C compiler setup plan
 - Recorded the owner-approved missing-compiler download/setup flow in TODO.md (SYN-13): official Apple setup on Mac and a verified LLVM-MinGW download on Windows, with Later, cancellation and re-detection.
 - Planning only; no compiler download/installation or application release performed.
+
+## 0.5.0 — iPad-first C syntax checking
+- Added bundled Tree-sitter C/Wasm structural checks for iPad/web, with explicit header/macro/type/standard limitations and no compiler installer.
+- Added iPad native webview checks for all seven languages, large text, correction/navigation, indentation and Vim; archive assets must match tested assets and exclude the test bridge.
+- iPad-only branch skips desktop publication; simulator and TestFlight results are pending.
