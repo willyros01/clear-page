@@ -133,4 +133,4 @@ jobs:
             android-saved.c
             android/app/build/outputs/androidTest-results/**
 
-# Reverify Android 11 WebView compatibility after worker API fallbacks.
+# Reverify Android 11 WebView and wait for system picker navigation transitions.

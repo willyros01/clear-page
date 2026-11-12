@@ -8,6 +8,8 @@ import androidx.test.uiautomator.By;
 import androidx.test.uiautomator.UiDevice;
 import androidx.test.uiautomator.UiObject2;
 import androidx.test.uiautomator.Until;
+import androidx.test.uiautomator.BySelector;
+import androidx.test.uiautomator.StaleObjectException;
 import org.json.JSONObject;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -42,7 +44,7 @@ public class DocumentSaveTest {
         click(device,"Save file");
         assertTrue(device.wait(Until.hasObject(By.pkg(DOCUMENTS)),15000));
         UiObject2 roots=device.findObject(By.desc("Show roots"));
-        if(roots!=null){roots.click();UiObject2 downloads=device.wait(Until.findObject(By.text("Downloads")),5000);if(downloads!=null)downloads.click();}
+        if(roots!=null){clickSelector(device,By.desc("Show roots"),"Show roots");device.waitForIdle();clickSelector(device,By.text("Downloads"),"Downloads");device.waitForIdle();}
         UiObject2 filename=device.wait(Until.findObject(By.clazz("android.widget.EditText")),10000);
         assertNotNull("Native filename field missing",filename);filename.setText("ate-storage-check.c");
         UiObject2 save=device.findObject(By.res(Pattern.compile("com\\.(android|google\\.android)\\.documentsui:id/action_menu_select")));
@@ -57,5 +59,14 @@ public class DocumentSaveTest {
         assertTrue("Native file open did not complete",device.wait(Until.hasObject(By.textContains("Opened ate-storage-check.c")),15000));
         System.out.println("PASS: ACTION_CREATE_DOCUMENT picker, cancel preserves draft, filename/destination save and reopen succeed");
     }
-    private void click(UiDevice device,String text){UiObject2 button=device.wait(Until.findObject(By.text(text)),15000);assertNotNull(text+" missing",button);button.click();}
+    private void click(UiDevice device,String text){clickSelector(device,By.text(text),text);}
+    private void clickSelector(UiDevice device,BySelector selector,String label){
+        long end=System.currentTimeMillis()+15000;
+        while(System.currentTimeMillis()<end){
+            UiObject2 button=device.wait(Until.findObject(selector),1000);
+            if(button==null)continue;
+            try{button.click();device.waitForIdle();return;}catch(StaleObjectException changed){device.waitForIdle();}
+        }
+        fail(label+" missing or unstable");
+    }
 }
