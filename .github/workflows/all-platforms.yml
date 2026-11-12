@@ -1,0 +1,440 @@
+name: ATE Apple and Desktop
+on:
+  push:
+    branches:
+      - desktop
+    paths:
+      - .github/workflows/all-platforms.yml
+  workflow_dispatch: {}
+permissions:
+  contents: read
+concurrency:
+  group: ate-all-platforms
+  cancel-in-progress: false
+env:
+  ATE_BUILD_NUMBER: "17"
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium webkit
+      - run: npm run test:browser
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-browser-evidence
+          path: editor-evidence/*
+  ipad-native:
+    needs: browser
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Start the iPad simulator while building
+        shell: bash
+        run: |
+          DEVICE=$(xcrun simctl list devices available -j | python3 -c 'import json,sys;d=json.load(sys.stdin);print(next(x["udid"] for a in d["devices"].values() for x in a if "iPad" in x["name"]))')
+          echo "$DEVICE" > "$RUNNER_TEMP/ipad-device.txt"
+          xcrun simctl boot "$DEVICE"
+      - run: npm ci
+      - name: Build simulator-only verification assets
+        run: ATE_IOS_VERIFICATION=1 npm run build
+      - run: node scripts/prepare-ios.mjs
+      - name: Build iPad simulator app
+        run: |
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug -destination 'generic/platform=iOS Simulator' -derivedDataPath "$RUNNER_TEMP/DerivedData" CODE_SIGNING_ALLOWED=NO build > "$RUNNER_TEMP/ipad-build.log" 2>&1 || { tail -80 "$RUNNER_TEMP/ipad-build.log"; exit 1; }
+      - name: Verify syntax checking in the real iPad webview
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEVICE=$(cat "$RUNNER_TEMP/ipad-device.txt")
+          xcrun simctl bootstatus "$DEVICE" -b
+          xcrun simctl install "$DEVICE" "$RUNNER_TEMP/DerivedData/Build/Products/Debug-iphonesimulator/App.app"
+          xcrun simctl launch "$DEVICE" io.github.willyros01.clearpage
+          DATA=$(xcrun simctl get_app_container "$DEVICE" io.github.willyros01.clearpage data)
+          REPORT="$DATA/Documents/ate-ipad-syntax-verification.json"
+          for attempt in {1..120}; do
+            if [ -f "$REPORT" ]; then break; fi
+            sleep 1
+          done
+          xcrun simctl io "$DEVICE" screenshot "$RUNNER_TEMP/ipad-syntax.png"
+          if [ ! -f "$REPORT" ]; then echo 'Native verification report missing'; exit 1; fi
+          cp "$REPORT" "$RUNNER_TEMP/ipad-syntax.json"
+          node -e 'const r=JSON.parse(require("fs").readFileSync(process.argv[1])); console.log(r.checks.map(x=>"PASS: "+x).join("\n")); if(!r.passed)throw Error(r.error);' "$RUNNER_TEMP/ipad-syntax.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ate-ipad-native-evidence
+          path: |
+            ${{ runner.temp }}/ipad-build.log
+            ${{ runner.temp }}/ipad-syntax.json
+            ${{ runner.temp }}/ipad-syntax.png
+  ipad-testflight:
+    needs:
+      - browser
+      - ipad-native
+    runs-on: macos-26
+    timeout-minutes: 45
+    env:
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: bash build/ios-release.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ate-ipad-release-evidence
+          path: ${{ runner.temp }}/clear-page-release/*.log
+  mac-build:
+    needs: browser
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+          cache-on-failure: true
+      - run: npm ci
+      - run: npm run desktop:icons
+      - run: npm run build
+      - name: Verify C compiler and project settings
+        run: cargo test --locked --manifest-path src-tauri/Cargo.toml c_check::tests -- --nocapture
+      - name: Build universal native verification app
+        run: npm run tauri -- build --target universal-apple-darwin --no-bundle --features editor-verification
+      - name: Verify syntax checking and editing inside the Mac webview
+        shell: bash
+        run: |
+          set -euo pipefail
+          export ATE_VERIFICATION_REPORT="$RUNNER_TEMP/mac-testflight-native.txt"
+          src-tauri/target/universal-apple-darwin/release/ate-desktop &
+          ATE_PID=$!
+          for attempt in {1..90}; do
+            if [ -f "$ATE_VERIFICATION_REPORT" ]; then break; fi
+            sleep 1
+          done
+          if [ ! -f "$ATE_VERIFICATION_REPORT" ]; then kill "$ATE_PID" || true; exit 1; fi
+          cat "$ATE_VERIFICATION_REPORT"
+          wait "$ATE_PID"
+      - name: Build distribution app without verification bridge
+        run: npm run tauri -- build --target universal-apple-darwin --bundles app
+      - name: Verify and package universal Mac app
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP=src-tauri/target/universal-apple-darwin/release/bundle/macos/ATE.app
+          EXECUTABLE=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP/Contents/Info.plist")
+          lipo "$APP/Contents/MacOS/$EXECUTABLE" -verify_arch arm64 x86_64
+          codesign --verify --deep --strict "$APP"
+          mkdir -p mac-input
+          ditto -c -k --keepParent "$APP" mac-input/ate-mac-app.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ate-mac-universal-preview
+          path: mac-input/ate-mac-app.zip
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ate-mac-native-evidence
+          path: ${{ runner.temp }}/mac-testflight-native.txt
+  mac-release:
+    needs: mac-build
+    strategy:
+      fail-fast: false
+      matrix:
+        channel:
+          - testflight
+          - website
+    runs-on: macos-26
+    timeout-minutes: 40
+    env:
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - uses: actions/download-artifact@v4
+        with:
+          name: ate-mac-universal-preview
+          path: mac-input
+      - run: bash build/mac-release.sh ${{ matrix.channel }}
+        env:
+          MAC_DEVELOPER_ID_SIGNING: ${{ matrix.channel == 'website' && secrets.MAC_DEVELOPER_ID_SIGNING || '' }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ate-mac-${{ matrix.channel }}-release
+          path: |
+            public-desktop/*
+            ${{ runner.temp }}/ate-mac-${{ matrix.channel }}/*.log
+            ${{ runner.temp }}/ate-mac-${{ matrix.channel }}/notary.json
+  windows:
+    needs: browser
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+          cache-on-failure: true
+      - run: npm ci
+      - run: npm run desktop:icons
+      - run: npm run build
+      - name: Check cancellation, wrong checksum, partial download and unsafe archive
+        shell: powershell
+        run: ./tests/windows-compiler.ps1
+      - name: Verify cancellation of actual setup and a clean official toolchain installation
+        timeout-minutes: 20
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $script=(Resolve-Path scripts/install-windows-compiler.ps1).Path
+          $cancelRoot=Join-Path $env:RUNNER_TEMP 'compiler-cancel-test'
+          New-Item -ItemType Directory -Force $cancelRoot | Out-Null
+          $cancel=Join-Path $cancelRoot 'cancel'
+          $status=Join-Path $cancelRoot 'status.txt'
+          $arguments=@('-NoLogo','-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',"`"$script`"",'-Destination',"`"$cancelRoot`"",'-StatusPath',"`"$status`"",'-CancelPath',"`"$cancel`"")
+          $process=Start-Process powershell.exe -ArgumentList $arguments -PassThru
+          Start-Sleep -Seconds 2
+          Set-Content $cancel 'cancel'
+          if (!$process.WaitForExit(30000)) { Stop-Process -Id $process.Id; throw 'Cancellation timed out' }
+          if ($process.ExitCode -eq 0) { throw 'Cancelled setup unexpectedly succeeded' }
+          if (Test-Path (Join-Path $cancelRoot 'llvm-mingw-20261104-ucrt-x86_64/ate-verified.txt')) { throw 'Cancelled setup was activated' }
+          if (Test-Path (Join-Path $cancelRoot '.compiler-setup')) { throw 'Cancelled download was not cleaned up' }
+          'PASS: actual setup cancellation and cleanup' | Set-Content "$env:RUNNER_TEMP/compiler-setup-evidence.txt"
+          $destination=Join-Path $env:LOCALAPPDATA 'io.github.willyros01.clearpage/toolchains'
+          & powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $script -Destination $destination -StatusPath "$env:RUNNER_TEMP/compiler-status.txt" -CancelPath "$env:RUNNER_TEMP/no-cancel"
+          if ($LASTEXITCODE -ne 0) { throw 'Official compiler download/setup failed' }
+          'PASS: official 191037046-byte LLVM-MinGW archive checksum verified; local installation and standard headers verified' | Add-Content "$env:RUNNER_TEMP/compiler-setup-evidence.txt"
+      - name: Verify compiler and project settings
+        run: cargo test --locked --manifest-path src-tauri/Cargo.toml --target x86_64-pc-windows-msvc c_check::tests -- --nocapture
+      - name: Build native Windows verification app
+        run: npm run tauri -- build --target x86_64-pc-windows-msvc --no-bundle --features editor-verification
+      - name: Verify native editing, syntax and persistent managed compiler detection
+        shell: pwsh
+        run: |
+          $env:ATE_VERIFICATION_REPORT=Join-Path $env:RUNNER_TEMP 'windows-native.txt'
+          $app=Start-Process src-tauri/target/x86_64-pc-windows-msvc/release/ate-desktop.exe -PassThru
+          if (!$app.WaitForExit(90000)) { Stop-Process -Id $app.Id; throw 'Native editor checks timed out' }
+          $report=Get-Content $env:ATE_VERIFICATION_REPORT -Raw
+          $report
+          if ($app.ExitCode -ne 0 -or $report -notmatch 'Managed Windows compiler detected after app startup' -or $report -notmatch 'Native Clang diagnostic maps') { throw 'Native editor or managed compiler detection failed' }
+      - name: Build Windows installer without verification controls
+        run: npm run tauri -- build --target x86_64-pc-windows-msvc --bundles nsis
+      - name: Install and launch the exact distributable
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $setup=@(Get-ChildItem src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe)
+          if ($setup.Count -ne 1) { throw 'Expected one installer' }
+          $destination=Join-Path $env:RUNNER_TEMP 'ATE-installed'
+          $process=Start-Process $setup[0].FullName -ArgumentList @('/S',"/D=$destination") -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw 'Installation failed' }
+          $exe=Join-Path $destination 'ATE.exe'
+          if (!(Test-Path $exe)) { $exe=Join-Path $destination 'ate-desktop.exe' }
+          $app=Start-Process $exe -PassThru
+          Start-Sleep -Seconds 8
+          if ($app.HasExited) { throw 'Installed app exited unexpectedly' }
+          Stop-Process -Id $app.Id
+          'PASS: exact Windows installer installed and app launched; physical acceptance pending' | Add-Content "$env:RUNNER_TEMP/compiler-setup-evidence.txt"
+      - name: Stage verified installer and checksum manifest
+        shell: bash
+        run: |
+          node build/stage-desktop.mjs
+          node --input-type=module <<'JS'
+          import {readFileSync,writeFileSync} from 'node:fs';
+          const path='desktop-artifacts/manifest.json',m=JSON.parse(readFileSync(path));
+          m.optional_c_compiler={toolchain:'LLVM-MinGW',release:'20261104',sha256:'552191b5754c49a5a20723276a6fc56541ea1922c4c50b7b669022333fc1b40f',download_bytes:191037046,verification:'official-download-standard-headers-native-detection'};
+          writeFileSync(path,JSON.stringify(m,null,2)+'\n');
+          JS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ate-windows-x64
+          path: desktop-artifacts/*
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-compiler-evidence
+          path: |
+            ${{ runner.temp }}/compiler-setup-evidence.txt
+            ${{ runner.temp }}/compiler-status.txt
+            ${{ runner.temp }}/windows-native.txt
+  report:
+    if: ${{ always() }}
+    needs:
+      - windows
+      - mac-release
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node build/desktop-report.mjs
+      - name: Publish release result for Cuberoot
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp desktop-report/ate-desktop-last-run.json "$RUNNER_TEMP/ate-desktop-last-run.json"
+          git fetch origin desktop-releases || true
+          if git show-ref --verify --quiet refs/remotes/origin/desktop-releases; then
+            git checkout -B desktop-releases origin/desktop-releases
+          else
+            git checkout --orphan desktop-releases
+            git rm -rf .
+          fi
+          cp "$RUNNER_TEMP/ate-desktop-last-run.json" ate-desktop-last-run.json
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ate-desktop-last-run.json
+          git commit -m "Record ATE desktop run $GITHUB_RUN_ID"
+          git push origin HEAD:desktop-releases
+    permissions:
+      contents: write
+      actions: read
+  android:
+    needs: browser
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq imagemagick > /dev/null
+      - run: npm ci
+      - name: Build native Android verification app
+        run: |-
+          ATE_ANDROID_VERIFICATION=1 npm run build
+          ATE_ANDROID_VERIFICATION=1 node build/prepare-android.mjs
+          cd android && chmod +x gradlew && ./gradlew --no-daemon --console=plain assembleDebug assembleDebugAndroidTest
+      - name: Enable KVM
+        run: |-
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Test Android 11 file manager, cancellation, save and reopen
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          target: google_apis
+          arch: x86_64
+          profile: pixel_c
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: |-
+            adb install android/app/build/outputs/apk/debug/app-debug.apk
+            adb install android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+            adb shell am instrument -w io.github.willyros01.clearpage.test/androidx.test.runner.AndroidJUnitRunner | tee android-instrumentation.txt
+            grep -q "OK (1 test)" android-instrumentation.txt
+            adb pull /sdcard/Download/ate-storage-check.c android-saved.c
+            node -e 'const s=require("fs").readFileSync("android-saved.c","utf8");if(s!=="int main(void) { return 0 }")throw Error("Saved text differs");'
+            adb shell screencap -p /sdcard/ate-native.png
+            adb pull /sdcard/ate-native.png android-native.png
+      - name: Rebuild production assets without the verification driver
+        run: |-
+          npm run build
+          node build/prepare-android.mjs
+          node -e 'if(require("fs").readFileSync("dist/app.js","utf8").includes("ATE_IPAD_SYNTAX_VERIFICATION_ONLY"))throw Error("Test driver in release");'
+          cd android && ./gradlew --no-daemon --console=plain assembleRelease
+          cd .. && mkdir -p out && cp android/app/build/outputs/apk/release/app-release-unsigned.apk out/ate-unsigned.apk
+      - name: Sign with permanent ATE certificate
+        id: sign
+        env:
+          ATE_ANDROID_SIGNING: ${{ secrets.ATE_ANDROID_SIGNING }}
+        run: node build/android-sign.mjs
+      - uses: actions/upload-artifact@v4
+        id: apk
+        with:
+          name: ate-android-apk
+          path: out/*.apk
+          if-no-files-found: error
+      - name: Record verified APK for Cuberoot
+        env:
+          ARTIFACT_ID: ${{ steps.apk.outputs.artifact-id }}
+          APK_NAME: ${{ steps.sign.outputs.apk_name }}
+        run: |-
+          node --input-type=module <<'NODE'
+          import {readFileSync,writeFileSync} from 'node:fs';
+          const e=process.env;writeFileSync(e.RUNNER_TEMP+'/ate-last-run.json',JSON.stringify({workflow:'ATE Apple and Desktop',branch:'desktop',outcome:'success',run_id:Number(e.GITHUB_RUN_ID),run_number:Number(e.ATE_BUILD_NUMBER),source_sha:e.GITHUB_SHA,artifact_id:Number(e.ARTIFACT_ID),apk_name:e.APK_NAME,version:JSON.parse(readFileSync('package.json')).version,signer_sha256:readFileSync('resources/android-signer.sha256','utf8').trim(),reported_at:new Date().toISOString()},null,2)+'\n');
+          NODE
+          git fetch origin apk-releases
+          git checkout -B apk-releases origin/apk-releases
+          cp "$RUNNER_TEMP/ate-last-run.json" ate-last-run.json
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add ate-last-run.json
+          git commit -m "Record verified ATE Android release $GITHUB_RUN_ID"
+          git push origin HEAD:apk-releases
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ate-android-native-evidence
+          path: |-
+            android-instrumentation.txt
+            android-native.png
+            android-saved.c
+            android/app/build/outputs/androidTest-results/**

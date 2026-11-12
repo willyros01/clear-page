@@ -29,6 +29,11 @@ try{
    await page.goto(url);
    await page.waitForSelector('.cm-content');
    const editor=page.locator('.cm-content');
+   for(const id of ['menu','cSettings','compilerInstall']){
+    const fonts=await page.locator('#'+id).evaluate(dialog=>{dialog.showModal();const result=[...dialog.querySelectorAll('button,input,select,textarea,label,p,h1,h2,h3')].filter(e=>e.getBoundingClientRect().width).map(e=>parseFloat(getComputedStyle(e).fontSize));dialog.close();return result});
+    assert.ok(fonts.every(size=>size<=18.67),'Controls must not exceed 14pt: '+id+' '+fonts);
+   }
+
    const text=()=>page.locator('.cm-line').allTextContents().then(lines=>lines.join('\n'));
    const menu=async()=>page.locator('#menuButton').click();
    const done=async()=>page.locator('#closeMenu').click();
@@ -61,7 +66,7 @@ try{
    await page.keyboard.type(':%s/const/let/g');
    const command=page.locator('.cm-vim-panel input');await command.waitFor({state:'visible'});
    const panel=await command.evaluate(e=>({width:e.getBoundingClientRect().width,color:getComputedStyle(e).color,bg:getComputedStyle(e).backgroundColor,size:getComputedStyle(e).fontSize}));
-   assert.ok(panel.width>200,JSON.stringify(panel));assert.notEqual(panel.color,panel.bg);assert.equal(panel.size,'24px');
+   assert.ok(panel.width>200,JSON.stringify(panel));assert.notEqual(panel.color,panel.bg);assert.equal(panel.size,'16px');
    await page.keyboard.press('Enter');assert.ok(!(await text()).includes('const'));assert.match(await text(),/let second/);
    await page.keyboard.type('/third');await page.keyboard.press('Enter');await page.keyboard.type('nN');
    await page.keyboard.type(':2');await page.keyboard.press('Enter');await page.keyboard.type('dd');assert.ok(!(await text()).includes('second'));
@@ -74,7 +79,7 @@ try{
    await page.waitForFunction(()=>document.getElementById('syntaxIssues').children.length>0);
    assert.match(await page.locator('#syntaxIssues').innerText(),/Line 1, column 7/);
    assert.ok(await page.locator('.cm-lintRange-error').count(),'Errors must be underlined');
-   assert.equal(await page.locator('#syntaxIssues button').first().evaluate(e=>getComputedStyle(e).fontSize),'26px');
+   assert.equal(await page.locator('#syntaxIssues button').first().evaluate(e=>getComputedStyle(e).fontSize),'16px');
    await mkdir('editor-evidence',{recursive:true});
    await page.screenshot({path:`editor-evidence/${name}-syntax-errors.png`});
    await page.locator('#syntaxIssues button').first().click();

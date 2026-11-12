@@ -88,3 +88,8 @@ Mac-only release workflow verifies browser behavior, local Clang integration and
 
 ## Windows 0.5.1 optional compiler
 Implementing and verifying the approved optional LLVM-MinGW setup for Windows website distribution. Pinned release 20261104 (191,037,046 bytes), app-private install, retained upstream licenses, 3 GB free-space requirement, no admin/PATH change. Native/installer/publication results remain pending until CI completes. Mac/iPad 0.5.0 TestFlight builds are separate releases.
+
+## 0.5.2 — common control sizing and Android document pickers
+- Set shared menus/configuration/control text to 12pt, headings maximum 14pt; preserve document font preferences and touch targets.
+- Android/Fire Open and Save now use native system file-manager intents instead of the iOS share sheet. Native cancellation preserves the recovery draft.
+- Retain syntax checks and Windows optional verified Clang installation. All-platform verification, signing, TestFlight and website distribution are in progress.

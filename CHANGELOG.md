@@ -120,3 +120,8 @@ Mac notarization completed: Apple returned Accepted. Recovery run 43103034568 pa
 
 ## iPad TestFlight 0.5.0 (15) complete
 27 Node tests, Chromium/WebKit and 101 native iPad webview checks passed. The production archive verified its bundled C Wasm/worker assets and excluded the simulator test bridge. Apple processing is VALID and the build is assigned to the existing internal tester group. Packaging run 43141713621 reused the exact app source verified in native run 43139879836 after a packaging-script-only fix. Physical iPad acceptance remains pending; desktop website downloads remain 0.4.1. See TODO.md for evidence and remaining gates.
+
+## 0.5.2 — common control sizing and Android document pickers
+- Set shared menus/configuration/control text to 12pt, headings maximum 14pt; preserve document font preferences and touch targets.
+- Android/Fire Open and Save now use native system file-manager intents instead of the iOS share sheet. Native cancellation preserves the recovery draft.
+- Retain syntax checks and Windows optional verified Clang installation. All-platform verification, signing, TestFlight and website distribution are in progress.

@@ -1,4 +1,6 @@
-import {saveText,native,desktop,closePlatform,handleDesktopExit} from './platform.js';
+import {Capacitor} from '@capacitor/core';
+import {openAndroid} from './android-files.js';
+import {saveText,native,desktop,closePlatform,handleDesktopExit,handleBack} from './platform.js';
 
 import {createEditor, languageForName} from './editor.js';
 import {languages} from './editor.js';
@@ -40,13 +42,16 @@ async function closeEditor(saved){
  try{await closePlatform()}catch(e){notice('The document is closed. You can close the window now.')}
 }
 handleDesktopExit(()=>{if(!$('exitDialog').open)$('exitDialog').showModal()});
+handleBack(()=>{const dialogs=[...document.querySelectorAll('dialog[open]')];if(dialogs.length){dialogs[dialogs.length-1].close();editor.focus()}else $('exitDialog').showModal()});
 $('discardExit').onclick=()=>closeEditor(false);
 $('saveExit').onclick=async()=>{if(await save())closeEditor(true)};
 
 function guard(action,title){if(editor.value){pending=action;$('dialogTitle').textContent=title;$('confirm').showModal()}else action()}
 $('cancel').onclick=()=>{$('confirm').close();pending=null};$('proceed').onclick=()=>{const fn=pending;pending=null;$('confirm').close();if(fn)fn()};
 $('new').onclick=()=>{$('menu').close();guard(()=>{editor.value='';$('name').value='Untitled.txt';setLanguage('plain');dirty=false;counts();persist();notice('');editor.focus()},'Start a new document?')};
-$('open').onclick=()=>{$('menu').close();guard(()=>$('file').click(),'Open another document?')};$('file').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{if(f.size>10*1024*1024)throw new Error('Please choose a text file smaller than 10 MB.');const text=await f.text();if(text.includes('\u0000'))throw new Error('This does not look like a plain-text file.');editor.value=text;$('name').value=f.name;setLanguage(languageForName(f.name));dirty=false;counts();persist();notice('Opened '+f.name);editor.focus()}catch(err){notice(err.message||'Could not open this file.')}finally{e.target.value=''}};
+function opened(text,name){editor.value=text;$('name').value=name;setLanguage(languageForName(name));dirty=false;counts();persist();notice('Opened '+name);editor.focus()}
+async function chooseOpen(){if(Capacitor.getPlatform()==='android'){try{const result=await openAndroid();opened(result.text,result.name)}catch(error){notice(error.message||'Open was cancelled. Your draft is kept.')}}else $('file').click()}
+$('open').onclick=()=>{$('menu').close();guard(chooseOpen,'Open another document?')};$('file').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{if(f.size>10*1024*1024)throw new Error('Please choose a text file smaller than 10 MB.');const text=await f.text();if(text.includes('\u0000'))throw new Error('This does not look like a plain-text file.');opened(text,f.name)}catch(err){notice(err.message||'Could not open this file.')}finally{e.target.value=''}};
 $('focus').onclick=async()=>{$('menu').close();document.body.classList.add('focus');try{if(document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen()}catch(e){}editor.focus()};
 async function leave(){document.body.classList.remove('focus');if(document.fullscreenElement)try{await document.exitFullscreen()}catch(e){}}
 $('leaveFocus').onclick=leave;document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement)document.body.classList.remove('focus')});document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();save()}if(e.key==='Escape')leave()});window.addEventListener('beforeunload',e=>{if(dirty&&$('status').textContent.startsWith('Draft not')){e.preventDefault();e.returnValue=''}});

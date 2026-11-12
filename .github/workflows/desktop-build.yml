@@ -12,7 +12,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   editor:
-    if: ${{ !contains(github.event.head_commit.message, '[ios-packaging-only]') }}
+    if: ${{ !contains(github.event.head_commit.message, '[ios-packaging-only]') && !contains(github.event.head_commit.message, '[all-platforms]') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -273,7 +273,7 @@ jobs:
           name: ate-ipad-release-evidence
           path: ${{ runner.temp }}/clear-page-release/*.log
   report:
-    if: ${{ always() && !contains(github.event.head_commit.message, '[signing-setup]') && github.ref_name != 'ipad-syntax' && !contains(github.event.head_commit.message, '[ipad-first]') }}
+    if: ${{ always() && !contains(github.event.head_commit.message, '[all-platforms]') && !contains(github.event.head_commit.message, '[signing-setup]') && github.ref_name != 'ipad-syntax' && !contains(github.event.head_commit.message, '[ipad-first]') }}
     needs: [desktop, mac-release, ipad-testflight]
     runs-on: ubuntu-latest
     env:

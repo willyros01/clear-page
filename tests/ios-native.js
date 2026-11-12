@@ -22,6 +22,14 @@ import {Filesystem,Directory,Encoding} from '@capacitor/filesystem';
    if($('syntaxSummary').textContent.includes('unavailable'))throw Error('iPad checker unavailable: '+$('syntaxDetails').textContent);
    checks.push('iPad checker is available');
   };
+  for(const id of ['menu','cSettings','compilerInstall']){
+   const dialog=$(id);dialog.showModal();
+   assert(getComputedStyle(dialog).fontSize==='16px','12pt '+id+' control text');
+   for(const element of dialog.querySelectorAll('button,input,select,textarea,label,h1,h2,h3,p')){
+    if(element.getBoundingClientRect().width)assert(parseFloat(getComputedStyle(element).fontSize)<=18.67,'Control text is at most 14pt: '+id);
+   }
+   dialog.close();
+  }
   assert(getComputedStyle(content).fontSize==='36px','iPad defaults to large 36px editor text');
   assert(/monospace/.test(getComputedStyle(content.closest('.cm-scroller')).fontFamily),'iPad uses monospaced code');
   assert(['pre-wrap','break-spaces'].includes(getComputedStyle(content).whiteSpace),'iPad retains whitespace');
@@ -37,7 +45,7 @@ import {Filesystem,Directory,Encoding} from '@capacitor/filesystem';
    await open(invalid,name);await check();
    assert($('syntaxIssues').children.length>0,'iPad '+name+' reports syntax errors');
    await until(()=>!!document.querySelector('.cm-lintRange-error, .cm-lintPoint-error'),'iPad '+name+' shows an error range or end-of-file marker');
-   assert(getComputedStyle($('syntaxIssues').querySelector('button')).fontSize==='26px','iPad error messages use large text');
+   assert(getComputedStyle($('syntaxIssues').querySelector('button')).fontSize==='16px','iPad error messages use 12pt control text');
    if(name.endsWith('.c'))assert($('syntaxDetails').textContent.includes('Basic C syntax check only'),'iPad C explains parser limits');
    $('syntaxIssues').querySelector('button').click();assert(!$('syntaxDialog').open,'iPad issue selection returns to text');
    await open(valid,name);await check();

@@ -116,3 +116,6 @@ Acceptance evidence must cover missing/existing compilers, a successful official
 ### Mac TestFlight release
 
 2026-11-11 (America/Toronto): [run 43147595044](https://github.com/willyros01/clear-page/actions/runs/43147595044) passed browser, 27 Node, five Clang/project and native Mac webview checks. The universal distribution app contains arm64 and x86_64 architectures. Apple processed ATE 0.5.0 (16) as VALID (build `59ad98c2-da97-4545-a850-07b24d74c2d4`) and assignment to the existing internal tester group was verified. Physical Mac acceptance remains pending; website downloads were not changed.
+
+## 0.5.2 coordinated rebuild — 12 November 2026
+Owner authorized every platform build and publication. Menus, dialogs, Clang settings and compiler setup now use 12pt text (headings max 14pt); document text retains its independent 36px default/adjustment. Android Open/Save use native Storage Access Framework document pickers, preserving cancel/recovery behavior; Android Back behavior retained. Build/test/publication is in progress for iOS, universal Mac TestFlight, signed/notarized Mac website, Windows with optional compiler setup, and permanently signed Android APK. No physical Fire acceptance is claimed from emulator tests.

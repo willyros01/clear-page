@@ -1,6 +1,6 @@
 {
   "name": "clear-page",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "private": true,
   "type": "module",
   "scripts": {
@@ -12,6 +12,8 @@
   },
   "dependencies": {
     "@babel/parser": "^8.1.2",
+    "@capacitor/android": "^8.6.0",
+    "@capacitor/app": "^8.1.1",
     "@capacitor/core": "^8.6.0",
     "@capacitor/filesystem": "^8.1.5",
     "@capacitor/ios": "^8.6.0",

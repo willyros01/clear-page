@@ -28,6 +28,14 @@
   await open('function hello() {\n    const answer = 42;\n    return answer;\n}');
   await wait(150);
   const scroller=content.closest('.cm-scroller');
+  for(const id of ['menu','cSettings','compilerInstall']){
+   const dialog=$(id);dialog.showModal();
+   assert(getComputedStyle(dialog).fontSize==='16px','12pt '+id+' control text');
+   for(const element of dialog.querySelectorAll('button,input,select,textarea,label,h1,h2,h3,p')){
+    if(element.getBoundingClientRect().width)assert(parseFloat(getComputedStyle(element).fontSize)<=18.67,'Control text is at most 14pt: '+id);
+   }
+   dialog.close();
+  }
   assert(getComputedStyle(content.closest('.cm-editor')).display==='flex','Native editor uses CodeMirror flex layout');
   assert(['pre-wrap','break-spaces'].includes(getComputedStyle(content).whiteSpace),'Native editor preserves whitespace');
   assert(/monospace/.test(getComputedStyle(scroller).fontFamily),'Native editor uses a monospaced font');
