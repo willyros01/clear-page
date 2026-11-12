@@ -71,4 +71,3 @@ export function checkSyntax({text,language,name=''}) {
  const total=diagnostics.length;
  return {status:'checked',diagnostics:diagnostics.slice(0,limit),message:[message,total>limit?'Showing the first 100 issues.':''].filter(Boolean).join(' ')};
 }
-
