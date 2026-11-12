@@ -54,7 +54,7 @@ jobs:
         run: |-
           ATE_ANDROID_VERIFICATION=1 npm run build
           ATE_ANDROID_VERIFICATION=1 node build/prepare-android.mjs
-          cd android && chmod +x gradlew && ./gradlew --no-daemon --console=plain assembleDebug assembleDebugAndroidTest
+          cd android && chmod +x gradlew && ./gradlew --no-daemon --console=plain :app:assembleDebug :app:assembleDebugAndroidTest
       - name: Enable KVM
         run: |-
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules

@@ -32,6 +32,7 @@ jobs:
         with:
           name: windows-browser-evidence
           path: editor-evidence/*
+    if: ${{ !contains(github.event.head_commit.message, '[android-only]') }}
   ipad-native:
     needs: browser
     runs-on: macos-26
@@ -314,7 +315,7 @@ jobs:
             ${{ runner.temp }}/compiler-status.txt
             ${{ runner.temp }}/windows-native.txt
   report:
-    if: ${{ always() }}
+    if: ${{ always() && !contains(github.event.head_commit.message, '[android-only]') }}
     needs:
       - windows
       - mac-release
@@ -370,7 +371,7 @@ jobs:
         run: |-
           ATE_ANDROID_VERIFICATION=1 npm run build
           ATE_ANDROID_VERIFICATION=1 node build/prepare-android.mjs
-          cd android && chmod +x gradlew && ./gradlew --no-daemon --console=plain assembleDebug assembleDebugAndroidTest
+          cd android && chmod +x gradlew && ./gradlew --no-daemon --console=plain :app:assembleDebug :app:assembleDebugAndroidTest
       - name: Enable KVM
         run: |-
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
