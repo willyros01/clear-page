@@ -1,0 +1,77 @@
+name: ATE verified iPad TestFlight release
+on:
+  push:
+    branches: [ipad-syntax]
+    paths: ['.github/workflows/ipad-release-retry.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: ate-ipad-verified-release
+  cancel-in-progress: false
+jobs:
+  release:
+    runs-on: macos-26
+    timeout-minutes: 40
+    env:
+      SOURCE_RUN: '43139879836'
+      ATE_BUILD_NUMBER: '15'
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Require passed native iPad tests and unchanged app sources
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          node --input-type=module <<'JS'
+          import {execFileSync} from 'node:child_process';
+          const base='https://api.github.com/repos/willyros01/clear-page/';
+          const headers={Authorization:'Bearer '+process.env.GITHUB_TOKEN,Accept:'application/vnd.github+json'};
+          async function get(path){const r=await fetch(base+path,{headers});if(!r.ok)throw Error('Provenance lookup HTTP '+r.status);return r.json()}
+          const run=await get('actions/runs/'+process.env.SOURCE_RUN);
+          if(run.head_branch!=='ipad-syntax')throw Error('Wrong source branch');
+          const {jobs}=await get('actions/runs/'+process.env.SOURCE_RUN+'/jobs?per_page=100');
+          for(const name of ['editor','ipad-native'])if(!jobs.some(j=>j.name===name&&j.conclusion==='success'))throw Error('Source checks did not pass: '+name);
+          const changed=execFileSync('git',['diff','--name-only',run.head_sha,process.env.GITHUB_SHA],{encoding:'utf8'}).trim().split('\n').filter(Boolean);
+          for(const file of changed)if(!/^(build\/(ios-release\.sh|apple-build-status\.mjs)|\.github\/workflows\/[^/]+\.yml|[^/]+\.md)$/.test(file))throw Error('App changed after native verification: '+file);
+          console.log('PASS: exact app source from '+run.head_sha+' passed browser and native iPad checks; only packaging/workflow/docs changes follow.');
+          JS
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ env.SOURCE_RUN }}
+          name: ate-ipad-native-evidence
+          path: verified-ipad
+      - name: Verify native evidence
+        run: |
+          node --input-type=module <<'JS'
+          import {readFileSync} from 'node:fs';
+          const report=JSON.parse(readFileSync('verified-ipad/ipad-syntax.json','utf8'));
+          if(report.passed!==true||report.checks.length<100)throw Error('Incomplete native verification evidence');
+          for(const check of ['iPad fixture.c reports syntax errors','iPad fixture.c clears corrected errors','iPad Vim undo works'])if(!report.checks.includes(check))throw Error('Missing native evidence: '+check);
+          console.log('PASS: '+report.checks.length+' native iPad checks verified.');
+          JS
+      - run: npm ci
+      - run: npm run build
+      - name: Archive, verify, sign, upload and process the tested app
+        run: bash build/ios-release.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ate-ipad-verified-release-evidence
+          path: |
+            ${{ runner.temp }}/clear-page-release/*.log
+            ${{ runner.temp }}/clear-page-release/export/*.ipa

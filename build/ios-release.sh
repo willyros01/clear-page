@@ -3,7 +3,7 @@ set -euo pipefail
 swift --version
 node scripts/apple-preflight.mjs
 VERSION=$(node -p "JSON.parse(require('fs').readFileSync('package.json','utf8')).version")
-BUILD="${GITHUB_RUN_NUMBER:?Missing build number}"
+BUILD="${ATE_BUILD_NUMBER:-${GITHUB_RUN_NUMBER:?Missing build number}}"
 RELEASE_DIR="${RUNNER_TEMP:?}/clear-page-release"
 mkdir -p "$RELEASE_DIR"
 export RELEASE_DIR VERSION BUILD
@@ -58,7 +58,7 @@ for asset in ['app.js','syntax-worker.js','tree-sitter-c.wasm','web-tree-sitter.
  actual=app/'public'/asset;expected=pathlib.Path('dist')/asset
  assert actual.is_file(), 'Missing bundled checker asset: '+asset
  assert hashlib.sha256(actual.read_bytes()).digest()==hashlib.sha256(expected.read_bytes()).digest(), 'Archive asset mismatch: '+asset
-assert b'ATE_IPAD_SYNTAX_VERIFICATION_ONLY' not (app/'public/app.js').read_bytes(), 'Test bridge in release assets'
+assert b'ATE_IPAD_SYNTAX_VERIFICATION_ONLY' not in (app/'public/app.js').read_bytes(), 'Test bridge in release assets'
 with (app/'PrivacyInfo.xcprivacy').open('rb') as f: privacy=plistlib.load(f)
 assert any(x['NSPrivacyAccessedAPIType']=='NSPrivacyAccessedAPICategoryFileTimestamp' and 'C617.1' in x['NSPrivacyAccessedAPITypeReasons'] for x in privacy['NSPrivacyAccessedAPITypes'])
 print('PASS: archived iPhone/iPad app identity, version, assets, web bundle, privacy manifest and signature.')
