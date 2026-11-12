@@ -34,7 +34,7 @@ public class MainActivity extends BridgeActivity {
 `);
 if(process.env.ATE_ANDROID_VERIFICATION==='1'){
  let testGradle=readFileSync(gradle,'utf8').replace('defaultConfig {','defaultConfig {\n        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"');
- testGradle+='\ndependencies { androidTestImplementation "androidx.test:runner:1.6.2"; androidTestImplementation "androidx.test.ext:junit:1.2.1"; androidTestImplementation "androidx.test.uiautomator:uiautomator:2.3.0" }\n';
+ testGradle+='\ndependencies { implementation platform("org.jetbrains.kotlin:kotlin-bom:1.8.22"); androidTestImplementation platform("org.jetbrains.kotlin:kotlin-bom:1.8.22"); androidTestImplementation "androidx.test:runner:1.6.2"; androidTestImplementation "androidx.test.ext:junit:1.2.1"; androidTestImplementation "androidx.test.uiautomator:uiautomator:2.3.0" }\n';
  writeFileSync(gradle,testGradle);
  const tests='android/app/src/androidTest/java/io/github/willyros01/clearpage';mkdirSync(tests,{recursive:true});
  writeFileSync(tests+'/DocumentSaveTest.java',readFileSync('tests/android/DocumentSaveTest.java'));
