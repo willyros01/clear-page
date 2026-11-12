@@ -3,7 +3,7 @@ name: ATE Apple and Desktop
 on:
   workflow_dispatch:
   push:
-    branches: [desktop]
+    branches: [desktop, ipad-syntax]
     paths: ['src/**', 'src-tauri/**', 'index.html', 'package*.json', 'build/**', 'scripts/**', 'tests/**', '.github/workflows/desktop-build.yml']
 permissions:
   contents: write
@@ -12,6 +12,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   editor:
+    if: ${{ !contains(github.event.head_commit.message, '[ios-packaging-only]') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -31,7 +32,7 @@ jobs:
           name: editor-browser-evidence
           path: editor-evidence/*
   desktop:
-    if: ${{ !contains(github.event.head_commit.message, '[signing-setup]') }}
+    if: ${{ !contains(github.event.head_commit.message, '[signing-setup]') && github.ref_name != 'ipad-syntax' && !contains(github.event.head_commit.message, '[ipad-first]') }}
     needs: editor
     strategy:
       fail-fast: false
@@ -135,6 +136,7 @@ jobs:
           path: desktop-artifacts/*
           if-no-files-found: error
   apple-readiness:
+    if: ${{ github.ref_name != 'ipad-syntax' && !contains(github.event.head_commit.message, '[ipad-first]') }}
     needs: editor
     runs-on: ubuntu-latest
     env:
@@ -190,9 +192,62 @@ jobs:
             public-desktop/*
             ${{ runner.temp }}/ate-mac-${{ matrix.channel }}/*.log
             ${{ runner.temp }}/ate-mac-${{ matrix.channel }}/notary.json
-  ipad-testflight:
+  ipad-native:
     if: ${{ !contains(github.event.head_commit.message, '[desktop-only]') }}
     needs: editor
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Start the iPad simulator while building
+        shell: bash
+        run: |
+          DEVICE=$(xcrun simctl list devices available -j | python3 -c 'import json,sys;d=json.load(sys.stdin);print(next(x["udid"] for a in d["devices"].values() for x in a if "iPad" in x["name"]))')
+          echo "$DEVICE" > "$RUNNER_TEMP/ipad-device.txt"
+          xcrun simctl boot "$DEVICE"
+      - run: npm ci
+      - name: Build simulator-only verification assets
+        run: ATE_IOS_VERIFICATION=1 npm run build
+      - run: node scripts/prepare-ios.mjs
+      - name: Build iPad simulator app
+        run: |
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug -destination 'generic/platform=iOS Simulator' -derivedDataPath "$RUNNER_TEMP/DerivedData" CODE_SIGNING_ALLOWED=NO build > "$RUNNER_TEMP/ipad-build.log" 2>&1 || { tail -80 "$RUNNER_TEMP/ipad-build.log"; exit 1; }
+      - name: Verify syntax checking in the real iPad webview
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEVICE=$(cat "$RUNNER_TEMP/ipad-device.txt")
+          xcrun simctl bootstatus "$DEVICE" -b
+          xcrun simctl install "$DEVICE" "$RUNNER_TEMP/DerivedData/Build/Products/Debug-iphonesimulator/App.app"
+          xcrun simctl launch "$DEVICE" io.github.willyros01.clearpage
+          DATA=$(xcrun simctl get_app_container "$DEVICE" io.github.willyros01.clearpage data)
+          REPORT="$DATA/Documents/ate-ipad-syntax-verification.json"
+          for attempt in {1..120}; do
+            if [ -f "$REPORT" ]; then break; fi
+            sleep 1
+          done
+          xcrun simctl io "$DEVICE" screenshot "$RUNNER_TEMP/ipad-syntax.png"
+          if [ ! -f "$REPORT" ]; then echo 'Native verification report missing'; exit 1; fi
+          cp "$REPORT" "$RUNNER_TEMP/ipad-syntax.json"
+          node -e 'const r=JSON.parse(require("fs").readFileSync(process.argv[1])); console.log(r.checks.map(x=>"PASS: "+x).join("\n")); if(!r.passed)throw Error(r.error);' "$RUNNER_TEMP/ipad-syntax.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ate-ipad-native-evidence
+          path: |
+            ${{ runner.temp }}/ipad-build.log
+            ${{ runner.temp }}/ipad-syntax.json
+            ${{ runner.temp }}/ipad-syntax.png
+  ipad-testflight:
+    if: ${{ !contains(github.event.head_commit.message, '[desktop-only]') }}
+    needs: [editor, ipad-native]
     runs-on: macos-26
     timeout-minutes: 45
     env:
@@ -218,7 +273,7 @@ jobs:
           name: ate-ipad-release-evidence
           path: ${{ runner.temp }}/clear-page-release/*.log
   report:
-    if: ${{ always() && !contains(github.event.head_commit.message, '[signing-setup]') }}
+    if: ${{ always() && !contains(github.event.head_commit.message, '[signing-setup]') && github.ref_name != 'ipad-syntax' && !contains(github.event.head_commit.message, '[ipad-first]') }}
     needs: [desktop, mac-release, ipad-testflight]
     runs-on: ubuntu-latest
     env:

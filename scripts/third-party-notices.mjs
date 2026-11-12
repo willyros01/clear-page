@@ -9,4 +9,4 @@ for(const [path,entry] of Object.entries(lock.packages)){
  result+=`\n\n===== ${pkg.name} ${pkg.version} (${typeof pkg.license==='string'?pkg.license:'see below'}) =====\n`;
  for(const name of names)result+=await readFile(path+'/'+name,'utf8')+'\n';
 }
-await writeFile('THIRD-PARTY-NOTICES.txt',result);
+await writeFile('THIRD-PARTY-NOTICES.txt',result.replace(/\r\n/g,'\n').trimEnd()+'\n');

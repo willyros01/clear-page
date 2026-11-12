@@ -10,9 +10,11 @@ export function setupSyntax({editor,getDocument,nativeCheck,chooseCompiler,choos
  $('cStandard').value=['c99','c11','c17','c23'].includes(settings.standard)?settings.standard:'c17';
  $('cIncludes').value=typeof settings.includes==='string'?settings.includes:'';
  $('cDefines').value=typeof settings.defines==='string'?settings.defines:'';
+ if(!desktop)$('cSettingsButton').textContent='About C checks';
  $('chooseCompiler').disabled=$('chooseProject').disabled=!desktop;
- $('cPlatformNote').textContent=desktop?'Uses a local Clang compiler. Choose a project folder for relative headers; paths and macros are optional.':'C highlighting works here. Compiler checking is available only in the Mac and Windows desktop apps.';
- const runner=createCheckRunner({workerFactory:()=>new Worker(new URL('syntax-worker.js',document.baseURI)),nativeCheck});
+ $('cPlatformNote').textContent=desktop?'Uses a local Clang compiler. Choose a project folder for relative headers; paths and macros are optional.':'Basic C syntax checking is included and works offline. No compiler download is needed. Header, macro and type checks require the desktop compiler edition.';
+ if(!desktop)for(const id of ['chooseCompiler','compilerChoice','chooseProject','projectChoice','cStandard','cIncludes','cDefines'])($(id).closest('label')||$(id)).hidden=true;
+ const runner=createCheckRunner({workerFactory:()=>new Worker(new URL('syntax-worker.js',document.baseURI)),nativeCheck:desktop?nativeCheck:null});
  function options(){return {standard:$('cStandard').value,includes:$('cIncludes').value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean),defines:$('cDefines').value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean)}}
  function render(result) {
   diagnostics=result.diagnostics||[];editor.diagnostics(diagnostics);

@@ -11,8 +11,8 @@ const server=createServer(async(req,res)=>{
   const path=req.url.split('?')[0];
   let data=await readFile(new URL('../../dist/'+(path==='/'?'index.html':path.slice(1)),import.meta.url));
   if(path==='/')data=Buffer.from(data.toString().replace('<style>',`<style nonce="${nonce}">`));
-  res.setHeader('Content-Type',path.endsWith('.js')?'application/javascript':'text/html');
-  res.setHeader('Content-Security-Policy',`default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' 'nonce-${nonce}'; img-src 'self' data:; object-src 'none'`);
+  res.setHeader('Content-Type',path.endsWith('.js')?'application/javascript':path.endsWith('.wasm')?'application/wasm':'text/html');
+  res.setHeader('Content-Security-Policy',`default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' 'nonce-${nonce}'; img-src 'self' data:; object-src 'none'`);
   res.end(data);
  }catch{res.writeHead(404);res.end()}
 });
@@ -24,6 +24,7 @@ try{
   const browser=await engine.launch(name==='chromium'&&process.env.CHROMIUM_PATH?{executablePath:process.env.CHROMIUM_PATH}:{});
   try{
    const page=await browser.newPage({viewport:{width:1200,height:850}});
+   page.on('console',message=>{if(message.type()==='error')console.error(name+': '+message.text())});
    const errors=[];page.on('pageerror',e=>errors.push(e.message));
    await page.goto(url);
    await page.waitForSelector('.cm-content');
@@ -101,8 +102,9 @@ try{
    await page.locator('#closeSyntax').click();
    await open('int main(void) { return 0 }','fixture.c');
    await menu();await page.locator('#checkSyntax').click();
-   await page.waitForFunction(()=>document.getElementById('syntaxDetails').textContent.includes('local Clang'));
-   assert.match(await page.locator('#syntaxSummary').innerText(),/unavailable/);
+   await page.waitForFunction(()=>document.getElementById('syntaxIssues').children.length>0);
+   assert.match(await page.locator('#syntaxDetails').innerText(),/Basic C syntax check only/);
+   assert.match(await page.locator('#syntaxIssues').innerText(),/Missing/);
    await page.locator('#closeSyntax').click();
    // Manual checking still works when automatic checking is disabled.
    await menu();await page.locator('#autoCheck').uncheck();await done();
@@ -112,14 +114,11 @@ try{
    await page.waitForFunction(()=>document.getElementById('syntaxIssues').children.length>0);
    await page.locator('#closeSyntax').click();
    await menu();await page.locator('#cSettingsButton').click();
-   assert.equal(await page.locator('#chooseCompiler').isDisabled(),true);
-   await page.locator('#cStandard').selectOption('c11');
-   await page.locator('#cIncludes').fill('include');
-   await page.locator('#cDefines').fill('DEBUG=1');
+   assert.equal(await page.locator('#chooseCompiler').isVisible(),false);
+   assert.equal(await page.locator('#cStandard').isVisible(),false);
+   assert.match(await page.locator('#cPlatformNote').innerText(),/No compiler download/);
    await page.locator('#closeCSettings').click();
    await page.reload();await page.waitForSelector('.cm-content');
-   assert.equal(await page.locator('#cStandard').inputValue(),'c11');
-   assert.equal(await page.locator('#cDefines').inputValue(),'DEBUG=1');
    await page.setViewportSize({width:390,height:844});
    await menu();await page.locator('#checkSyntax').click();
    await page.waitForFunction(()=>document.getElementById('syntaxIssues').children.length>0);
@@ -129,7 +128,7 @@ try{
    assert.deepEqual(errors,[]);
    await mkdir('editor-evidence',{recursive:true});
    await page.screenshot({path:`editor-evidence/${name}-editor.png`});
-   console.log(`PASS ${name}: strict desktop CSP, 36px monospaced layout, preserved spaces, syntax colors, Tab/Shift+Tab, Enter indentation, dark theme, Vim insert/delete/undo/search/substitution/go-to-line, mode switching, draft recovery, worker syntax checks, language override, diagnostics, stale-result cancellation and unsupported C reporting`);
+   console.log(`PASS ${name}: strict desktop CSP, 36px monospaced layout, preserved spaces, syntax colors, Tab/Shift+Tab, Enter indentation, dark theme, Vim insert/delete/undo/search/substitution/go-to-line, mode switching, draft recovery, worker syntax checks, language override, diagnostics, stale-result cancellation and bundled C parser diagnostics`);
   }catch(error){console.error(name+': '+error.stack);throw error}finally{await browser.close()}
  }
 }finally{await new Promise(r=>server.close(r))}

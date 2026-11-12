@@ -76,3 +76,9 @@ Verification checkpoint: SYN-01–11 are verified at the scope recorded in TODO.
 
 ## Optional C compiler setup approved
 SYN-13 in TODO.md tracks an optional missing-compiler offer: official Apple Command Line Tools setup on Mac, or a verified official LLVM-MinGW download on Windows. Keep Later and Choose installed compiler options; no automatic install at launch. This is planned, not implemented.
+
+## iPad-first syntax checking
+The owner prioritized iPad. `ipad-syntax` bundles a basic C parser alongside the six existing parser-based checkers, adds a simulator native-worker/diagnostics gate, and uploads to TestFlight only after verification. Full compiler setup/download stays a desktop feature; the iPad UI explains its basic checker limits.
+
+## iPad TestFlight 0.5.0 (15) complete
+27 Node tests, Chromium/WebKit and 101 native iPad webview checks passed. The production archive verified its bundled C Wasm/worker assets and excluded the simulator test bridge. Apple processing is VALID and the build is assigned to the existing internal tester group. Packaging run 43141713621 reused the exact app source verified in native run 43139879836 after a packaging-script-only fix. Physical iPad acceptance remains pending; desktop website downloads remain 0.4.1. See TODO.md for evidence and remaining gates.

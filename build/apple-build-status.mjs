@@ -12,7 +12,7 @@ function token() {
  return input+'.'+sign('sha256',Buffer.from(input),{key:createPrivateKey(process.env.ASC_KEY_P8.trim()),dsaEncoding:'ieee-p1363'}).toString('base64url');
 }
 async function main() {
- const build=process.env.GITHUB_RUN_NUMBER;
+ const build=process.env.ATE_BUILD_NUMBER||process.env.GITHUB_RUN_NUMBER;
  if(!/^\d+$/.test(build??'')) throw Error('Missing build number');
  for(let attempt=0;attempt<24;attempt++) {
   const url=new URL('https://api.appstoreconnect.apple.com/v1/builds');

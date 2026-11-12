@@ -1,6 +1,8 @@
 # C syntax checking in ATE
 
-C checking is being verified for ATE 0.5.0. See TODO.md for release status.
+iPad/iPhone TestFlight **0.5.0 (15)** includes a basic C syntax checker. It is bundled in the app and needs no compiler download. It catches structural syntax errors such as missing semicolons/braces; it does not resolve headers, expand macros, check types, enforce a C standard or build/run code. Choose Menu → Check syntax, or enable Check while typing.
+
+The following compiler setup instructions apply to the desktop edition, which uses installed Clang. The desktop 0.5.0 release remains pending. See TODO.md for platform status.
 
 ## Free compiler setup
 
@@ -34,7 +36,7 @@ Only the editor buffer is passed to the compiler, through standard input. Includ
 - Checks are limited to 512K characters, 32 include directories, 32 macros, 10 seconds of compiler time and bounded diagnostic output. Stale results are ignored, and requests are serialized.
 - No arbitrary compiler flags, shell commands, plugins or build scripts are accepted by this integration. A compiler selected through the native file chooser must be a trusted local executable.
 - Checks stay on the device. ATE does not send source text to a remote compiler.
-- C highlighting and indentation are available on other platforms, but C compiler checking on iPad/web remains deferred.
+- iPad/web basic structural C checks are being added with bundled Tree-sitter C/Wasm. No compiler download is needed there. Header resolution, macro expansion, type checking and C-standard conformance remain desktop compiler features.
 
 ## Licensing
 
