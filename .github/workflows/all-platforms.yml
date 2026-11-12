@@ -1,3 +1,4 @@
+# Python Wasm uses the compatibility build for Android 11 / older Fire WebViews.
 name: ATE Apple and Desktop
 on:
   push:

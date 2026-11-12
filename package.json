@@ -11,7 +11,7 @@
     "test:browser": "node tests/browser/desktop-editor.mjs"
   },
   "dependencies": {
-    "@astral-sh/ruff-wasm-web": "0.17.5",
+    "@astral-sh/ruff-wasm-web": "0.6.9",
     "@babel/parser": "^8.1.2",
     "@capacitor/android": "^8.6.0",
     "@capacitor/app": "^8.1.1",

@@ -24,7 +24,7 @@ Recovery/preferences stay on this device; no ATE account or cloud synchronizatio
 
 ## Code checking and Vim
 
-Menu → Check syntax opens line/column issues; select an issue to jump to it. Check while typing is optional. JavaScript, TypeScript syntax, JSON, YAML, HTML and CSS use bundled offline parsers. Python has a bundled Ruff/WebAssembly Python 3.14 syntax parser, without executing source or resolving imports/types. SQL uses the bundled SQLite grammar, without connecting to a database or executing statements. Markdown uses the Lezer Markdown parser with warnings for duplicate headings, unclosed fenced code and trailing whitespace (two-space hard breaks allowed).
+Menu → Check syntax opens line/column issues; select an issue to jump to it. Check while typing is optional. JavaScript, TypeScript syntax, JSON, YAML, HTML and CSS use bundled offline parsers. Python has a bundled Ruff/WebAssembly Python 3.13 syntax parser, without executing source or resolving imports/types. SQL uses the bundled SQLite grammar, without connecting to a database or executing statements. Markdown uses the Lezer Markdown parser with warnings for duplicate headings, unclosed fenced code and trailing whitespace (two-space hard breaks allowed).
 
 C on iPad/iPhone, Android and web uses a bundled structural parser, without header resolution, macro expansion, type checks or compiler-standard enforcement. Desktop C uses the same bundled structural parser by default. Choose C settings → C checking → Advanced: installed Clang for local Clang with `-fsyntax-only`, project/include/macro settings and an optional verified Windows LLVM-MinGW download. See [C-CHECKING.md](C-CHECKING.md). Checks stay local and never run user programs or send source to a remote compiler.
 

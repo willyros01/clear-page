@@ -10,7 +10,7 @@ Owner authorized the combined update after being unable to reproduce the unsaved
 | --- | --- | --- |
 | Exact filenames | Removed shared .txt append rule; defaults use Untitled. Android Save uses application/octet-stream to avoid MIME-based suffix insertion. | Native Save/cancel/discard, explicit extensions and extensionless names gated in CI; physical acceptance pending. |
 | Language detection | Filename first; bounded content fallback for all supported code languages; manual override retained; automatic drafts re-detected. | Automated regression tests pass; native checks included. |
-| Offline Python | Bundled MIT Ruff 0.17.5 Wasm, Python 3.14 parser, no execution/import/type checking. | Missing colon, indentation, Unicode, malformed strings and valid modern Python tested; native worker gates pending. |
+| Offline Python | Bundled MIT Ruff 0.6.9 Wasm, Python 3.13 parser, no execution/import/type checking. | Missing colon, indentation, Unicode, malformed strings and valid modern Python tested; native worker gates pending. |
 | Offline SQL | Bundled Apache-2.0 node-sql-parser 5.4.0 SQLite grammar. No database or execution. Other dialects not promised. | Valid multi-statements and malformed SQL tested; native worker gates pending. |
 | Markdown | Bundled MIT Lezer parser; duplicate-heading, unclosed-fence and trailing-whitespace lint warnings. | Valid/invalid fixtures tested; native gates pending. |
 | One release | iOS, universal Mac TestFlight/website, Windows and Android use the coordinated workflow. Existing JS/TS/JSON/HTML/CSS/YAML/Basic C retained. | 40 Node tests and shared build pass. Distribution results not yet available. |
