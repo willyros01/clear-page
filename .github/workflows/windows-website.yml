@@ -8,7 +8,7 @@ permissions:
   contents: read
 concurrency:
   group: ate-windows-website
-  cancel-in-progress: false
+  cancel-in-progress: true
 jobs:
   browser:
     runs-on: ubuntu-latest
@@ -51,6 +51,7 @@ jobs:
         shell: powershell
         run: ./tests/windows-compiler.ps1
       - name: Verify cancellation of actual setup and a clean official toolchain installation
+        timeout-minutes: 20
         shell: pwsh
         run: |
           $ErrorActionPreference='Stop'

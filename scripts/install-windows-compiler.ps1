@@ -10,9 +10,11 @@ function Assert-NotCancelled {
 }
 function Write-SetupStatus([string]$Message) {
     if ($StatusPath) { [IO.File]::WriteAllText($StatusPath,$Message) }
+    [Console]::WriteLine($Message)
 }
 function Wait-SetupTask($Task) {
-    while (!$Task.IsCompleted) { Assert-NotCancelled; Start-Sleep -Milliseconds 100 }
+    $clock=[Diagnostics.Stopwatch]::StartNew()
+    while (!$Task.IsCompleted) { Assert-NotCancelled; if ($clock.Elapsed.TotalSeconds -gt 30) { throw 'The download connection timed out. Please retry.' }; Start-Sleep -Milliseconds 100 }
     Assert-NotCancelled
     return $Task.GetAwaiter().GetResult()
 }
@@ -33,21 +35,22 @@ function Receive-Compiler([string]$Url,[string]$Path,[long]$ExpectedBytes) {
         if ($response.Content.Headers.ContentLength -and $response.Content.Headers.ContentLength -ne $ExpectedBytes) { throw 'Unexpected compiler download size. Please retry.' }
         $stream = Wait-SetupTask ($response.Content.ReadAsStreamAsync())
         $file = [IO.File]::Create($Path)
-        $buffer = New-Object byte[] 262144
-        [long]$received = 0; $lastPercent = -1
-        while ($true) {
-            $task = $stream.ReadAsync($buffer,0,$buffer.Length)
-            $clock = [Diagnostics.Stopwatch]::StartNew()
-            while (!$task.IsCompleted) { Assert-NotCancelled; if ($clock.Elapsed.TotalSeconds -gt 30) { throw 'Download interrupted. Please retry when connected.' }; Start-Sleep -Milliseconds 100 }
-            $count = $task.GetAwaiter().GetResult()
+        # Let .NET stream the archive without a PowerShell call for every network packet.
+        $copy=$stream.CopyToAsync($file,262144)
+        [long]$lastBytes=0; $lastPercent=-1
+        $clock=[Diagnostics.Stopwatch]::StartNew()
+        while (!$copy.IsCompleted) {
             Assert-NotCancelled
-            if ($count -eq 0) { break }
-            $received += $count
+            [long]$received=$file.Length
             if ($received -gt $ExpectedBytes) { throw 'Unexpected compiler download size.' }
-            $file.Write($buffer,0,$count)
-            $percent = [int][Math]::Floor(100 * $received / $ExpectedBytes)
+            if ($received -ne $lastBytes) { $clock.Restart(); $lastBytes=$received }
+            if ($clock.Elapsed.TotalSeconds -gt 30) { throw 'Download interrupted. Please retry when connected.' }
+            $percent=[int][Math]::Floor(100*$received/$ExpectedBytes)
             if ($percent -ne $lastPercent) { Write-SetupStatus "Downloading C compiler: $percent%"; $lastPercent=$percent }
+            Start-Sleep -Milliseconds 100
         }
+        $copy.GetAwaiter().GetResult()
+        Assert-NotCancelled
     } finally {
         if ($file) { $file.Dispose() }; if ($stream) { $stream.Dispose() }; if ($response) { $response.Dispose() }; $client.Dispose()
     }
@@ -95,13 +98,16 @@ function Invoke-CompilerProbe([string]$Compiler,[string]$Arguments,[string]$Sour
         return $text
     } finally { if ($process.Id -and !$process.HasExited) { $process.Kill() }; $process.Dispose() }
 }
+function Assert-CompilerSpace([long]$AvailableBytes) {
+    if ($AvailableBytes -lt 3GB) { throw 'C compiler setup needs 3 GB of free disk space. Free some space and retry.' }
+}
 function Install-ATECompiler {
     if (!$Destination -or !$StatusPath -or !$CancelPath) { throw 'Missing setup paths.' }
     $stage=Join-Path $Destination '.compiler-setup'
     $final=Join-Path $Destination $CompilerRoot
     [IO.Directory]::CreateDirectory($Destination) | Out-Null
     $drive=New-Object IO.DriveInfo ([IO.Path]::GetPathRoot([IO.Path]::GetFullPath($Destination)))
-    if ($drive.AvailableFreeSpace -lt 3GB) { throw 'C compiler setup needs 3 GB of free disk space. Free some space and retry.' }
+    Assert-CompilerSpace $drive.AvailableFreeSpace
     if (Test-Path -LiteralPath $final) { throw 'A compiler folder already exists. Choose its bin\clang.exe in C settings, or remove that toolchain folder before retrying.' }
     try {
         if (Test-Path -LiteralPath $stage) { Remove-Item -LiteralPath $stage -Recurse -Force }

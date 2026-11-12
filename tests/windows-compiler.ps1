@@ -8,6 +8,7 @@ function Must-Fail([scriptblock]$Action,[string]$Match) {
     if (!$caught -or $caught -notmatch $Match) { throw "Expected failure '$Match', got '$caught'" }
     Write-Output "PASS: $Match"
 }
+Must-Fail { Assert-CompilerSpace 1MB } 'free disk space'
 $fixture=Join-Path $testRoot 'partial.zip'
 [IO.File]::WriteAllText($fixture,'partial')
 Must-Fail { Assert-Archive $fixture ('0'*64) 100 } 'incomplete'
