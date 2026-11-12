@@ -1,0 +1,23 @@
+name: ATE TestFlight availability
+on:
+  push:
+    branches: [desktop]
+    paths: ['build/testflight-availability.mjs', '.github/workflows/testflight-availability.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  availability:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify current Apple processing and tester availability
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: node build/testflight-availability.mjs
