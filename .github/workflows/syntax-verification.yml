@@ -1,0 +1,79 @@
+name: ATE syntax verification
+on:
+  push:
+    branches: [syntax-checking]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium webkit
+      - run: npm run test:browser
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: syntax-browser-evidence
+          path: editor-evidence/*
+  native:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-26, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+      - run: npm ci
+      - run: npm run desktop:icons
+      - run: npm run build
+      - name: Compiler and project checks
+        run: cargo test --locked --manifest-path src-tauri/Cargo.toml c_check::tests -- --nocapture
+      - name: Build native verification app
+        run: npm run tauri -- build --no-bundle --features editor-verification
+      - name: Check Mac native webview
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -euo pipefail
+          export ATE_VERIFICATION_REPORT="$RUNNER_TEMP/syntax-native.txt"
+          src-tauri/target/release/ate-desktop &
+          ATE_PID=$!
+          for attempt in {1..90}; do
+            if [ -f "$ATE_VERIFICATION_REPORT" ]; then break; fi
+            sleep 1
+          done
+          if [ ! -f "$ATE_VERIFICATION_REPORT" ]; then kill "$ATE_PID" || true; exit 1; fi
+          cat "$ATE_VERIFICATION_REPORT"
+          wait "$ATE_PID"
+      - name: Check Windows native webview
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $env:ATE_VERIFICATION_REPORT = Join-Path $env:RUNNER_TEMP 'syntax-native.txt'
+          $app = Start-Process 'src-tauri/target/release/ate-desktop.exe' -PassThru
+          if (!$app.WaitForExit(90000)) { Stop-Process -Id $app.Id; throw 'Native checks timed out' }
+          Get-Content $env:ATE_VERIFICATION_REPORT
+          if ($app.ExitCode -ne 0) { throw 'Native checks failed' }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: syntax-native-${{ runner.os }}
+          path: ${{ runner.temp }}/syntax-native.txt

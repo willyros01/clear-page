@@ -32,8 +32,8 @@ try{
    const menu=async()=>page.locator('#menuButton').click();
    const done=async()=>page.locator('#closeMenu').click();
    const setMode=async mode=>{await menu();await page.locator('#editingMode').selectOption(mode);await done()};
-   const open=async content=>{
-    await page.locator('#file').setInputFiles({name:'fixture.js',mimeType:'text/javascript',buffer:Buffer.from(content)});
+   const open=async (content,name="fixture.js")=>{
+    await page.locator('#file').setInputFiles({name,mimeType:'text/javascript',buffer:Buffer.from(content)});
     await page.waitForFunction(expected=>[...document.querySelectorAll('.cm-line')].map(e=>e.textContent).join('\n')===expected,content);
    };
    await open('function hello() {\n    const answer = 42;\n    return answer;\n}');
@@ -67,10 +67,52 @@ try{
    await page.keyboard.type('u');assert.match(await text(),/second/);
    await setMode('standard');await page.keyboard.press('ControlOrMeta+End');await page.keyboard.type(' // standard');assert.match(await text(),/\/\/ standard$/);
    await page.reload();await page.waitForSelector('.cm-content');assert.match(await text(),/\/\/ standard$/,'Draft recovery must keep edits');
+   // Check the built worker under the same strict nonce policy as the editor.
+   await open('const = 2;');
+   await menu();await page.locator('#checkSyntax').click();
+   await page.waitForFunction(()=>document.getElementById('syntaxIssues').children.length>0);
+   assert.match(await page.locator('#syntaxIssues').innerText(),/Line 1, column 7/);
+   assert.ok(await page.locator('.cm-lintRange-error').count(),'Errors must be underlined');
+   assert.equal(await page.locator('#syntaxIssues button').first().evaluate(e=>getComputedStyle(e).fontSize),'26px');
+   await page.locator('#syntaxIssues button').first().click();
+   assert.equal(await page.locator('#syntaxDialog').evaluate(e=>e.open),false);
+   await open('const fixed = 2;');
+   await page.waitForFunction(()=>document.getElementById('syntaxStatus').textContent.includes('no syntax errors'));
+   assert.equal(await page.locator('.cm-lintRange-error').count(),0);
+   await open('{"name":}', 'fixture.json');
+   await page.waitForFunction(()=>document.getElementById('syntaxStatus').textContent.includes('syntax issue'));
+   assert.equal(await page.locator('#language').inputValue(),'json');
+   // Explicit language override works for new or unknown file names and recovers.
+   await open('const = 1;', 'fixture.txt');
+   await menu();await page.locator('#language').selectOption('javascript');await done();
+   await page.waitForFunction(()=>document.getElementById('syntaxStatus').textContent.includes('syntax issue'));
+   await page.reload();await page.waitForSelector('.cm-content');
+   assert.equal(await page.locator('#language').inputValue(),'javascript');
+   await page.waitForFunction(()=>document.getElementById('syntaxStatus').textContent.includes('syntax issue'));
+   // Obsolete worker results must not survive a document/language replacement.
+   await open('const = 1;');await open('ordinary notes','notes.txt');
+   await page.waitForTimeout(1000);
+   assert.equal(await page.locator('#syntaxStatus').innerText(),'Syntax: not checked');
+   assert.equal(await page.locator('.cm-lintRange-error').count(),0);
+   await menu();await page.locator('#checkSyntax').click();
+   assert.match(await page.locator('#syntaxDetails').innerText(),/Choose a code language/);
+   await page.locator('#closeSyntax').click();
+   await open('int main(void) { return 0 }','fixture.c');
+   await menu();await page.locator('#checkSyntax').click();
+   await page.waitForFunction(()=>document.getElementById('syntaxDetails').textContent.includes('local Clang'));
+   assert.match(await page.locator('#syntaxSummary').innerText(),/unavailable/);
+   await page.locator('#closeSyntax').click();
+   // Manual checking still works when automatic checking is disabled.
+   await menu();await page.locator('#autoCheck').uncheck();await done();
+   await open('name: [unfinished','fixture.yaml');
+   await page.waitForTimeout(900);assert.equal(await page.locator('#syntaxStatus').innerText(),'Syntax: not checked');
+   await menu();await page.locator('#checkSyntax').click();
+   await page.waitForFunction(()=>document.getElementById('syntaxIssues').children.length>0);
+   await page.locator('#closeSyntax').click();
    assert.deepEqual(errors,[]);
    await mkdir('editor-evidence',{recursive:true});
    await page.screenshot({path:`editor-evidence/${name}-editor.png`});
-   console.log(`PASS ${name}: strict desktop CSP, 36px monospaced layout, preserved spaces, syntax colors, Tab/Shift+Tab, Enter indentation, dark theme, Vim insert/delete/undo/search/substitution/go-to-line, mode switching, draft recovery`);
+   console.log(`PASS ${name}: strict desktop CSP, 36px monospaced layout, preserved spaces, syntax colors, Tab/Shift+Tab, Enter indentation, dark theme, Vim insert/delete/undo/search/substitution/go-to-line, mode switching, draft recovery, worker syntax checks, language override, diagnostics, stale-result cancellation and unsupported C reporting`);
   }catch(error){console.error(name+': '+error.stack);throw error}finally{await browser.close()}
  }
 }finally{await new Promise(r=>server.close(r))}

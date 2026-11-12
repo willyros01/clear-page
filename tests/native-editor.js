@@ -56,6 +56,26 @@
   mode('standard');
   $('theme').click();await wait(100);
   assert(document.body.classList.contains('dark'),'Native dark appearance works');
+  // Real bundled worker, lint UI and local compiler, inside the native webview.
+  const until=async predicate=>{for(let i=0;i<120&&!predicate();i++)await wait(100);assert(predicate(),'Native syntax result arrived')};
+  await open('const = 1;');
+  $('checkSyntax').click();
+  await until(()=>$('syntaxIssues').children.length>0);
+  assert(/Line 1, column 7/.test($('syntaxIssues').textContent),'Native worker reports JavaScript error positions');
+  assert(!!document.querySelector('.cm-lintRange-error'),'Native syntax errors have underlines');
+  $('syntaxIssues').querySelector('button').click();
+  assert(!$('syntaxDialog').open,'Native error selection returns to the editor');
+  await open('const fixed = 1;');
+  $('checkSyntax').click();
+  await until(()=>$('syntaxSummary').textContent.includes('no syntax errors'));
+  assert(!document.querySelector('.cm-lintRange-error'),'Native fixed code clears old errors');
+  $('closeSyntax').click();
+  await open('int main(void) { return 0 }');
+  $('language').value='c';$('language').dispatchEvent(new Event('change'));
+  $('checkSyntax').click();
+  await until(()=>$('syntaxIssues').textContent.includes("expected ';'"));
+  assert(/Line 1/.test($('syntaxIssues').textContent),'Native Clang diagnostic maps into the open unsaved buffer');
+  $('closeSyntax').click();
   await window.__TAURI_INTERNALS__.invoke('editor_verification_result',{passed:true,report:checks.map(x=>'PASS: '+x).join('\n')});
  }catch(error){
   await window.__TAURI_INTERNALS__.invoke('editor_verification_result',{passed:false,report:checks.map(x=>'PASS: '+x).join('\n')+'\nFAIL: '+error.stack});

@@ -13,3 +13,5 @@ resources/desktop-icon.png
 *.p12
 *.mobileprovision
 *.provisionprofile
+
+editor-evidence/
