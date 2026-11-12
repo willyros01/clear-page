@@ -101,3 +101,7 @@ All native control-sizing and editor gates passed. Android 11 native verificatio
 
 ## TestFlight visibility audit
 12 November 2026: read-only run 43211972237 confirmed both iOS and Mac 0.5.2 (17) are IN_BETA_TESTING, VALID, unexpired and assigned to the existing installed tester. Notification delivery and device UI visibility were not verified. Added a read-only availability workflow for future checks; no binaries rebuilt or tester recipients changed.
+
+## Lightweight compiler assessment — Zig 0.17.1
+
+Native Windows x64, Intel Mac and Apple silicon assessment completed in run 43216011773. Zig embeds Clang 22.1.8; adapted direct syntax-check invocation passed 44 focused fixtures. The ordinary zig cc driver failed/timed out with ATE's syntax-only path. Final toolchain allocation is about 430–459 MB (Windows estimated), with 600 MB a practical toolchain/test-cache allowance and 1 GB free for fresh installation. No application integration or binary release occurred. See assessment/RESULTS.md and SYN-14 in TODO.md.

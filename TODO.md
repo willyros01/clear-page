@@ -135,3 +135,11 @@ Owner authorized every platform build and publication. Menus, dialogs, Clang set
 
 ATE **0.5.2 (17)** is processed VALID and assigned to the existing internal TestFlight groups for iPhone/iPad and universal Mac. Verified 0.5.2 Mac, Windows and Android downloads are published on Cuberoot. See [RELEASE-0.5.2.md](RELEASE-0.5.2.md) for exact build sources, native test runs, signatures and public-download hashes. Physical-device acceptance remains separate.
 Android native verification: run 43175083674, source `33b071f5510d322e149d2286d5fb1da1866af794`. Public APK SHA-256 `a81ad1c096ce479bfdf56467a8109687e18c456e5da4f8c8d394fd32f45051c9` (4112463 bytes). Cuberoot publisher run 43176173587 verified the live download. Remaining work: physical platform acceptance, Mac guided compiler setup, and separately planned language checkers.
+
+## Zig lightweight compiler assessment — 12 November 2026
+
+| ID | Work | Status | Evidence / remaining work |
+| --- | --- | --- | --- |
+| SYN-14 | Assess Zig C compatibility and final disk footprint on Windows and both Mac architectures | Assessment verified; integration pending | Zig 0.17.1 embeds Clang 22.1.8. All 44 adapted direct-frontend fixtures and 21 system-Clang comparisons passed in run 43216011773. Normal zig cc syntax-only failed/timed out; it is not an ATE drop-in. Toolchain allocation roughly 430–459 MB, plus measured driver cache about 50–60 MB; plan 600 MB installed/cache and 1 GB free for fresh setup. Windows allocation is estimated for 4 KB clusters. See assessment/RESULTS.md. |
+
+No application binary or installed compiler changed. Optional Zig integration, the Mac TestFlight sandbox, download integrity/installation and physical acceptance remain future work. This focused suite is not full ISO C conformance certification.

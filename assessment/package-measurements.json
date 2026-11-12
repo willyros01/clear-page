@@ -1,0 +1,46 @@
+[
+  {
+    "platform": "aarch64-macos",
+    "version": "0.17.1",
+    "archive_bytes": 54001240,
+    "sha256": "75f1bc7a1e9852f17ec9a0c1895f767c4ec56d46bc8a834920eece1d0359dd8d",
+    "file_count": 19520,
+    "unpacked_file_bytes": 388055077,
+    "extracted_regular_file_bytes": 388055077,
+    "linux_filesystem_allocated_bytes": 439398400,
+    "rounded_file_bytes_4k": 439398400
+  },
+  {
+    "platform": "x86_64-macos",
+    "version": "0.17.1",
+    "archive_bytes": 59496824,
+    "sha256": "9af07b20319fbd0c92ee46ad23e81d6a782b1aaea2cfb8dcbff35f1d2c7ddbb7",
+    "file_count": 19520,
+    "unpacked_file_bytes": 398537412,
+    "extracted_regular_file_bytes": 398537412,
+    "linux_filesystem_allocated_bytes": 449880064,
+    "rounded_file_bytes_4k": 449880064
+  },
+  {
+    "platform": "x86_64-windows",
+    "version": "0.17.1",
+    "archive_bytes": 100343666,
+    "sha256": "b03f477a1943673e02aca0f570e8030dffd536ce1f45cbc4d3326ec31159562e",
+    "file_count": 19520,
+    "unpacked_file_bytes": 378964486,
+    "extracted_regular_file_bytes": 378964486,
+    "linux_filesystem_allocated_bytes": 430309376,
+    "rounded_file_bytes_4k": 430309376
+  },
+  {
+    "platform": "x86_64-linux",
+    "version": "0.17.1",
+    "archive_bytes": 57411036,
+    "sha256": "3581863e3cbcfd0fce0efc682ce7e9e93da96668a977791d356a26d2a7e9b17a",
+    "file_count": 19520,
+    "unpacked_file_bytes": 374407381,
+    "extracted_regular_file_bytes": 374407381,
+    "linux_filesystem_allocated_bytes": 425750528,
+    "rounded_file_bytes_4k": 425750528
+  }
+]

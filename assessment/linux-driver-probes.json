@@ -1,0 +1,88 @@
+[
+  {
+    "case": "file-fsyntax",
+    "args": [
+      "cc",
+      "-target",
+      "aarch64-macos",
+      "-std=c17",
+      "-fsyntax-only",
+      "probe.c"
+    ],
+    "returncode": 1,
+    "seconds": 24.69,
+    "stderr": "zig: warning: argument unused during compilation: '-c' [-Wunused-command-line-argument]\nprobe.c:1:1: error: failed to rename 'tmp/32f1d84a77260468-probe.o' into 'local-probes/file-fsyntax//o/923bab1c14d699133a769c474719f416/probe.o': FileNotFound\n",
+    "stdout": ""
+  },
+  {
+    "case": "stdin-fsyntax",
+    "args": [
+      "cc",
+      "-target",
+      "aarch64-macos",
+      "-x",
+      "c",
+      "-std=c17",
+      "-fsyntax-only",
+      "-"
+    ],
+    "returncode": 1,
+    "seconds": 22.506,
+    "stderr": "zig: warning: argument unused during compilation: '-c' [-Wunused-command-line-argument]\nlocal-probes/stdin-fsyntax/tmp/406f496c6ad2d52c408bb4b693154100-stdin.c:1:1: error: failed to rename 'tmp/d86f77a9c96578e3-406f496c6ad2d52c408bb4b693154100-stdin.o' into 'local-probes/stdin-fsyntax//o/1d606f9f1fadccdaf8798d59487216b7/406f496c6ad2d52c408bb4b693154100-stdin.o': FileNotFound\n",
+    "stdout": ""
+  },
+  {
+    "case": "stdin-devnull",
+    "args": [
+      "cc",
+      "-target",
+      "aarch64-macos",
+      "-x",
+      "c",
+      "-std=c17",
+      "-fsyntax-only",
+      "-o",
+      "/dev/null",
+      "-"
+    ],
+    "returncode": 1,
+    "seconds": 0.037,
+    "stderr": "zig: warning: argument unused during compilation: '-c' [-Wunused-command-line-argument]\nlocal-probes/stdin-devnull/tmp/406f496c6ad2d52c408bb4b693154100-stdin.c:1:1: error: failed to rename 'tmp/be18052b5e8c00d7-406f496c6ad2d52c408bb4b693154100-stdin.o' into 'local-probes/stdin-devnull//o/66119546aeec62c930a528ec52b66c5a/406f496c6ad2d52c408bb4b693154100-stdin.o': FileNotFound\n",
+    "stdout": ""
+  },
+  {
+    "case": "no-emit",
+    "args": [
+      "cc",
+      "-target",
+      "aarch64-macos",
+      "-x",
+      "c",
+      "-std=c17",
+      "-fsyntax-only",
+      "-fno-emit-bin",
+      "-"
+    ],
+    "returncode": 1,
+    "seconds": 0.005,
+    "stderr": "error: unknown clang option: \"-fno-emit-bin\"\n",
+    "stdout": ""
+  },
+  {
+    "case": "direct-clang",
+    "args": [
+      "clang",
+      "-target",
+      "arm64-apple-macos13",
+      "-x",
+      "c",
+      "-std=c17",
+      "-fsyntax-only",
+      "-"
+    ],
+    "returncode": 1,
+    "seconds": 0.012,
+    "stderr": "In file included from <stdin>:1:\n/usr/include/stdio.h:28:10: fatal error: 'bits/libc-header-start.h' file not found\n   28 | #include <bits/libc-header-start.h>\n      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~\n1 error generated.\n",
+    "stdout": ""
+  }
+]

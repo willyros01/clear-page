@@ -1,5 +1,9 @@
 # Changelog
 
+## Compiler research — no application release
+- Measured official Zig 0.17.1 archives and tested native Windows, Intel Mac and Apple silicon C checking. Embedded Clang 22.1.8 passed 44 direct-frontend fixtures and 21 system-Clang comparisons.
+- Recorded the normal-driver syntax-only failure/timeout and the tested direct-frontend alternative, footprint/cache measurements and integration limits in assessment/RESULTS.md. ATE 0.5.2 binaries and existing compiler choices are unchanged.
+
 ## 0.5.2 — control sizing and Android file manager
 - Added a read-only Apple availability audit: both 0.5.2 (17) builds were confirmed IN_BETA_TESTING in run 43211972237 after the owner reported missing updates. Device visibility/notification delivery remains unverified.
 - Menus, configuration, search and syntax messages use 12pt text, headings at most 14pt. Document text keeps its independent 36px default and 10–54pt adjustment.
