@@ -5,7 +5,7 @@ set -euo pipefail
 CHANNEL="${1:?testflight or website}"
 case "$CHANNEL" in testflight|website) ;; *) exit 2;; esac
 export VERSION="$(node -p "require('./package.json').version")"
-export BUILD="${GITHUB_RUN_NUMBER:?}"
+export BUILD="${ATE_BUILD_NUMBER:-${GITHUB_RUN_NUMBER:?}}"
 export RELEASE_DIR="$RUNNER_TEMP/ate-mac-$CHANNEL"
 mkdir -p "$RELEASE_DIR"
 KEY_DIR=$(mktemp -d "$RUNNER_TEMP/ate-mac-key.XXXXXX")

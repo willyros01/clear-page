@@ -1,0 +1,98 @@
+name: ATE Mac TestFlight
+on:
+  push:
+    branches: [ios]
+    paths: ['.github/workflows/mac-testflight.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ate-mac-testflight
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium webkit
+      - run: npm run test:browser
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mac-testflight-browser-evidence
+          path: editor-evidence/*
+  release:
+    needs: verify
+    runs-on: macos-26
+    timeout-minutes: 60
+    env:
+      ATE_BUILD_NUMBER: '16'
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+          cache-on-failure: true
+      - run: npm ci
+      - run: npm run desktop:icons
+      - run: npm run build
+      - name: Verify C compiler and project settings
+        run: cargo test --locked --manifest-path src-tauri/Cargo.toml c_check::tests -- --nocapture
+      - name: Build universal native verification app
+        run: npm run tauri -- build --target universal-apple-darwin --no-bundle --features editor-verification
+      - name: Verify syntax checking and editing inside the Mac webview
+        shell: bash
+        run: |
+          set -euo pipefail
+          export ATE_VERIFICATION_REPORT="$RUNNER_TEMP/mac-testflight-native.txt"
+          src-tauri/target/universal-apple-darwin/release/ate-desktop &
+          ATE_PID=$!
+          for attempt in {1..90}; do
+            if [ -f "$ATE_VERIFICATION_REPORT" ]; then break; fi
+            sleep 1
+          done
+          if [ ! -f "$ATE_VERIFICATION_REPORT" ]; then kill "$ATE_PID" || true; exit 1; fi
+          cat "$ATE_VERIFICATION_REPORT"
+          wait "$ATE_PID"
+      - name: Build distribution app without verification bridge
+        run: npm run tauri -- build --target universal-apple-darwin --bundles app
+      - name: Verify and package universal Mac app
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP=src-tauri/target/universal-apple-darwin/release/bundle/macos/ATE.app
+          EXECUTABLE=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP/Contents/Info.plist")
+          lipo "$APP/Contents/MacOS/$EXECUTABLE" -verify_arch arm64 x86_64
+          codesign --verify --deep --strict "$APP"
+          mkdir -p mac-input
+          ditto -c -k --keepParent "$APP" mac-input/ate-mac-app.zip
+      - name: Sign, upload, verify Apple processing and assign existing testers
+        run: bash build/mac-release.sh testflight
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ate-mac-testflight-evidence
+          path: |
+            ${{ runner.temp }}/mac-testflight-native.txt
+            ${{ runner.temp }}/ate-mac-testflight/*.log

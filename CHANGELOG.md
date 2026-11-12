@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0 — Mac TestFlight
+- Added a Mac-only TestFlight workflow using the current shared syntax-checking editor.
+- Requires browser, compiler and native Mac webview checks before building a universal Intel/Apple silicon release.
+- Release 0.5.0 (16) processing and tester assignment must be verified; physical Mac acceptance remains pending.
+
 ## 0.3.2 — Another Text Editor (ATE)
 - Renamed the product to Another Text Editor (ATE), retaining its existing app identity and recovery data.
 - Replaced the blank generated icon with the approved minimalist faceless writing figure and upright paper.
