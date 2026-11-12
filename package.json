@@ -37,6 +37,7 @@
     "@replit/codemirror-vim": "^6.4.0",
     "@tauri-apps/api": "^2.12.4",
     "codemirror": "^6.0.2",
+    "core-js": "^3.51.0",
     "css-tree": "^3.2.1",
     "jsonc-parser": "^3.3.1",
     "parse5": "^8.1.1",

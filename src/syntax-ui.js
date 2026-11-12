@@ -25,7 +25,7 @@ export function setupSyntax({editor,getDocument,nativeCheck,chooseCompiler,choos
   const summary=result.status==='checked'?(count?`${count} syntax issue${count===1?'':'s'}`:`${label}: no syntax errors found`):result.status==='checking'?'Checking syntax…':result.status==='pending'?'Syntax: not checked':'Syntax: check unavailable';
   $('syntaxStatus').textContent=summary;$('syntaxSummary').textContent=summary;
   $('syntaxDetails').textContent=result.message||'';
-  $('syntaxIssues').replaceChildren();
+  $('syntaxIssues').textContent='';
   for(const d of diagnostics){
    const item=document.createElement('li'),button=document.createElement('button');
    button.textContent=`Line ${d.line}, column ${d.column} — ${d.severity}: ${d.message}`;

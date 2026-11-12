@@ -1,3 +1,6 @@
+// Older Android/Fire WebViews need these worker-local standard APIs.
+import 'core-js/actual/object/has-own.js';
+import 'core-js/actual/string/replace-all.js';
 import {checkSyntax} from './syntax.js';
 import {createCChecker} from './c-syntax.js';
 const checkC=createCChecker(async name=>{

@@ -122,3 +122,5 @@ jobs:
             android-native.png
             android-saved.c
             android/app/build/outputs/androidTest-results/**
+
+# Reverify Android 11 WebView compatibility after worker API fallbacks.

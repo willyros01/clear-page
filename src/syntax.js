@@ -48,7 +48,7 @@ export function checkSyntax({text,language,name=''}) {
  } else if(language==='html') {
   const root=parseHTML(text,{sourceCodeLocationInfo:true,onParseError:e=>{
    // Fragments are useful editor documents; a missing doctype is not an error here.
-   if(e.code!=='missing-doctype')diagnostics.push(diagnostic(text,e.startOffset,e.endOffset,e.code.replaceAll('-',' ')));
+   if(e.code!=='missing-doctype')diagnostics.push(diagnostic(text,e.startOffset,e.endOffset,e.code.replace(/-/g,' ')));
   }});
   const visit=node=>{
    if(node.tagName==='script'||node.tagName==='style') {
