@@ -95,3 +95,5 @@ Mac notarization completed: Apple returned Accepted. Recovery run 43103034568 pa
 - Added desktop C checking through an installed Clang compiler, C standard selection, source/include folders and macros. Uses syntax-only stdin checks; never builds or runs the program.
 - Added worker cancellation, size/time limits, bundled third-party notices, Help and verification tests. Python/SQL/Markdown checking and iPad C remain deferred.
 - Native/browser CI and physical acceptance are tracked in TODO.md; no 0.5.0 release claimed yet.
+
+0.5.0 verification checkpoint: 23 Node tests, Chromium/WebKit, five Clang tests on each native OS, native Mac/Windows UI and a Mac App Sandbox probe pass in run 43134841430. No 0.5.0 publication or physical acceptance is claimed. See TODO.md.
