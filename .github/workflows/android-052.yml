@@ -70,10 +70,15 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: |-
-            trap 'adb logcat -d > android-logcat.txt; adb shell screencap -p /sdcard/ate-debug.png; adb pull /sdcard/ate-debug.png android-debug.png; adb shell uiautomator dump /sdcard/ate-ui.xml; adb pull /sdcard/ate-ui.xml android-ui.xml; adb shell run-as io.github.willyros01.clearpage cat files/ate-ipad-syntax-verification.json > android-webview-report.json' EXIT
             adb install android/app/build/outputs/apk/debug/app-debug.apk
             adb install android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
             adb shell am instrument -w -e class io.github.willyros01.clearpage.DocumentSaveTest io.github.willyros01.clearpage.test/androidx.test.runner.AndroidJUnitRunner | tee android-instrumentation.txt
+            adb logcat -d > android-logcat.txt
+            adb shell screencap -p /sdcard/ate-debug.png
+            adb pull /sdcard/ate-debug.png android-debug.png
+            adb shell uiautomator dump /sdcard/ate-ui.xml
+            adb pull /sdcard/ate-ui.xml android-ui.xml
+            adb shell run-as io.github.willyros01.clearpage cat files/ate-ipad-syntax-verification.json > android-webview-report.json || true
             grep -q "OK (1 test)" android-instrumentation.txt
             adb pull /sdcard/Download/ate-storage-check.c android-saved.c
             node -e 'const s=require("fs").readFileSync("android-saved.c","utf8");if(s!=="int main(void) { return 0 }")throw Error("Saved text differs");'
