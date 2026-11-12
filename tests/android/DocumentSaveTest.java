@@ -47,10 +47,9 @@ public class DocumentSaveTest {
         if(roots!=null){clickSelector(device,By.desc("Show roots"),"Show roots");device.waitForIdle();clickSelector(device,By.text("Downloads"),"Downloads");device.waitForIdle();}
         UiObject2 filename=device.wait(Until.findObject(By.clazz("android.widget.EditText")),10000);
         assertNotNull("Native filename field missing",filename);filename.setText("ate-storage-check.c");
-        UiObject2 save=device.findObject(By.res(Pattern.compile("com\\.(android|google\\.android)\\.documentsui:id/action_menu_select")));
-        if(save==null)save=device.findObject(By.text("SAVE"));
-        if(save==null)save=device.findObject(By.text("Save"));
-        assertNotNull("Native Save button missing",save);save.click();
+        device.waitForIdle();
+        if(device.hasObject(By.pkg(Pattern.compile(".*inputmethod.*")))){device.pressBack();device.waitForIdle();}
+        clickSelector(device,By.res("android:id/button1").text(Pattern.compile("(?i)save")),"Native Save");
         assertTrue("Successful native document save notice missing",device.wait(Until.hasObject(By.textContains("Saved ate-storage-check.c")),15000));
         click(device,"Menu");click(device,"Open");click(device,"Continue");
         assertTrue("Open must launch DocumentsUI",device.wait(Until.hasObject(By.pkg(DOCUMENTS)),15000));
