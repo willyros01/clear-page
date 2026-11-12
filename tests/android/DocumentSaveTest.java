@@ -49,7 +49,11 @@ public class DocumentSaveTest {
         assertNotNull("Native filename field missing",filename);filename.setText("ate-storage-check.c");
         device.waitForIdle();
         if(device.hasObject(By.pkg(Pattern.compile(".*inputmethod.*")))){device.pressBack();device.waitForIdle();}
-        clickSelector(device,By.res("android:id/button1").text(Pattern.compile("(?i)save")),"Native Save");
+        BySelector nativeSave=By.res("android:id/button1").text(Pattern.compile("(?i)save"));
+        for(int attempt=0;attempt<3&&device.hasObject(By.pkg(DOCUMENTS));attempt++){
+            clickSelector(device,nativeSave,"Native Save");
+            if(device.wait(Until.gone(nativeSave),3000))break;
+        }
         assertTrue("Successful native document save notice missing",device.wait(Until.hasObject(By.textContains("Saved ate-storage-check.c")),15000));
         click(device,"Menu");click(device,"Open");click(device,"Continue");
         assertTrue("Open must launch DocumentsUI",device.wait(Until.hasObject(By.pkg(DOCUMENTS)),15000));
