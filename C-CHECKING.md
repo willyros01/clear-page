@@ -1,6 +1,6 @@
 # C syntax checking in ATE
 
-Desktop 0.5.3 makes the bundled offline parser the default on Mac and Windows. iOS/Android 0.5.2 already use this parser. It catches structural syntax errors such as missing semicolons/braces and malformed expressions. It does not resolve headers, expand macros, check types or enforce a C standard. No compiler is needed.
+ATE 0.6.0 (19) uses the bundled offline parser by default on Mac, Windows, iPhone/iPad and Android. It catches structural syntax errors such as missing semicolons/braces and malformed expressions. It does not resolve headers, expand macros, check types or enforce a C standard. No compiler is needed.
 
 Use Menu → Check syntax, or enable Check while typing. On desktop, Menu → C settings → C checking offers Basic offline parser (default) and Advanced: installed Clang. The selection is remembered. Existing preferences without this choice start in Basic mode.
 
@@ -42,7 +42,7 @@ Only the editor buffer is passed to the compiler, through standard input. Includ
 
 ## Licensing
 
-ATE remains proprietary. This version uses the user's compiler rather than redistributing Clang or an Apple/Windows SDK. The bundled JavaScript packages retain their own licenses, included in THIRD-PARTY-NOTICES.txt. Any future compiler bundle needs a separate review of the exact compiler, runtime, headers, SDK and notices before distribution.
+ATE remains proprietary. Optional Advanced mode uses the user's compiler rather than redistributing Clang or an Apple/Windows SDK. The bundled JavaScript packages retain their own licenses, included in THIRD-PARTY-NOTICES.txt. Any future compiler bundle needs a separate review of the exact compiler, runtime, headers, SDK and notices before distribution.
 
 ## Optional Windows setup
 
@@ -52,4 +52,4 @@ Run 43168469203 verified official installation/detection, diagnostics, checksum 
 
 ## Desktop default release
 
-Desktop 0.5.3 makes compiler-free Basic checks the default. [RELEASE-0.5.3.md](RELEASE-0.5.3.md) records the native mode-selection gates and desktop distribution results. The iOS/Android 0.5.2 binaries remain unchanged.
+Desktop 0.5.3 makes compiler-free Basic checks the default. [RELEASE-0.5.3.md](RELEASE-0.5.3.md) records the native mode-selection gates and desktop distribution results. This historical desktop change is retained in the coordinated 0.6.0 (19) release; see RELEASE-0.6.0.md for current evidence.

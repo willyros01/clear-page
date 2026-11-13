@@ -3,10 +3,10 @@
 Work in small, reviewable steps. Keep one shared editor for all platforms.
 
 ## Coordinated 0.6.0 (19) release
-Owner authorized filename preservation, all supported language detection, offline Python/SQLite parsers and Markdown linting together. Source implementation and 40 Node tests pass; native verification and distribution publication are in progress. See TODO.md and RELEASE-0.6.0.md for current gates.
+Owner authorized filename preservation, all supported language detection, offline Python/SQLite parsers and Markdown linting together. 42 Node tests and all platform native gates pass; TestFlight and all public website downloads are verified, including the signed Android APK. Physical-device acceptance remains separate. See TODO.md and RELEASE-0.6.0.md for current gates.
 
 ## Automatic language detection — included in 0.6.0
-Implemented filename-first and conservative content detection across all supported languages, with manual overrides and stale automatic draft recovery covered by automated checks. Shared app build and 36 Node tests pass. Native device acceptance and distribution rebuilds remain pending; no installed app has been updated. Unsolicited .txt filename changes remain a separate unresolved report.
+Implemented filename-first and conservative content detection across all supported languages, with manual overrides and stale automatic draft recovery covered by automated checks. Shared app build, language detection and filename-preservation regressions pass. The 0.6.0 distributions are rebuilt; physical-device acceptance remains separate. The earlier unsaved suffix report was not reproduced.
 
 ## Step 1 — Baseline
 - Preserve the original standalone HTML/CSS/JavaScript editor as index.html.
