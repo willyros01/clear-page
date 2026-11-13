@@ -3,7 +3,7 @@ import {createCheckRunner} from './check-runner.js';
 import {checkableLanguages,MAX_CHECK_LENGTH} from './syntax-common.js';
 import {languageLabels} from './languages.js';
 
-export function setupSyntax({editor,getDocument,nativeCheck,chooseCompiler,chooseProject,compilerSetupInfo,installCCompiler,cancelCompilerSetup,desktop}) {
+export function setupSyntax({editor,getDocument,nativeCheck,chooseCompiler,chooseProject,compilerSetupInfo,installCCompiler,cancelCompilerSetup,desktop,keepIdleWorker=false}) {
  const $=id=>document.getElementById(id),settingsKey='ate-syntax-preferences-v1';
  let revision=0,timer,diagnostics=[],settings={automatic:true,cChecker:'basic',standard:'c17',includes:'',defines:''};
  try{Object.assign(settings,JSON.parse(localStorage.getItem(settingsKey))||{})}catch{}
@@ -22,7 +22,7 @@ export function setupSyntax({editor,getDocument,nativeCheck,chooseCompiler,choos
  }
  updateMode();
  if(!desktop)for(const id of ['chooseCompiler','compilerChoice','chooseProject','projectChoice','cStandard','cIncludes','cDefines'])($(id).closest('label')||$(id)).hidden=true;
- const runner=createCheckRunner({workerFactory:()=>new Worker(new URL('syntax-worker.js',document.baseURI)),nativeCheck:desktop?nativeCheck:null});
+ const runner=createCheckRunner({workerFactory:()=>new Worker(new URL('syntax-worker.js',document.baseURI)),nativeCheck:desktop?nativeCheck:null,keepIdleWorker});
  function options(){return {cChecker:desktop?$('cChecker').value:'basic',standard:$('cStandard').value,includes:$('cIncludes').value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean),defines:$('cDefines').value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean)}}
  const compilerInstall=setupCompilerInstall({desktop,info:compilerSetupInfo,install:installCCompiler,cancel:cancelCompilerSetup,chooseCompiler,ready:()=>check(),enabled:()=>desktop&&$('cChecker').value==='clang'});
  function render(result) {
@@ -51,7 +51,7 @@ export function setupSyntax({editor,getDocument,nativeCheck,chooseCompiler,choos
   catch{if(current===revision)render({status:'unavailable',message:'The syntax check could not complete. Editing and saving still work.'})}
  }
  function changed() {
-  revision++;runner.cancel();clearTimeout(timer);render({status:'pending'});
+  revision++;if(getDocument().text)runner.cancel();else runner.dispose();clearTimeout(timer);render({status:'pending'});
   if($('autoCheck').checked&&checkableLanguages.has(getDocument().language))timer=setTimeout(check,700);
  }
  function saveSettings(){try{localStorage.setItem(settingsKey,JSON.stringify({automatic:$('autoCheck').checked,cChecker:desktop?$('cChecker').value:'basic',standard:$('cStandard').value,includes:$('cIncludes').value,defines:$('cDefines').value}))}catch{}changed()}

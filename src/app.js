@@ -72,5 +72,5 @@ $('closeCopy').onclick=()=>{$('copyDialog').close();editor.focus()};
 $('helpButton').onclick=()=>{$('menu').close();$('help').showModal();$('help').scrollTop=0};
 $('closeHelp').onclick=()=>{$('help').close();editor.focus()};
 editor.commands(save,()=>{$('exitDialog').showModal()},async()=>{if(await save())closeEditor(true)});
-syntax=setupSyntax({editor,getDocument:()=>({text:editor.value,language:$('language').value,name:$('name').value}),nativeCheck:checkC,chooseCompiler:chooseCCompiler,chooseProject:chooseCProject,compilerSetupInfo,installCCompiler,cancelCompilerSetup,desktop});
+syntax=setupSyntax({editor,getDocument:()=>({text:editor.value,language:$('language').value,name:$('name').value}),nativeCheck:checkC,chooseCompiler:chooseCCompiler,chooseProject:chooseCProject,compilerSetupInfo,installCCompiler,cancelCompilerSetup,desktop,keepIdleWorker:Capacitor.getPlatform()==='android'});
 
