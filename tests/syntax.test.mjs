@@ -90,6 +90,6 @@ test('Android keeps isolated engines warm, serializes cancelled Python work and 
 });
 test('Android terminates a genuinely stuck parser at the watchdog limit',async()=>{
  const {createAndroidCheckRunner}=await import('../src/android-check-runner.js');
- const workers=[];const runner=createAndroidCheckRunner({timeoutMs:20,workerFactory:()=>{const w={postMessage(){},terminate(){this.stopped=true}};workers.push(w);return w}});
+ const workers=[];const runner=createAndroidCheckRunner({timeoutMs:20,bootstrapTimeoutMs:20,workerFactory:()=>{const w={postMessage(){},terminate(){this.stopped=true}};workers.push(w);return w}});
  assert.equal((await runner.run({language:'python'})).status,'skipped');assert.equal(workers[0].stopped,true);runner.dispose();
 });

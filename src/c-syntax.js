@@ -3,15 +3,17 @@ import {diagnostic,MAX_CHECK_LENGTH} from './syntax-common.js';
 
 // This grammar checks C structure only. It is not a compiler, preprocessor,
 // header resolver or type checker. Both Wasm modules ship inside the app.
-export function createCChecker(loadAsset) {
+export function createCChecker(loadAsset,trace=()=>{}) {
  let ready;
  return async ({text})=>{
   if(text.length>MAX_CHECK_LENGTH)return {status:'skipped',diagnostics:[],message:'Checking is limited to 512K characters.'};
   ready??=Promise.all([loadAsset('web-tree-sitter.wasm'),loadAsset('tree-sitter-c.wasm')]).then(async([runtime,grammar])=>{
    // The bytes are already bundled/loaded. Avoid import.meta URL resolution in
    // the classic worker bundle, including Capacitor's custom app URL scheme.
-   await Parser.init({wasmBinary:runtime,locateFile:name=>name});
-   return Language.load(grammar);
+   trace('C runtime initialize');
+   await Parser.init({wasmBinary:runtime,locateFile:name=>name,onAbort:message=>trace('C abort',String(message)),monitorRunDependencies:count=>trace('C dependencies',count)});
+   trace('C runtime initialized');
+   const language=await Language.load(grammar);trace('C grammar loaded');return language;
   });
   const language=await ready,parser=new Parser();
   let tree;

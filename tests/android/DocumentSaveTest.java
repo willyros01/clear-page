@@ -28,7 +28,7 @@ public class DocumentSaveTest {
         launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TASK);
         context.startActivity(launch);
         File report=new File(context.getFilesDir(),"ate-ipad-syntax-verification.json");
-        long end=System.currentTimeMillis()+120000;
+        long end=System.currentTimeMillis()+180000;
         while(!report.exists()&&System.currentTimeMillis()<end)Thread.sleep(250);
         assertTrue("Native Android editor report missing",report.exists());
         JSONObject result=new JSONObject(new String(Files.readAllBytes(report.toPath()),java.nio.charset.StandardCharsets.UTF_8));

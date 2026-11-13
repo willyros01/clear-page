@@ -1,4 +1,4 @@
-# ATE 0.6.0 (19): two persistent isolated engines avoid mid-Wasm worker teardown.
+# ATE 0.6.0 (19): verify cold-start Wasm timing and exact native file names.
 name: ATE Apple and Desktop
 on:
   push:
@@ -72,6 +72,7 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: |-
+            sleep 25
             adb install android/app/build/outputs/apk/debug/app-debug.apk
             adb install android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
             adb shell am instrument -w -e class io.github.willyros01.clearpage.DocumentSaveTest io.github.willyros01.clearpage.test/androidx.test.runner.AndroidJUnitRunner | tee android-instrumentation.txt
@@ -84,6 +85,7 @@ jobs:
             cat android-webview-report.json
             cat android-ui.xml
             grep 'DocumentFiles' android-logcat.txt || true
+            grep 'ATE_VERIFY_WORKER' android-logcat.txt || true
             grep -q "OK (1 test)" android-instrumentation.txt
             adb pull /sdcard/Download/ate-storage-check.c android-saved.c
             node -e 'const s=require("fs").readFileSync("android-saved.c","utf8");if(s!=="int main(void) { return 0 }")throw Error("Saved text differs");'
@@ -94,6 +96,7 @@ jobs:
           npm run build
           node build/prepare-android.mjs
           node -e 'if(require("fs").readFileSync("dist/app.js","utf8").includes("ATE_IPAD_SYNTAX_VERIFICATION_ONLY"))throw Error("Test driver in release");'
+          node -e 'if(require("fs").readFileSync("dist/syntax-worker.js","utf8").includes("ATE_VERIFY_WORKER"))throw Error("Worker trace in production");'
           cd android && ./gradlew --no-daemon --console=plain assembleRelease
           cd .. && mkdir -p out && cp android/app/build/outputs/apk/release/app-release-unsigned.apk out/ate-unsigned.apk
       - name: Sign with permanent ATE certificate

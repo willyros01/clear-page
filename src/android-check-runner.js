@@ -1,8 +1,8 @@
 // Older Android WebViews can stall when a Wasm worker is repeatedly destroyed.
 // Keep two isolated engines alive: Ruff/Python and the ordinary/C worker.
 // Only the latest queued request is retained; stale results never reach the UI.
-export function createAndroidCheckRunner({workerFactory,timeoutMs=8000}){
- const slots=[{worker:null,current:null,queued:null,timer:null},{worker:null,current:null,queued:null,timer:null}];
+export function createAndroidCheckRunner({workerFactory,timeoutMs=8000,bootstrapTimeoutMs=30000}){
+ const slots=[{worker:null,current:null,queued:null,timer:null,ready:new Set()},{worker:null,current:null,queued:null,timer:null,ready:new Set()}];
  let sequence=0,pending=null;
  const cancel=()=>{
   sequence++;pending?.resolve({status:'cancelled',diagnostics:[]});pending=null;
@@ -10,7 +10,8 @@ export function createAndroidCheckRunner({workerFactory,timeoutMs=8000}){
  };
  function finish(slot,result,failed=false){
   clearTimeout(slot.timer);const current=slot.current;slot.current=null;
-  if(failed){slot.worker?.terminate();slot.worker=null;}
+  if(failed){slot.worker?.terminate();slot.worker=null;slot.ready.clear();}
+  else if(current&&result?.status==='checked')slot.ready.add(current.request.language);
   if(current&&pending?.id===current.id){const {resolve}=pending;pending=null;resolve(result);}
   start(slot);
  }
@@ -26,7 +27,8 @@ export function createAndroidCheckRunner({workerFactory,timeoutMs=8000}){
   slot.current=task;
   try{
    ensure(slot);
-   slot.timer=setTimeout(()=>finish(slot,{status:'skipped',diagnostics:[],message:'Syntax checking timed out. Simplify the document or check again.'},true),timeoutMs);
+   const bootstrap=['python','c'].includes(task.request.language)&&!slot.ready.has(task.request.language);
+   slot.timer=setTimeout(()=>finish(slot,{status:'skipped',diagnostics:[],message:'Syntax checking timed out. Simplify the document or check again.'},true),bootstrap?bootstrapTimeoutMs:timeoutMs);
    slot.worker.postMessage(task);
   }catch{finish(slot,{status:'unavailable',diagnostics:[],message:'Syntax checker is unavailable on this device.'},true);}
  }
