@@ -1,4 +1,4 @@
-# ATE 0.6.0 (19): isolate language runtimes and preserve exact native Save names.
+# ATE 0.6.0 (19): two persistent isolated engines avoid mid-Wasm worker teardown.
 name: ATE Apple and Desktop
 on:
   push:

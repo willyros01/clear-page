@@ -78,15 +78,18 @@ test('native checks are serialized and intermediate obsolete requests are skippe
  assert.deepEqual(calls,['first','last']);runner.cancel();
 });
 
-test('Android keeps a completed parser worker warm, cancels active work and disposes on document close',async()=>{
- const workers=[];
- const runner=createCheckRunner({keepIdleWorker:true,workerFactory:()=>{const w={postMessage(data){this.data=data},terminate(){this.stopped=true}};workers.push(w);return w}});
- const first=runner.run({language:'python'});workers[0].onmessage({data:{id:workers[0].data.id,result:{status:'checked',diagnostics:[]}}});await first;
- runner.cancel();assert.equal(workers[0].stopped,undefined);
- const second=runner.run({language:'python'});assert.equal(workers.length,1);
- workers[0].onmessage({data:{id:workers[0].data.id,result:{status:'checked',diagnostics:[]}}});await second;
- const switched=runner.run({language:'c'});assert.equal(workers[0].stopped,true,'Changing language must release the old Wasm runtime');assert.equal(workers.length,2);
- workers[1].onmessage({data:{id:workers[1].data.id,result:{status:'checked',diagnostics:[]}}});await switched;
- runner.dispose();assert.equal(workers[1].stopped,true);
- const third=runner.run({language:'python'});runner.cancel();assert.equal((await third).status,'cancelled');assert.equal(workers[2].stopped,true);
+test('Android keeps isolated engines warm, serializes cancelled Python work and ignores stale results',async()=>{
+ const workers=[];const runner=createCheckRunner({keepIdleWorker:true,workerFactory:()=>{const w={postMessage(data){this.data=data},terminate(){this.stopped=true}};workers.push(w);return w}});
+ const first=runner.run({language:'python'});assert.equal(workers.length,2);const old=workers[0].data;
+ const second=runner.run({language:'python'});assert.equal((await first).status,'cancelled');assert.equal(workers[0].data.id,old.id,'Do not queue obsolete requests inside the Wasm worker');
+ workers[0].onmessage({data:{id:old.id,result:{status:'checked',diagnostics:[{message:'obsolete'}]}}});
+ assert.notEqual(workers[0].data.id,old.id);workers[0].onmessage({data:{id:workers[0].data.id,result:{status:'checked',diagnostics:[]}}});assert.deepEqual((await second).diagnostics,[]);
+ const c=runner.run({language:'c'});assert.equal(workers.length,2);workers[1].onmessage({data:{id:workers[1].data.id,result:{status:'checked',diagnostics:[]}}});await c;
+ assert.ok(workers.every(w=>!w.stopped),'Switching engines must not force-destroy initialized Wasm');
+ const third=runner.run({language:'python'});const current=workers[0].data.id;runner.dispose();assert.equal((await third).status,'cancelled');workers[0].onmessage({data:{id:current,result:{status:'checked',diagnostics:[]}}});
+});
+test('Android terminates a genuinely stuck parser at the watchdog limit',async()=>{
+ const {createAndroidCheckRunner}=await import('../src/android-check-runner.js');
+ const workers=[];const runner=createAndroidCheckRunner({timeoutMs:20,workerFactory:()=>{const w={postMessage(){},terminate(){this.stopped=true}};workers.push(w);return w}});
+ assert.equal((await runner.run({language:'python'})).status,'skipped');assert.equal(workers[0].stopped,true);runner.dispose();
 });
