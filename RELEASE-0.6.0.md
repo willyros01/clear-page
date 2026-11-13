@@ -3,7 +3,7 @@
 All platform packages use release.json (0.6.0, build 19). Native/package/public download verification must complete before this document claims a released binary.
 
 ## Changes
-- Preserve explicit and extensionless filenames on Save. Discard has no file-write path. Android uses a generic binary MIME type to avoid file-provider text suffixes. The owner could not reproduce the earlier unsaved suffix report; that cause remains unconfirmed.
+- Preserve explicit and extensionless filenames on Save. Discard has no file-write path. Android uses a MIME type with no registered extension to avoid file-provider text suffixes. The owner could not reproduce the earlier unsaved suffix report; that cause remains unconfirmed.
 - Detect supported languages by filename, then a 32K-character local content sample; respect manual overrides and correct stale automatic recovery modes. Detection does not rename documents.
 - Python: bundled Ruff 0.6.9 Wasm parser, target Python 3.13, syntax only. It does not execute code, resolve imports, check names/types, or promise CPython compilation equivalence.
 - SQL: bundled node-sql-parser 5.4.0, SQLite grammar only. No SQL is executed; schema existence and other dialects are outside this check.

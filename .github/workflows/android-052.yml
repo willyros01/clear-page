@@ -1,4 +1,4 @@
-# ATE 0.6.0 (19): Android worker reuse and exact extensionless filenames.
+# ATE 0.6.0 (19): isolate language runtimes and preserve exact native Save names.
 name: ATE Apple and Desktop
 on:
   push:

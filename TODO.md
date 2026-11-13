@@ -8,7 +8,7 @@ Owner authorized the combined update after being unable to reproduce the unsaved
 
 | Item | Implementation | Verification / release |
 | --- | --- | --- |
-| Exact filenames | Removed shared .txt append rule; defaults use Untitled. Android Save uses application/octet-stream to avoid MIME-based suffix insertion. | Native Save/cancel/discard, explicit extensions and extensionless names gated in CI; physical acceptance pending. |
+| Exact filenames | Removed shared .txt append rule; defaults use Untitled. Android Save uses application/x-ate-document to avoid MIME-based suffix insertion. | Native Save/cancel/discard, explicit extensions and extensionless names gated in CI; physical acceptance pending. |
 | Language detection | Filename first; bounded content fallback for all supported code languages; manual override retained; automatic drafts re-detected. | Automated regression tests pass; native checks included. |
 | Offline Python | Bundled MIT Ruff 0.6.9 Wasm, Python 3.13 parser, no execution/import/type checking. | Missing colon, indentation, Unicode, malformed strings and valid modern Python tested; native worker gates pending. |
 | Offline SQL | Bundled Apache-2.0 node-sql-parser 5.4.0 SQLite grammar. No database or execution. Other dialects not promised. | Valid multi-statements and malformed SQL tested; native worker gates pending. |

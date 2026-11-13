@@ -85,6 +85,8 @@ test('Android keeps a completed parser worker warm, cancels active work and disp
  runner.cancel();assert.equal(workers[0].stopped,undefined);
  const second=runner.run({language:'python'});assert.equal(workers.length,1);
  workers[0].onmessage({data:{id:workers[0].data.id,result:{status:'checked',diagnostics:[]}}});await second;
- runner.dispose();assert.equal(workers[0].stopped,true);
- const third=runner.run({language:'python'});runner.cancel();assert.equal((await third).status,'cancelled');assert.equal(workers[1].stopped,true);
+ const switched=runner.run({language:'c'});assert.equal(workers[0].stopped,true,'Changing language must release the old Wasm runtime');assert.equal(workers.length,2);
+ workers[1].onmessage({data:{id:workers[1].data.id,result:{status:'checked',diagnostics:[]}}});await switched;
+ runner.dispose();assert.equal(workers[1].stopped,true);
+ const third=runner.run({language:'python'});runner.cancel();assert.equal((await third).status,'cancelled');assert.equal(workers[2].stopped,true);
 });

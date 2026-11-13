@@ -61,8 +61,9 @@ public class DocumentFilesPlugin extends Plugin {
         if (name.trim().isEmpty()) name = "Untitled";
         Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
-        // Avoid MIME-derived suffixes: preserve explicit and extensionless names.
-        intent.setType("application/octet-stream");
+        // No registered extension for this type: preserve both explicit extensions
+        // and extensionless names, including a name edited in the Save dialog.
+        intent.setType("application/x-ate-document");
         intent.putExtra(Intent.EXTRA_TITLE, name);
         intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION);
         try { startActivityForResult(call, intent, "documentSaved"); }
