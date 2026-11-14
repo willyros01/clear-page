@@ -56,6 +56,13 @@ import {Filesystem,Directory,Encoding} from '@capacitor/filesystem';
   $('exit').click();assert($('exitDialog').open,'Dirty close asks for a choice');$('exitCancel').click();assert(view.state.doc.toString().startsWith('# keep'),'Cancel close preserves edits');
   $('exit').click();$('discardExit').click();assert(tabs().length===2,'Discard closes only one tab');
   closeCurrent();
+  await open(Array.from({length:120},(_,i)=>'// source line '+i).join('\n'),'scroll.c');
+  await wait(300);view.scrollDOM.scrollTop=800;await wait(100);
+  const oldScroll=view.scrollDOM.scrollTop;
+  assert(oldScroll>100,'Long document can scroll');
+  await open('print(1)','scroll.py',true);tabs()[1].click();await wait(200);
+  assert(Math.abs(view.scrollDOM.scrollTop-oldScroll)<50,'Each tab preserves its scroll position');
+  tabs()[2].click();closeCurrent();closeCurrent();
   }
   for(const id of ['menu','cSettings','compilerInstall']){
    const dialog=$(id);dialog.showModal();

@@ -127,6 +127,10 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+      - name: Require the latest tested iOS revision
+        run: |
+          CURRENT=$(git ls-remote origin refs/heads/ios-tabs | cut -f1)
+          if [ "$CURRENT" != "$GITHUB_SHA" ]; then echo 'Newer iOS work exists; refusing a stale upload.'; exit 1; fi
       - run: bash build/ios-release.sh
       - uses: actions/upload-artifact@v4
         if: always()
