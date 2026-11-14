@@ -1,6 +1,6 @@
 [package]
 name = "ate-desktop"
-version = "0.6.0"
+version = "0.7.0"
 description = "Another Text Editor"
 authors = ["Cuberoot Systems Architects Ltd."]
 edition = "2021"

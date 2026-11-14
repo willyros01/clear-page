@@ -115,3 +115,7 @@ Native Windows x64, Intel Mac and Apple silicon assessment completed in run 4321
 ## Desktop 0.5.3 — offline C by default
 
 Owner approved using the existing mobile C parser as the Mac/Windows default. Added an explicit persisted Basic/Advanced Clang selector; compiler setup is available only in Advanced mode. Browser CSP now comes from the actual Tauri configuration, which permits bundled worker/Wasm loading without enabling general unsafe evaluation. Native verification covers Basic checks without compiler IPC and explicit Advanced checks. Run 43222957484 passed all browser/compiler/native and desktop distribution gates. Universal Mac TestFlight 0.5.3 (18) is VALID and IN_BETA_TESTING in the existing group. Universal Mac website 0.5.3 is Developer ID signed, notarized and stapled; Windows 0.5.3 installed/launched in CI. Cuberoot publisher 43226821763 verified both live public downloads against their release hashes/bytes. Online/PDF guides are updated. Mobile distributions remain 0.5.2 (17); physical acceptance remains separate. See RELEASE-0.5.3.md.
+
+### iOS tabs — active development
+
+0.7.0 (20): shared tab controller enabled on iOS first. Independent document states, save guards and recoverable workspaces implemented; regression, iPhone/iPad simulator and native UI verification required before TestFlight. Physical device acceptance remains a separate step. Other proposed features (backups/comparison, folder search, outline, formatting, reading controls) remain planned, not part of this release.

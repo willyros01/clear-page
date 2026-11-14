@@ -152,3 +152,12 @@ Mac notarization completed: Apple returned Accepted. Recovery run 43103034568 pa
 ## iPad TestFlight 0.5.0 (15) complete
 27 Node tests, Chromium/WebKit and 101 native iPad webview checks passed. The production archive verified its bundled C Wasm/worker assets and excluded the simulator test bridge. Apple processing is VALID and the build is assigned to the existing internal tester group. Packaging run 43141713621 reused the exact app source verified in native run 43139879836 after a packaging-script-only fix. Physical iPad acceptance remains pending; desktop website downloads remain 0.4.1. See TODO.md for evidence and remaining gates.
 
+
+## 0.7.0 (20) — iOS tabs (verification in progress)
+
+- iPhone/iPad New and Open retain other files in tabs, with independent undo history, cursor/selection, scroll and language choices.
+- Unsaved changes are marked with a dot. Close affects one tab and offers Save/Discard/Cancel for changes.
+- Recovery restores all tab text/filenames/selections and active tab after restart; undo history is session-only. Legacy single drafts migrate after a successful workspace write.
+- A visible warning reports recovery storage failures. Maximum 12 tabs. iOS Save still exports a copy; sharing completion does not prove a file was stored in Files.
+- Protect newer edits made while sharing from Save-and-close; no automatic filename extension is added.
+- Browser regression plus iPhone/iPad native-webview and XCUITest gates precede TestFlight upload. Other platform releases are unchanged.

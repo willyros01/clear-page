@@ -1,3 +1,5 @@
+import {EditorView} from '@codemirror/view';
+import {undo} from '@codemirror/commands';
 // Included only by ATE_IOS_VERIFICATION=1, never in distribution assets.
 import {Filesystem,Directory,Encoding} from '@capacitor/filesystem';
 (async()=>{
@@ -9,9 +11,26 @@ import {Filesystem,Directory,Encoding} from '@capacitor/filesystem';
  try{
   await until(()=>!!document.querySelector('.cm-content'),'iPad editor initialized');
   const content=document.querySelector('.cm-content');
+  const view=EditorView.findFromDOM(document.querySelector('.cm-editor'));
+  const tabs=()=>[...document.querySelectorAll('#tabs [role=tab]')];
+  const closeCurrent=()=>{ $('exit').click();if($('exitDialog').open)$('discardExit').click(); };
+  const restart=JSON.parse(localStorage.getItem('ate-tabs-verification-restart')||'null');
+  if(restart){
+   checks.push(...restart.checks);
+   assert(tabs().length===2,'Workspace recovers both tabs after webview restart');
+   assert($('name').value==='recovery.py'&&view.state.doc.toString()==='print(42)\n# unsaved','Active tab, exact text and filename recovered');
+   assert($('language').value==='plain','Manual language choice recovered');
+   assert(tabs()[1].textContent.includes('•'),'Unsaved indicator recovered');
+   tabs()[0].click();assert($('name').value==='recovery.c'&&view.state.doc.toString()==='int main(void) { return 0; }','Inactive C document recovered');
+   assert($('language').value==='c','Inactive language recovered');
+   localStorage.removeItem('ate-tabs-verification-restart');
+   passed=true;
+  }else{
+
   const text=()=>[...document.querySelectorAll('.cm-line')].map(e=>e.textContent).join('\n');
   const key=(key,opts={})=>content.dispatchEvent(new KeyboardEvent('keydown',{key,bubbles:true,cancelable:true,...opts}));
-  const open=async(value,name)=>{
+  const open=async(value,name,keep=false)=>{
+   if(tabs().length&&!keep)closeCurrent();
    const transfer=new DataTransfer();transfer.items.add(new File([value],name,{type:'text/plain'}));
    $('file').files=transfer.files;$('file').dispatchEvent(new Event('change'));
    await until(()=>text()===value,'iPad file import preserves '+name);
@@ -22,6 +41,22 @@ import {Filesystem,Directory,Encoding} from '@capacitor/filesystem';
    if($('syntaxSummary').textContent.includes('unavailable'))throw Error('iPad checker unavailable: '+$('syntaxDetails').textContent);
    checks.push('iPad checker is available');
   };
+  if(!$('tabs').hidden){
+  assert(!$('tabs').hidden,'iOS tab bar is enabled');
+  await open('int main(void) { return 0; }','first.c');
+  view.dispatch({changes:{from:view.state.doc.length,insert:'\n// edited'},selection:{anchor:4}});
+  await open('print(1)','second.py',true);
+  view.dispatch({changes:{from:0,insert:'# edited\n'}});
+  tabs()[1].click();assert(view.state.doc.toString().endsWith('// edited'),'C edits survive switching');
+  assert(view.state.selection.main.head===4,'Selection survives switching');
+  undo(view);assert(!view.state.doc.toString().includes('edited'),'C undo is independent');
+  tabs()[2].click();assert(view.state.doc.toString().startsWith('# edited'),'Python edits survive C undo');
+  undo(view);assert(view.state.doc.toString()==='print(1)','Python undo is independent');
+  view.dispatch({changes:{from:0,insert:'# keep\n'}});
+  $('exit').click();assert($('exitDialog').open,'Dirty close asks for a choice');$('exitCancel').click();assert(view.state.doc.toString().startsWith('# keep'),'Cancel close preserves edits');
+  $('exit').click();$('discardExit').click();assert(tabs().length===2,'Discard closes only one tab');
+  closeCurrent();
+  }
   for(const id of ['menu','cSettings','compilerInstall']){
    const dialog=$(id);dialog.showModal();
    assert(getComputedStyle(dialog).fontSize==='16px','12pt '+id+' control text');
@@ -76,7 +111,19 @@ import {Filesystem,Directory,Encoding} from '@capacitor/filesystem';
   $('editingMode').value='standard';$('editingMode').dispatchEvent(new Event('change'));
   $('theme').click();assert(document.body.classList.contains('dark'),'iPad dark theme works');
   await open('int main(void) { return 0 }','final.c');await check();
-  passed=true;
+  if($('tabs').hidden){passed=true;}else{
+  // End with exactly two tabs for recovery validation on the next webview load.
+  while(tabs().length>1)closeCurrent();closeCurrent();
+  await open('int main(void) { return 0; }','recovery.c');
+  // Remove the initial empty tab so the restored workspace has exactly two files.
+  tabs()[0].click();closeCurrent();
+  await open('print(42)','recovery.py',true);
+  $('language').value='plain';$('language').dispatchEvent(new Event('change'));
+  view.dispatch({changes:{from:view.state.doc.length,insert:'\n# unsaved'}});
+  localStorage.setItem('ate-tabs-verification-restart',JSON.stringify({checks}));
+  await Filesystem.writeFile({path:'ate-ipad-restart-ready.json',directory:Directory.Data,encoding:Encoding.UTF8,data:'ready'});return;
+  }
+  }
  }catch(e){error=(e.message||String(e))+'\n'+(e.stack||'')}
  await Filesystem.writeFile({path:'ate-ipad-syntax-verification.json',directory:Directory.Data,encoding:Encoding.UTF8,data:JSON.stringify({marker,passed,checks,error},null,2)});
 })();

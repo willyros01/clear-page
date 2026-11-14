@@ -1,0 +1,135 @@
+name: ATE iOS Tabs
+on:
+  push:
+    branches: [ios-tabs]
+  workflow_dispatch: {}
+permissions:
+  contents: read
+concurrency:
+  group: ate-ios-tabs
+  cancel-in-progress: false
+env:
+  ATE_BUILD_NUMBER: "20"
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium webkit
+      - run: npm run test:browser
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ios-tabs-browser-evidence
+          path: editor-evidence/*
+  simulator:
+    needs: regression
+    runs-on: macos-26
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        device: [iPhone, iPad]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Boot simulator
+        env:
+          DEVICE_KIND: ${{ matrix.device }}
+        run: |
+          DEVICE=$(xcrun simctl list devices available -j | python3 -c 'import json,sys,os;d=json.load(sys.stdin);print(next(x["udid"] for a in d["devices"].values() for x in a if os.environ["DEVICE_KIND"] in x["name"]))')
+          echo "$DEVICE" > "$RUNNER_TEMP/ipad-device.txt"
+          xcrun simctl boot "$DEVICE"
+      - run: npm ci
+      - run: ATE_IOS_VERIFICATION=1 npm run build
+      - run: node scripts/prepare-ios.mjs
+      - name: Build simulator regression app
+        run: |
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug -destination 'generic/platform=iOS Simulator' -derivedDataPath "$RUNNER_TEMP/DerivedData" CODE_SIGNING_ALLOWED=NO build > "$RUNNER_TEMP/ipad-build.log" 2>&1 || { tail -80 "$RUNNER_TEMP/ipad-build.log"; exit 1; }
+      - name: Run native parser, editor, tabs and process-recovery checks
+        run: |
+          set -euo pipefail
+          DEVICE=$(cat "$RUNNER_TEMP/ipad-device.txt")
+          xcrun simctl bootstatus "$DEVICE" -b
+          xcrun simctl install "$DEVICE" "$RUNNER_TEMP/DerivedData/Build/Products/Debug-iphonesimulator/App.app"
+          xcrun simctl launch "$DEVICE" io.github.willyros01.clearpage
+          DATA=$(xcrun simctl get_app_container "$DEVICE" io.github.willyros01.clearpage data)
+          REPORT="$DATA/Documents/ate-ipad-syntax-verification.json"
+          READY="$DATA/Documents/ate-ipad-restart-ready.json"
+          for attempt in {1..240}; do
+            if [ -f "$REPORT" ]; then break; fi
+            if [ -f "$READY" ]; then
+              rm "$READY"
+              xcrun simctl terminate "$DEVICE" io.github.willyros01.clearpage
+              xcrun simctl launch "$DEVICE" io.github.willyros01.clearpage
+            fi
+            sleep 1
+          done
+          xcrun simctl io "$DEVICE" screenshot "$RUNNER_TEMP/ipad-syntax.png"
+          if [ ! -f "$REPORT" ]; then echo 'Native verification report missing'; exit 1; fi
+          cp "$REPORT" "$RUNNER_TEMP/ipad-syntax.json"
+          node -e 'const r=JSON.parse(require("fs").readFileSync(process.argv[1])); console.log(r.checks.map(x=>"PASS: "+x).join("\n")); if(!r.passed)throw Error(r.error);' "$RUNNER_TEMP/ipad-syntax.json"
+      - name: Build clean production assets for native UI tests
+        run: |
+          npm run build
+          node scripts/prepare-ios.mjs
+          if rg -q 'ATE_IPAD_SYNTAX_VERIFICATION_ONLY|ate-tabs-verification-restart' dist/app.js; then exit 1; fi
+      - name: Prepare XCUITest target
+        run: |
+          if ! ruby -e "require 'xcodeproj'"; then gem install --user-install xcodeproj --no-document; fi
+          ruby tests/ios/add-ui-tests.rb
+      - name: Native functional tests including Files and Share cancellation
+        run: |
+          DEVICE=$(cat "$RUNNER_TEMP/ipad-device.txt")
+          xcrun simctl terminate "$DEVICE" io.github.willyros01.clearpage || true
+          xcodebuild test -project ios/App/App.xcodeproj -scheme ATEFunctional -configuration Debug -destination "platform=iOS Simulator,id=$DEVICE" -derivedDataPath "$RUNNER_TEMP/UIBuild" -resultBundlePath "$RUNNER_TEMP/ATEFunctional.xcresult" CODE_SIGNING_ALLOWED=NO > "$RUNNER_TEMP/ui-tests.log" 2>&1 || { tail -120 "$RUNNER_TEMP/ui-tests.log"; exit 1; }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ios-tabs-${{ matrix.device }}-evidence
+          path: |
+            ${{ runner.temp }}/ipad-build.log
+            ${{ runner.temp }}/ipad-syntax.json
+            ${{ runner.temp }}/ipad-syntax.png
+            ${{ runner.temp }}/ui-tests.log
+            ${{ runner.temp }}/ATEFunctional.xcresult
+  testflight:
+    needs: [regression, simulator]
+    runs-on: macos-26
+    timeout-minutes: 45
+    env:
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: bash build/ios-release.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ios-tabs-release-evidence
+          path: ${{ runner.temp }}/clear-page-release/*.log
