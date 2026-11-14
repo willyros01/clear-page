@@ -1,0 +1,67 @@
+name: Inspect iOS evidence
+on:
+  push:
+    branches: [ate-native-diagnostics]
+  workflow_dispatch:
+    inputs:
+      artifact_id:
+        description: Native evidence artifact ID
+        required: false
+        default: "14136101276"
+permissions:
+  contents: read
+  actions: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      ARTIFACT_ID: ${{ github.event.inputs.artifact_id || '14136101276' }}
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pillow --quiet
+      - name: Read retained native test output and screenshots
+        run: |
+          gh api "/repos/willyros01/clear-page/actions/artifacts/$ARTIFACT_ID/zip" > "$RUNNER_TEMP/evidence.zip"
+          python - <<'PY'
+          import zipfile,os,io,base64,math
+          from PIL import Image,ImageOps,ImageDraw
+          z=zipfile.ZipFile(os.environ['RUNNER_TEMP']+'/evidence.zip')
+          log=z.read(next(n for n in z.namelist() if n.endswith('ui-tests.log'))).decode('utf8','replace')
+          lines=log.splitlines()
+          errors=[i for i,l in enumerate(lines) if 'error: -[ATEFunctionalTests' in l]
+          for i in errors[:3]:
+              print('NATIVE_ERROR_CONTEXT_BEGIN')
+              print('\n'.join(lines[max(0,i-80):i+230]))
+              print('NATIVE_ERROR_CONTEXT_END')
+          screenshots=[]
+          for n in z.namelist():
+              if '/ATEFunctional.xcresult/Data/data.' not in '/'+n: continue
+              raw=z.read(n)
+              if raw[:8]!=b'\x89PNG\r\n\x1a\n': continue
+              im=Image.open(io.BytesIO(raw)).convert('RGB')
+              screenshots.append(im)
+          print('SCREENSHOT_COUNT',len(screenshots))
+          thumbs=[]
+          for i,im in enumerate(screenshots):
+              small=ImageOps.contain(im,(240,320))
+              cell=Image.new('RGB',(250,350),'#ddd')
+              cell.paste(small,((250-small.width)//2,20))
+              ImageDraw.Draw(cell).text((8,332),str(i),fill='black')
+              thumbs.append(cell)
+              view=ImageOps.contain(im,(1000,1000))
+              out=io.BytesIO();view.save(out,'JPEG',quality=85)
+              print('ATE_IMAGE_'+str(i)+'_START')
+              print(base64.b64encode(out.getvalue()).decode())
+              print('ATE_IMAGE_'+str(i)+'_END')
+          if thumbs:
+              sheet=Image.new('RGB',(1000,350*math.ceil(len(thumbs)/4)),'white')
+              for i,im in enumerate(thumbs):sheet.paste(im,((i%4)*250,(i//4)*350))
+              out=io.BytesIO();sheet.save(out,'JPEG',quality=85)
+              print('ATE_CONTACT_START')
+              print(base64.b64encode(out.getvalue()).decode())
+              print('ATE_CONTACT_END')
+          PY
