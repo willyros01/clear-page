@@ -108,7 +108,15 @@ final class ATEFunctionalTests: XCTestCase {
         XCTAssertTrue(removed.waitForExistence(timeout: 15), app.debugDescription)
         // The panel was scrolled up to reach Remove; scroll back so "Back to editor" is on screen.
         let closeProjects = app.buttons["Close projects"].firstMatch
-        for _ in 0..<4 { if closeProjects.isHittable { break }; app.webViews.firstMatch.swipeDown() }
+        // isHittable is not enough: a button half under the status bar counts as hittable,
+        // but a tap there goes to the status bar. Scroll until it sits below the top edge.
+        let panelText = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "Project files are stored")).firstMatch
+        for attempt in 0..<6 {
+            if closeProjects.exists && closeProjects.frame.minY >= 60 && closeProjects.isHittable { break }
+            // Alternate: scroll the Projects panel itself, then the whole page.
+            if attempt % 2 == 0 && panelText.exists { panelText.swipeDown() } else { app.webViews.firstMatch.swipeDown() }
+        }
+        XCTAssertTrue(closeProjects.frame.minY >= 60, app.debugDescription)
         closeProjects.tap()
         XCTAssertTrue(app.buttons["Close current tab"].waitForExistence(timeout: 15), app.debugDescription)
         app.buttons["Close current tab"].tap()
