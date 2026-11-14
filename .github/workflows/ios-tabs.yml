@@ -28,7 +28,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: ios-tabs-browser-evidence
+          name: ios-tabs-browser-evidence-attempt-${{ github.run_attempt }}
           path: editor-evidence/*
   simulator:
     needs: regression
@@ -108,7 +108,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: ios-tabs-${{ matrix.device }}-evidence
+          name: ios-tabs-${{ matrix.device }}-evidence-attempt-${{ github.run_attempt }}
           path: |
             ${{ runner.temp }}/ipad-build.log
             ${{ runner.temp }}/ipad-syntax.json
@@ -145,5 +145,5 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: ios-tabs-release-evidence
+          name: ios-tabs-release-evidence-attempt-${{ github.run_attempt }}
           path: ${{ runner.temp }}/clear-page-release/*.log

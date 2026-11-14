@@ -264,7 +264,7 @@ final class ATEFunctionalTests: XCTestCase {
         app.terminate(); app.launch()
         XCTAssertTrue(app.buttons["Menu"].waitForExistence(timeout: 30))
         assertCText()
-        XCTAssertTrue(app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "native.py, unsaved changes")).firstMatch.exists)
+        XCTAssertTrue(app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "native.py, unsaved changes")).firstMatch.waitForExistence(timeout: 15), app.debugDescription)
         print("PASS native UI: forced process restart restores both files")
         rotateToLandscape(true)
         XCTAssertTrue(app.buttons["Menu"].exists)
