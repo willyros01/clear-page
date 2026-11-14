@@ -103,7 +103,11 @@ final class ATEFunctionalTests: XCTestCase {
         projectButton("Export project ZIP")
         dismissShareSheet()
         projectButton("Remove run.sh from project")
+        // Remove runs as a background save; the Projects panel ignores Close until it finishes.
+        let removed = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "Removed run.sh")).firstMatch
+        XCTAssertTrue(removed.waitForExistence(timeout: 15), app.debugDescription)
         app.buttons["Close projects"].tap()
+        XCTAssertTrue(app.buttons["Close current tab"].waitForExistence(timeout: 15), app.debugDescription)
         app.buttons["Close current tab"].tap()
         app.buttons["Close current tab"].tap()
         let discard = app.buttons["Close without saving"]
