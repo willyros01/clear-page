@@ -39,7 +39,21 @@ final class ATEFunctionalTests: XCTestCase {
         dismissKeyboard()
         let button = app.webViews.buttons[label].firstMatch
         XCTAssertTrue(button.waitForExistence(timeout: 15), app.debugDescription)
-        for _ in 0..<4 { if button.isHittable { break }; app.webViews.firstMatch.swipeUp() }
+        let contents = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@", "Project contents")).firstMatch
+        XCTAssertTrue(contents.waitForExistence(timeout: 15), app.debugDescription)
+        let panel = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@", "Projects,")).firstMatch
+        XCTAssertTrue(panel.waitForExistence(timeout: 15), app.debugDescription)
+        func fullyVisible() -> Bool {
+            let viewport = contents.frame.intersection(panel.frame).intersection(app.frame)
+            let headerBottom = app.buttons["Close projects"].frame.maxY
+            return !viewport.isEmpty && viewport.contains(button.frame) && button.frame.minY >= headerBottom && button.isHittable
+        }
+        for _ in 0..<6 {
+            if fullyVisible() { break }
+            if button.frame.minY < contents.frame.minY { contents.swipeDown() } else { contents.swipeUp() }
+        }
+        XCTAssertTrue(fullyVisible(), app.debugDescription)
+
         button.tap()
     }
     func assertWord(_ word: String) {
