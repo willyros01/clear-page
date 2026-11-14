@@ -17,7 +17,7 @@ final class ATEFunctionalTests: XCTestCase {
         menu()
         let field = app.textFields["File name"]
         XCTAssertTrue(field.waitForExistence(timeout: 10), app.debugDescription)
-        field.tap()
+        field.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
         let old = field.value as? String ?? ""
         field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: old.count))
         field.typeText(name)

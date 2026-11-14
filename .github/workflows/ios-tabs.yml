@@ -7,7 +7,7 @@ permissions:
   contents: read
 concurrency:
   group: ate-ios-tabs
-  cancel-in-progress: false
+  cancel-in-progress: true
 env:
   ATE_BUILD_NUMBER: "20"
 jobs:
