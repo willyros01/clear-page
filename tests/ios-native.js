@@ -27,7 +27,7 @@ import {Filesystem,Directory,Encoding} from '@capacitor/filesystem';
    passed=true;
   }else{
 
-  const text=()=>[...document.querySelectorAll('.cm-line')].map(e=>e.textContent).join('\n');
+  const text=()=>view.state.doc.toString();
   const key=(key,opts={})=>content.dispatchEvent(new KeyboardEvent('keydown',{key,bubbles:true,cancelable:true,...opts}));
   const open=async(value,name,keep=false)=>{
    if(tabs().length&&!keep)closeCurrent();
