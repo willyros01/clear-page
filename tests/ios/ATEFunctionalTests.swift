@@ -13,7 +13,15 @@ final class ATEFunctionalTests: XCTestCase {
         attachment.lifetime = .keepAlways
         add(attachment)
     }
-    func menu() { app.buttons["Menu"].tap() }
+    var menuSafeTop: CGFloat = 0
+    func menu() {
+        let button = app.buttons["Menu"]
+        XCTAssertTrue(button.waitForExistence(timeout: 15), app.debugDescription)
+        XCTAssertTrue(button.isHittable, app.debugDescription)
+        menuSafeTop = max(0, button.frame.minY)
+        button.tap()
+        XCTAssertTrue(app.staticTexts["Editor menu"].waitForExistence(timeout: 10), app.debugDescription)
+    }
     func rename(_ name: String) {
         menu()
         let field = app.textFields["File name"]
@@ -32,14 +40,28 @@ final class ATEFunctionalTests: XCTestCase {
     }
     func finishMenu() {
         let done = app.webViews.buttons["Done"].firstMatch
-        // Tap Done directly when it is visible. Repeated iPad Hide keyboard
-        // transitions can leave XCTest waiting 60 seconds for every action.
-        if !done.isHittable {
-            dismissKeyboard()
-            if !done.isHittable { app.webViews.firstMatch.swipeDown() }
+        XCTAssertTrue(done.waitForExistence(timeout: 10), app.debugDescription)
+        func fullyVisible() -> Bool {
+            return done.isHittable && app.frame.contains(done.frame) && done.frame.minY >= menuSafeTop
         }
-        XCTAssertTrue(done.isHittable, app.debugDescription)
+        // WebKit can report a partially clipped button as hittable. Scroll the
+        // actual dialog instead of repeatedly toggling the software keyboard.
+        for _ in 0..<5 {
+            if fullyVisible() { break }
+            app.webViews.firstMatch.swipeDown()
+        }
+        if !fullyVisible() {
+            // On iPhone the focused filename can pan the entire web viewport;
+            // only dismiss the keyboard when scrolling cannot reveal Done.
+            dismissKeyboard()
+            for _ in 0..<3 {
+                if fullyVisible() { break }
+                app.webViews.firstMatch.swipeDown()
+            }
+        }
+        XCTAssertTrue(fullyVisible(), app.debugDescription)
         done.tap()
+        XCTAssertTrue(waitForGone(app.staticTexts["Editor menu"], timeout: 10), app.debugDescription)
     }
     func projectButton(_ label: String) {
         dismissKeyboard()
@@ -91,6 +113,8 @@ final class ATEFunctionalTests: XCTestCase {
         }
         if copy.exists && !waitForGone(copy, timeout: 5) { app.swipeDown() }
         XCTAssertTrue(waitForGone(copy, timeout: 10), app.debugDescription)
+        XCTAssertTrue(waitForGone(sheet, timeout: 10), "Native share sheet must finish dismissing")
+        XCTAssertTrue(waitForGone(close, timeout: 10), "Native share Close must disappear")
     }
     func waitForGone(_ element: XCUIElement, timeout: TimeInterval) -> Bool {
         let deadline = Date().addingTimeInterval(timeout)
@@ -185,7 +209,6 @@ final class ATEFunctionalTests: XCTestCase {
         assertToolbarVisible()
         editor().tap(); editor().typeText("Large text save check")
         assertToolbarVisible()
-        dismissKeyboard()
         app.buttons["Save file"].tap()
         dismissShareSheet()
         assertWord("Large")
@@ -233,10 +256,7 @@ final class ATEFunctionalTests: XCTestCase {
         print("PASS native UI: actual document picker cancellation preserves C tab")
         // Exercise the actual native Share/Save sheet and cancel without losing text.
         app.buttons["Save file"].tap()
-        let sheet = app.otherElements["ActivityListView"]
-        let close = app.buttons["Close"].firstMatch
-        XCTAssertTrue(close.waitForExistence(timeout: 15) || sheet.exists, app.debugDescription)
-        if close.exists { close.tap() } else { app.swipeDown() }
+        dismissShareSheet()
         XCTAssertTrue(app.buttons["Menu"].waitForExistence(timeout: 10), app.debugDescription)
         assertCText()
         print("PASS native UI: actual share cancellation preserves C tab")
