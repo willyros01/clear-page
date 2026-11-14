@@ -19,7 +19,7 @@ final class ATEFunctionalTests: XCTestCase {
         XCTAssertTrue(button.waitForExistence(timeout: 15), app.debugDescription)
         XCTAssertTrue(button.isHittable, app.debugDescription)
         menuSafeTop = max(0, button.frame.minY)
-        button.tap()
+        button.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
         XCTAssertTrue(app.staticTexts["Editor menu"].waitForExistence(timeout: 10), app.debugDescription)
     }
     func rename(_ name: String) {
@@ -105,13 +105,23 @@ final class ATEFunctionalTests: XCTestCase {
         let deadline = Date().addingTimeInterval(15)
         while !shown() && Date() < deadline { RunLoop.current.run(until: Date().addingTimeInterval(0.25)) }
         XCTAssertTrue(shown(), app.debugDescription)
+        let tablet = min(app.frame.width, app.frame.height) > 600
         if close.exists && close.isHittable {
             close.tap()
+        } else if tablet {
+            // Tap clear of the anchored popover, including at large text sizes.
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.1)).tap()
         } else {
-            // Tap above the sheet (iPhone) or outside the popover (iPad).
-            app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.2)).tap()
+            // Large-text iPhone sheets can cover the former outside-tap point.
+            app.swipeDown()
         }
-        if copy.exists && !waitForGone(copy, timeout: 5) { app.swipeDown() }
+        if !waitForGone(sheet, timeout: 5) {
+            if tablet {
+                app.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.1)).tap()
+            } else {
+                app.swipeDown()
+            }
+        }
         XCTAssertTrue(waitForGone(copy, timeout: 10), app.debugDescription)
         XCTAssertTrue(waitForGone(sheet, timeout: 10), "Native share sheet must finish dismissing")
         XCTAssertTrue(waitForGone(close, timeout: 10), "Native share Close must disappear")
