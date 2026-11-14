@@ -21,7 +21,14 @@ final class ATEFunctionalTests: XCTestCase {
         let old = field.value as? String ?? ""
         field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: old.count))
         field.typeText(name)
-        app.buttons["Done"].firstMatch.tap()
+        // iPhone has a second Done button in the native keyboard toolbar.
+        let keyboardDone = app.toolbars.buttons["Done"].firstMatch
+        if keyboardDone.exists { keyboardDone.tap() }
+        let hideKeyboard = app.buttons["Hide keyboard"].firstMatch
+        if hideKeyboard.exists { hideKeyboard.tap() }
+        let done = app.webViews.buttons["Done"].firstMatch
+        if !done.isHittable { app.webViews.firstMatch.swipeDown() }
+        done.tap()
     }
     func editor() -> XCUIElement {
         let field = app.webViews.textViews.firstMatch

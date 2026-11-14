@@ -87,7 +87,7 @@ jobs:
         run: |
           npm run build
           node scripts/prepare-ios.mjs
-          if rg -q 'ATE_IPAD_SYNTAX_VERIFICATION_ONLY|ate-tabs-verification-restart' dist/app.js; then exit 1; fi
+          node -e 'const s=require("fs").readFileSync("dist/app.js","utf8");for(const marker of ["ATE_IPAD_SYNTAX_VERIFICATION_ONLY","ate-tabs-verification-restart"])if(s.includes(marker))throw Error("Verification driver in production assets");'
       - name: Prepare XCUITest target
         run: |
           if ! ruby -e "require 'xcodeproj'"; then gem install --user-install xcodeproj --no-document; fi
@@ -97,7 +97,7 @@ jobs:
           DEVICE=$(cat "$RUNNER_TEMP/ipad-device.txt")
           xcrun simctl terminate "$DEVICE" io.github.willyros01.clearpage || true
           xcrun simctl uninstall "$DEVICE" io.github.willyros01.clearpage
-          xcodebuild test -project ios/App/App.xcodeproj -scheme ATEFunctional -configuration Debug -destination "platform=iOS Simulator,id=$DEVICE" -derivedDataPath "$RUNNER_TEMP/DerivedData" -resultBundlePath "$RUNNER_TEMP/ATEFunctional.xcresult" CODE_SIGNING_ALLOWED=NO > "$RUNNER_TEMP/ui-tests.log" 2>&1 || { rg 'error:|XCTAssert|failed|Test Case|PASS native' "$RUNNER_TEMP/ui-tests.log" | tail -35 || true; tail -70 "$RUNNER_TEMP/ui-tests.log"; exit 1; }
+          xcodebuild test -project ios/App/App.xcodeproj -scheme ATEFunctional -configuration Debug -destination "platform=iOS Simulator,id=$DEVICE" -derivedDataPath "$RUNNER_TEMP/DerivedData" -resultBundlePath "$RUNNER_TEMP/ATEFunctional.xcresult" CODE_SIGNING_ALLOWED=NO > "$RUNNER_TEMP/ui-tests.log" 2>&1 || { python3 -c 'import sys,re;print("\n".join([x.rstrip() for x in open(sys.argv[1]) if re.search("error:|XCTAssert|failed|Test Case|PASS native",x)][-35:]))' "$RUNNER_TEMP/ui-tests.log"; tail -70 "$RUNNER_TEMP/ui-tests.log"; exit 1; }
       - uses: actions/upload-artifact@v4
         if: always()
         with:
