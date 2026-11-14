@@ -220,3 +220,21 @@ Owner accepted 0.7.0 (20) after physical testing and authorized this combined up
 - [ ] Owner physical-device validation of 0.8.0.
 
 Projects/mode controls are enabled on iOS first. Other published distributions remain unchanged.
+
+## Project follow-up — subdirectory Add files control
+
+Requested by owner on 14 November 2026. Status: **Pending**; not included in the 0.8.1 (22) toolbar repair.
+
+- [ ] When adding files to a project, clearly offer the destination subdirectory, including the project root.
+- [ ] Preferred interaction: a visible **+ beside each subdirectory** to add files directly into that folder; preselect and clearly display the destination.
+- [ ] Preserve exact filenames and existing collision/safe-path protections; cancelling must keep the project and open editor unchanged.
+- [ ] Verify root and nested-folder placement, cancellation and duplicate filenames in regression and native iPhone/iPad functional tests before release.
+
+## Project follow-up — Close project and cohesive page layout
+
+Requested by owner on 14 November 2026. Status: **Pending**; follow-up to the 0.8.1 (22) Save-button repair.
+
+- [ ] Add an explicit **Close project** action, distinct from dismissing the Projects page or closing an editor tab. Close the active project workspace without deleting its stored files; protect unsaved project work before closing.
+- [ ] Redesign the Projects page as a cohesive, readable workflow: clear active-project heading, grouped project actions, folder/file tree, consistent spacing/alignment and accessible touch targets. The owner finds the current layout disjointed.
+- [ ] Integrate the requested subdirectory destination choice and visible **+ beside each subdirectory** into the folder tree.
+- [ ] Verify open/close/reopen, unsaved-work protection, ordinary editor tabs, folder add controls and small-screen/large-text layouts through regression and full native iPhone/iPad functional tests.

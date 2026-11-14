@@ -4,6 +4,7 @@ final class ATEFunctionalTests: XCTestCase {
     let app = XCUIApplication(bundleIdentifier: "io.github.willyros01.clearpage")
     override func setUpWithError() throws {
         continueAfterFailure = false
+        app.terminate()
         app.launch()
         XCTAssertTrue(app.buttons["Menu"].waitForExistence(timeout: 30), app.debugDescription)
     }
@@ -30,9 +31,14 @@ final class ATEFunctionalTests: XCTestCase {
         if hide.exists { hide.tap() }
     }
     func finishMenu() {
-        dismissKeyboard()
         let done = app.webViews.buttons["Done"].firstMatch
-        if !done.isHittable { app.webViews.firstMatch.swipeDown() }
+        // Tap Done directly when it is visible. Repeated iPad Hide keyboard
+        // transitions can leave XCTest waiting 60 seconds for every action.
+        if !done.isHittable {
+            dismissKeyboard()
+            if !done.isHittable { app.webViews.firstMatch.swipeDown() }
+        }
+        XCTAssertTrue(done.isHittable, app.debugDescription)
         done.tap()
     }
     func projectButton(_ label: String) {
@@ -164,8 +170,18 @@ final class ATEFunctionalTests: XCTestCase {
             }
         }
     }
+    func rotateToLandscape(_ landscape: Bool) {
+        XCUIDevice.shared.orientation = landscape ? .landscapeLeft : .portrait
+        let settled = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            let frame = self.app.frame
+            return landscape ? frame.width > frame.height : frame.height > frame.width
+        }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [settled], timeout: 10), .completed)
+        // Allow the final screen-compositing frame before screenshot capture.
+        RunLoop.current.run(until: Date().addingTimeInterval(1))
+    }
     func testToolbarAndSaveVisibility() {
-        XCUIDevice.shared.orientation = .portrait
+        rotateToLandscape(false)
         assertToolbarVisible()
         editor().tap(); editor().typeText("Large text save check")
         assertToolbarVisible()
@@ -177,18 +193,20 @@ final class ATEFunctionalTests: XCTestCase {
         let portrait = XCTAttachment(screenshot: app.screenshot())
         portrait.name = "Toolbar portrait after save cancellation"
         portrait.lifetime = .keepAlways; add(portrait)
-        XCUIDevice.shared.orientation = .landscapeLeft
+        rotateToLandscape(true)
         assertToolbarVisible()
         let landscape = XCTAttachment(screenshot: app.screenshot())
         landscape.name = "Toolbar landscape"
         landscape.lifetime = .keepAlways; add(landscape)
-        XCUIDevice.shared.orientation = .portrait
+        rotateToLandscape(false)
         menu(); finishMenu()
         assertToolbarVisible()
         print("PASS native UI: Menu, Close and Save fully visible, status bar clear, keyboard, native Save cancellation and rotation")
     }
-    func testTabsNativePickersAndRelaunch() {
+    func testModesAndProjects() {
         exerciseModesAndProjects()
+    }
+    func testTabsNativePickersAndRelaunch() {
         rename("native.c")
         let first = editor()
         first.tap(); first.typeText("int main(void) { return 0; }")
@@ -228,9 +246,9 @@ final class ATEFunctionalTests: XCTestCase {
         assertCText()
         XCTAssertTrue(app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "native.py, unsaved changes")).firstMatch.exists)
         print("PASS native UI: forced process restart restores both files")
-        XCUIDevice.shared.orientation = .landscapeLeft
+        rotateToLandscape(true)
         XCTAssertTrue(app.buttons["Menu"].exists)
-        XCUIDevice.shared.orientation = .portrait
+        rotateToLandscape(false)
         XCUIDevice.shared.press(.home); app.activate()
         assertCText()
         print("PASS native UI: rotation and background/resume preserve C tab")
