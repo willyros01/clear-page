@@ -1,3 +1,5 @@
+import {createProjectStore} from '../src/projects.js';
+import {iosProjectAdapter} from '../src/ios-projects.js';
 import {EditorView} from '@codemirror/view';
 import {undo} from '@codemirror/commands';
 // Included only by ATE_IOS_VERIFICATION=1, never in distribution assets.
@@ -15,6 +17,7 @@ import {Filesystem,Directory,Encoding} from '@capacitor/filesystem';
   const tabs=()=>[...document.querySelectorAll('#tabs [role=tab]')];
   const closeCurrent=()=>{ $('exit').click();if($('exitDialog').open)$('discardExit').click(); };
   const restart=JSON.parse(localStorage.getItem('ate-tabs-verification-restart')||'null');
+  if(!restart&&!$('experienceModes').hidden){assert(document.body.classList.contains('basic-mode'),'New iOS install starts in Basic mode');$('advancedMode').click();assert(!document.body.classList.contains('basic-mode'),'Advanced mode enables coding tools');}
   if(restart){
    checks.push(...restart.checks);
    assert(tabs().length===2,'Workspace recovers both tabs after webview restart');
@@ -23,6 +26,13 @@ import {Filesystem,Directory,Encoding} from '@capacitor/filesystem';
    assert(tabs()[1].textContent.includes('•'),'Unsaved indicator recovered');
    tabs()[0].click();assert($('name').value==='recovery.c'&&view.state.doc.toString()==='int main(void) { return 0; }','Inactive C document recovered');
    assert($('language').value==='c','Inactive language recovered');
+   assert(document.body.classList.contains('basic-mode'),'Basic preference survives process restart');
+   const persisted=JSON.parse(localStorage.getItem('clear-page-workspace-v1')).tabs.find(t=>t.name==='recovery.c');
+   assert(persisted.projectRef?.id===restart.projectId,'Project tab association survives restart');
+   view.dispatch({changes:{from:view.state.doc.length,insert:'\n// saved from Basic'}});
+   assert(await $('save').onclick(),'Basic mode saves an existing project tab');
+   const saved=await Filesystem.readFile({path:'ATEProjects/'+restart.projectId+'/recovery.c',directory:Directory.Documents,encoding:Encoding.UTF8});
+   assert(saved.data==='int main(void) { return 0; }\n// saved from Basic','Project save after process recovery preserves exact disk text');
    localStorage.removeItem('ate-tabs-verification-restart');
    passed=true;
   }else{
@@ -64,7 +74,7 @@ import {Filesystem,Directory,Encoding} from '@capacitor/filesystem';
   assert(Math.abs(view.scrollDOM.scrollTop-oldScroll)<50,'Each tab preserves its scroll position');
   tabs()[2].click();closeCurrent();closeCurrent();
   }
-  for(const id of ['menu','cSettings','compilerInstall']){
+  for(const id of ['menu','cSettings','compilerInstall','projects']){
    const dialog=$(id);dialog.showModal();
    assert(getComputedStyle(dialog).fontSize==='16px','12pt '+id+' control text');
    for(const element of dialog.querySelectorAll('button,input,select,textarea,label,h1,h2,h3,p')){
@@ -82,6 +92,7 @@ import {Filesystem,Directory,Encoding} from '@capacitor/filesystem';
    ['fixture.html','<script>const = 1;</script>','<p>Hello</p>'],
    ['fixture.css','body { color red; }','body { color: red; }'],
    ['fixture.ts','const a: = 1;','const a: number = 1;'],
+   ['fixture.sh','#!/bin/sh\nif true; then\n echo hi\n','#!/bin/sh\nif true; then\n echo hi\nfi\n'],
    ['fixture.py','def greet(name)\n    return name','def greet(name):\n    return name'],
    ['fixture.sql','SELECT x FROM WHERE x=1;','SELECT name FROM people;'],
    ['fixture.c','int main(void) { return 0 }','#include <stdio.h>\nint main(void) { return 0; }']
@@ -119,15 +130,28 @@ import {Filesystem,Directory,Encoding} from '@capacitor/filesystem';
   $('theme').click();assert(document.body.classList.contains('dark'),'iPad dark theme works');
   await open('int main(void) { return 0 }','final.c');await check();
   if($('tabs').hidden){passed=true;}else{
-  // End with exactly two tabs for recovery validation on the next webview load.
-  while(tabs().length>1)closeCurrent();closeCurrent();
-  await open('int main(void) { return 0; }','recovery.c');
-  // Remove the initial empty tab so the restored workspace has exactly two files.
-  tabs()[0].click();closeCurrent();
-  await open('print(42)','recovery.py',true);
-  $('language').value='plain';$('language').dispatchEvent(new Event('change'));
-  view.dispatch({changes:{from:view.state.doc.length,insert:'\n# unsaved'}});
-  localStorage.setItem('ate-tabs-verification-restart',JSON.stringify({checks}));
+  await open("#!/usr/bin/env bash\npython3 <<'PY'\ndef hello():\n    print('hello')\nPY\n",'embedded.sh');
+  assert($('language').value==='shell','Shell header and extension override embedded Python');await check();assert($('syntaxIssues').children.length===0,'Embedded Python is not checked as Python in a shell script');$('closeSyntax').click();
+  await open('#!/bin/zsh\nprint hello\n','dialect.zsh');$('checkSyntax').click();await until(()=>$('syntaxSummary').textContent.includes('unavailable'),'Unsupported shell dialect is not falsely certified');assert($('syntaxDetails').textContent.includes('dialect'),'Shell checker explains dialect limit');$('closeSyntax').click();
+  const prior=text(),priorName=$('name').value;$('basicMode').click();assert(text()===prior&&$('name').value===priorName,'Switch to Basic preserves text and filename');$('advancedMode').click();assert(text()===prior,'Switch to Advanced preserves edits');
+  $('projectsButton').click();await until(()=>$('projects').open&&!$('createProject').disabled,'Project dialog ready');
+  $('projectName').value='Native verification';await $('createProject').onclick();
+  const projectId=localStorage.getItem('ate-current-project-v1');assert(!!projectId,'Native project created');
+  $('projectFileName').value='src';await $('newProjectFolder').onclick();
+  $('projectFileName').value='src/main.c';await $('newProjectFile').onclick();
+  view.dispatch({changes:{from:0,insert:'// café\r\nint main(void) { return 0; }\r\n'}});assert(await $('save').onclick(),'Project tab saves through real native filesystem');
+  const store=createProjectStore(iosProjectAdapter());let original=await store.read(projectId,'src/main.c');assert(original.text===text(),'Project UTF-8 disk bytes match editor text');
+  $('name').value='src/copy';$('name').dispatchEvent(new Event('change'));assert(await $('save').onclick(),'Project Save As accepts extensionless name');
+  assert((await store.read(projectId,'src/main.c')).text===original.text,'Project Save As keeps original file');assert((await store.read(projectId,'src/copy')).name==='src/copy','Project Save As never appends txt');
+  await store.remove(projectId,'src/copy');const retained=await Filesystem.readFile({path:'ATEProjects/'+projectId+'/src/copy',directory:Directory.Documents,encoding:Encoding.UTF8});assert(retained.data===original.text,'Removing project membership retains the native file');
+  await store.add(projectId,[{path:'src/windows.c',text:'// café\r\nint value;\r\n'}]);assert((await store.read(projectId,'src/windows.c')).text==='// café\r\nint value;\r\n','Native project storage preserves UTF-8 and CRLF bytes');
+  const zip=await store.export(projectId),imported=await store.import(zip.bytes);assert(imported.id!==projectId,'ZIP import creates a separate project');assert((await store.read(imported.id,'src/main.c')).text===original.text,'ZIP round trip preserves native project text');
+  $('projectsButton').click();await until(()=>$('projects').open&&!$('createProject').disabled,'Projects reopen');$('projectSelect').value=projectId;await $('projectSelect').onchange();
+  $('projectFileName').value='recovery.c';await $('newProjectFile').onclick();view.dispatch({changes:{from:0,insert:'int main(void) { return 0; }'}});assert(await $('save').onclick(),'Recovery project file saved');
+  while(tabs().length>1){const other=tabs().find(t=>t.getAttribute('aria-label')!=='recovery.c');other.click();closeCurrent();}
+  await open('print(42)','recovery.py',true);$('language').value='plain';$('language').dispatchEvent(new Event('change'));view.dispatch({changes:{from:view.state.doc.length,insert:'\n# unsaved'}});
+  $('basicMode').click();
+  localStorage.setItem('ate-tabs-verification-restart',JSON.stringify({checks,projectId}));
   await Filesystem.writeFile({path:'ate-ipad-restart-ready.json',directory:Directory.Data,encoding:Encoding.UTF8,data:'ready'});return;
   }
   }

@@ -4,6 +4,8 @@ import {basicSetup} from 'codemirror';
 import {EditorState, Compartment} from '@codemirror/state';
 import {EditorView, keymap, placeholder} from '@codemirror/view';
 import {indentWithTab, indentMore, indentLess, selectAll} from '@codemirror/commands';
+import {shell} from '@codemirror/legacy-modes/mode/shell';
+import {StreamLanguage} from '@codemirror/language';
 import {indentUnit} from '@codemirror/language';
 import {javascript} from '@codemirror/lang-javascript';
 import {html} from '@codemirror/lang-html';
@@ -17,7 +19,7 @@ import {markdown} from '@codemirror/lang-markdown';
 import {setDiagnostics} from '@codemirror/lint';
 export {languageForName} from './languages.js';
 import {oneDark} from '@codemirror/theme-one-dark';
-export const languages={plain:()=>[],javascript,typescript:()=>javascript({typescript:true,jsx:true}),json,html,css,yaml,c:cpp,python,sql,markdown};
+export const languages={shell:()=>StreamLanguage.define(shell),plain:()=>[],javascript,typescript:()=>javascript({typescript:true,jsx:true}),json,html,css,yaml,c:cpp,python,sql,markdown};
 export function createEditor(parent,onChange){
  const language=new Compartment(),theme=new Compartment(),vimMode=new Compartment();
  let activeLanguage="plain",activeDark=false,activeVim=false;

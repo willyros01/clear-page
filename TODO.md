@@ -202,3 +202,21 @@ All website/cockpit/Firebase/email items are complete. Live acceptance run 43302
 Tabs are enabled on iOS only. Current Mac/Windows/Android distributions remain 0.6.0 (19).
 
 Final automated gates: run 43613292921 at source `d23b3ff66fc3555983027a74cf75d01a8c307242` passed 44 Node tests, Chromium/WebKit, 199 native-webview assertions per device, and full XCUITest on both iPhone/iPad. TestFlight is VALID / IN_BETA_TESTING in the existing internal group; Apple build ID `ecae3ae1-3131-411d-90c5-c05caab20d7f`. See IOS-TABS-TEST-PLAN.md for coverage and physical-device limits.
+
+## iOS 0.8.0 (21) — Basic/Advanced, projects and Shell (in progress)
+
+Owner accepted 0.7.0 (20) after physical testing and authorized this combined update on 14 November 2026.
+
+- [x] Basic/Advanced preference: Basic for new installations, Advanced migration for existing users; preserve work/settings; stop checking in Basic.
+- [x] Project creation, folders, text file creation/import, file tree, project save and non-destructive Save As/remove.
+- [x] Ordinary Files-accessible project storage, JSON `.ateproj` manifest, portable ZIP import/export; saved-members-only export guard.
+- [x] SHA-256 stale-save protection and safe relative paths; filename extensions never appended.
+- [x] Shell extensions/startup names/interpreter recognition before embedded Python; shell highlighting and offline POSIX/Bash structural parser; other dialects not falsely checked.
+- [x] 53 local Node tests and production build.
+- [ ] Chromium/WebKit production bundle regression.
+- [ ] iPhone/iPad native filesystem/mode/project/ZIP/parser/recovery tests.
+- [ ] Native XCUITest modes, project save/export/remove and all earlier tab/picker regressions.
+- [ ] TestFlight upload and Apple processing after all gates pass.
+- [ ] Owner physical-device validation of 0.8.0.
+
+Projects/mode controls are enabled on iOS first. Other published distributions remain unchanged.

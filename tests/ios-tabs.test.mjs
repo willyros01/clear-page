@@ -24,7 +24,7 @@ test('iOS tabs preserve independent documents, undo, overrides, close cancellati
  const tabs=()=>[...document.querySelectorAll('[role=tab]')];
  const open=async(name,text)=>$('file').onchange({target:{files:[{name,size:text.length,text:async()=>text}],value:name}});
  try{
-  assert.equal($('tabs').hidden,false);assert.equal(tabs().length,1);assert.match(tabs()[0].textContent,/legacy.c •/);assert.equal(localStorage.getItem('clear-page-draft-v1'),null);
+  assert.equal(document.body.classList.contains('basic-mode'),false,'Existing users retain Advanced mode');assert.equal($('tabs').hidden,false);assert.equal(tabs().length,1);assert.match(tabs()[0].textContent,/legacy.c •/);assert.equal(localStorage.getItem('clear-page-draft-v1'),null);
   view.dispatch({changes:{from:view.state.doc.length,insert:' edited'}});
   await open('script.py','print("hello")');assert.equal(tabs().length,2);assert.equal($('language').value,'python');
   $('language').value='plain';$('language').onchange();

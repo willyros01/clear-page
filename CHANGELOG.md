@@ -163,3 +163,13 @@ Mac notarization completed: Apple returned Accepted. Recovery run 43103034568 pa
 - Browser regression plus iPhone/iPad native-webview and XCUITest gates precede TestFlight upload. Other platform releases are unchanged.
 
 Automated release: run 43613292921 passed 44 Node tests, Chromium/WebKit, 199 WKWebView assertions on each simulator, and native XCUITest on both iPhone/iPad. Apple processing is VALID and the build is IN_BETA_TESTING in the existing internal group. Physical-device acceptance remains pending; see RELEASE-0.7.0.md.
+
+## 0.8.0 (21) — iOS Basic/Advanced, projects and Shell (verification in progress)
+
+- Added a remembered Basic/Advanced tools switch. New installations start in Basic; existing users retain Advanced. Text, filename, undo, language choices and project associations are preserved; coding presentation/checking stops in Basic.
+- Added iOS projects with ordinary Files-accessible UTF-8 files, folders, a JSON `project.ateproj` manifest, file tree, copying existing files, project saves, non-destructive Save As, membership-only removal and ZIP transfer.
+- Project saves detect stale disk revisions before replacement. ZIP/path/count/size validation rejects unsafe imports. Project export requires saved project tabs and includes saved members only.
+- Fixed Unix scripts misidentified as Python: shell extensions, startup files and interpreter headers take priority over embedded Python. Added shell highlighting and bundled POSIX/Bash structural checks; other recognized dialects receive a clear not-checked result.
+- Existing syntax checkers, tabs, draft recovery, Vim and approved control/document font sizes are retained.
+
+Owner confirmed 0.7.0 (20) worked flawlessly on physical testing before authorizing this update.

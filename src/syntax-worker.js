@@ -1,6 +1,7 @@
 // Older Android/Fire WebViews need these worker-local standard APIs.
 import 'core-js/actual/object/has-own.js';
 import 'core-js/actual/string/replace-all.js';
+import {shellDialect} from './languages.js';
 import {checkSyntax} from './syntax.js';
 import {createPythonChecker} from './python-syntax.js';
 import {createCChecker} from './c-syntax.js';
@@ -12,9 +13,9 @@ const loadAsset=async name=>{
  if(!response.ok)throw Error('Bundled C checker could not load');
  const bytes=new Uint8Array(await response.arrayBuffer());trace('asset loaded',name,bytes.length);return bytes;
 };
-const checkC=createCChecker(loadAsset,trace),checkPython=createPythonChecker(loadAsset);
+const checkC=createCChecker(loadAsset,trace),checkPython=createPythonChecker(loadAsset),checkShell=createCChecker(loadAsset,trace,'tree-sitter-bash.wasm','Shell');
 self.onmessage=async({data})=>{
  trace('request',data.id,data.request.language);
- try{self.postMessage({id:data.id,result:data.request.language==='c'?await checkC(data.request):data.request.language==='python'?await checkPython(data.request):checkSyntax(data.request)})}
+ try{self.postMessage({id:data.id,result:data.request.language==='shell'?( ['bash','sh','dash','ash'].includes(shellDialect(data.request.name,data.request.text))?await checkShell(data.request):{status:'unavailable',diagnostics:[],message:'This shell dialect is recognized, but only POSIX/Bash structural checking is included. The script has not been checked or executed.'}):data.request.language==='c'?await checkC(data.request):data.request.language==='python'?await checkPython(data.request):checkSyntax(data.request)})}
  catch(error){console.error('Bundled checker failed:',error?.name,error?.message);self.postMessage({id:data.id,result:{status:'unavailable',diagnostics:[],message:'The checker could not process this document. Editing and saving still work.'}})}
 };

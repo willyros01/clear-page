@@ -113,13 +113,14 @@ try{
    assert.match(await page.locator('#syntaxIssues').innerText(),/Missing/);
    await page.locator('#closeSyntax').click();
    for(const [name,invalid,valid] of [
+    ['offline.sh','#!/bin/sh\nif true; then\n echo hello\n','#!/bin/sh\nif true; then\n echo hello\nfi\n'],
     ['offline.py','def greet(name)\n    return name','def greet(name):\n    return name'],
     ['offline.sql','SELECT x FROM WHERE x=1;','SELECT name FROM people;'],
     ['offline.md','## Twice\n\n## Twice\n\n```py\npass','# Title\n\n- item']
    ]){
     await open(invalid,name);await menu();await page.locator('#checkSyntax').click();
     await page.waitForFunction(()=>document.getElementById('syntaxIssues').children.length>0);
-    assert.match(await page.locator('#syntaxDetails').innerText(),/Offline|Markdown lint/);
+    assert.match(await page.locator('#syntaxDetails').innerText(),/Offline|Markdown lint|Basic POSIX/);
     await page.locator('#closeSyntax').click();await open(valid,name);await menu();await page.locator('#checkSyntax').click();
     await page.waitForFunction(()=>/no syntax errors|no lint issues/.test(document.getElementById('syntaxSummary').textContent));
     assert.equal(await page.locator('#syntaxIssues li').count(),0);await page.locator('#closeSyntax').click();

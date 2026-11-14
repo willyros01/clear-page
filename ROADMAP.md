@@ -119,3 +119,7 @@ Owner approved using the existing mobile C parser as the Mac/Windows default. Ad
 ### iOS tabs — 0.7.0 (20) released to TestFlight
 
 0.7.0 (20): shared tab controller enabled on iOS first. Independent document states, save guards and recoverable workspaces implemented. Run 43613292921 passed 44 Node tests, Chromium/WebKit, 199 native assertions on each device and full iPhone/iPad XCUITest. Apple processing is VALID and IN_BETA_TESTING in the existing group. Physical device acceptance remains a separate step; see RELEASE-0.7.0.md. Other proposed features (backups/comparison, folder search, outline, formatting, reading controls) remain planned, not part of this release.
+
+### iOS 0.8.0 — Basic/Advanced, projects and Shell
+
+Authorized after owner acceptance of 0.7.0. Implementation is complete locally: mode preference, portable text projects, exact-name project saves and ZIP transfer, and shell recognition/highlighting/structural checks. Existing project file changes are guarded by revision hashes; removal only changes manifest membership. Regression/native functional verification and TestFlight processing are required before release. No project build/run or arbitrary command execution is included.

@@ -49,12 +49,14 @@ assert info['CFBundleIdentifier']=='io.github.willyros01.clearpage'
 assert info['CFBundleShortVersionString']==os.environ['VERSION']
 assert info['CFBundleVersion']==os.environ['BUILD']
 assert info['UIDeviceFamily']==[1,2]
+assert info['UIFileSharingEnabled'] is True
+assert info['LSSupportsOpeningDocumentsInPlace'] is True
 assert info['CFBundleDisplayName']=='ATE'
 assert info['CFBundleIcons']['CFBundlePrimaryIcon']['CFBundleIconName']=='AppIcon'
 assert (app/'Assets.car').is_file()
 assert (app/'public/index.html').is_file()
 import hashlib
-for asset in ['app.js','syntax-worker.js','tree-sitter-c.wasm','web-tree-sitter.wasm','ruff_wasm_bg.wasm','THIRD-PARTY-NOTICES.txt']:
+for asset in ['app.js','syntax-worker.js','tree-sitter-c.wasm','tree-sitter-bash.wasm','web-tree-sitter.wasm','ruff_wasm_bg.wasm','THIRD-PARTY-NOTICES.txt']:
  actual=app/'public'/asset;expected=pathlib.Path('dist')/asset
  assert actual.is_file(), 'Missing bundled checker asset: '+asset
  assert hashlib.sha256(actual.read_bytes()).digest()==hashlib.sha256(expected.read_bytes()).digest(), 'Archive asset mismatch: '+asset

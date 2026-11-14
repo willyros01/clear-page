@@ -7,6 +7,8 @@ p='ios/App/App/Info.plist'
 with open(p,'rb') as f: d=plistlib.load(f)
 d['CFBundleDisplayName']='ATE'
 d['ITSAppUsesNonExemptEncryption']=False
+d['UIFileSharingEnabled']=True
+d['LSSupportsOpeningDocumentsInPlace']=True
 with open(p,'wb') as f: plistlib.dump(d,f)
 `;
 execFileSync('python3',['-c',code],{stdio:'inherit'});

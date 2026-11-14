@@ -21,14 +21,64 @@ final class ATEFunctionalTests: XCTestCase {
         let old = field.value as? String ?? ""
         field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: old.count))
         field.typeText(name)
-        // iPhone has a second Done button in the native keyboard toolbar.
+        finishMenu()
+    }
+    func dismissKeyboard() {
         let keyboardDone = app.toolbars.buttons["Done"].firstMatch
         if keyboardDone.exists { keyboardDone.tap() }
-        let hideKeyboard = app.buttons["Hide keyboard"].firstMatch
-        if hideKeyboard.exists { hideKeyboard.tap() }
+        let hide = app.buttons["Hide keyboard"].firstMatch
+        if hide.exists { hide.tap() }
+    }
+    func finishMenu() {
+        dismissKeyboard()
         let done = app.webViews.buttons["Done"].firstMatch
         if !done.isHittable { app.webViews.firstMatch.swipeDown() }
         done.tap()
+    }
+    func projectButton(_ label: String) {
+        dismissKeyboard()
+        let button = app.webViews.buttons[label].firstMatch
+        XCTAssertTrue(button.waitForExistence(timeout: 15), app.debugDescription)
+        for _ in 0..<4 { if button.isHittable { break }; app.webViews.firstMatch.swipeUp() }
+        button.tap()
+    }
+    func assertWord(_ word: String) {
+        XCTAssertTrue(editor().staticTexts.matching(NSPredicate(format: "label CONTAINS %@", word)).firstMatch.exists, app.debugDescription)
+    }
+    func exerciseModesAndProjects() {
+        editor().tap(); editor().typeText("Keep this note")
+        menu(); XCTAssertFalse(app.buttons["Projects"].exists)
+        app.buttons["Advanced mode"].tap(); XCTAssertTrue(app.buttons["Projects"].exists)
+        app.buttons["Basic mode"].tap(); XCTAssertFalse(app.buttons["Projects"].exists)
+        finishMenu(); assertWord("Keep")
+        app.terminate(); app.launch()
+        XCTAssertTrue(app.buttons["Menu"].waitForExistence(timeout: 30)); assertWord("Keep")
+        menu(); XCTAssertFalse(app.buttons["Projects"].exists)
+        app.buttons["Advanced mode"].tap(); app.buttons["Projects"].tap()
+        let projectName = app.textFields["New project name"]
+        XCTAssertTrue(projectName.waitForExistence(timeout: 15)); projectName.tap(); projectName.typeText("Native project")
+        projectButton("Create project")
+        let filename = app.textFields["New file or folder name"]
+        XCTAssertTrue(filename.waitForExistence(timeout: 15)); filename.tap(); filename.typeText("run.sh")
+        projectButton("Create file")
+        editor().tap(); editor().typeText("#!/bin/sh\necho hello\n")
+        app.buttons["Save file"].tap()
+        let saved = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "Saved in project")).firstMatch
+        XCTAssertTrue(saved.waitForExistence(timeout: 15), app.debugDescription)
+        menu(); app.buttons["Basic mode"].tap(); finishMenu()
+        app.terminate(); app.launch(); XCTAssertTrue(app.buttons["Menu"].waitForExistence(timeout: 30)); assertWord("echo")
+        menu(); XCTAssertFalse(app.buttons["Projects"].exists); app.buttons["Advanced mode"].tap(); app.buttons["Projects"].tap()
+        projectButton("Export project ZIP")
+        let close = app.buttons["Close"].firstMatch
+        XCTAssertTrue(close.waitForExistence(timeout: 15), app.debugDescription); close.tap()
+        projectButton("Remove run.sh from project")
+        app.buttons["Close projects"].tap()
+        app.buttons["Close current tab"].tap()
+        app.buttons["Close current tab"].tap()
+        let discard = app.buttons["Close without saving"]
+        if discard.waitForExistence(timeout: 5) { discard.tap() }
+        menu(); app.buttons["Basic mode"].tap(); finishMenu()
+        print("PASS native UI: Basic/Advanced preserve text and preferences; project create/save/reopen/ZIP share/remove work")
     }
     func editor() -> XCUIElement {
         let field = app.webViews.textViews.firstMatch
@@ -43,6 +93,7 @@ final class ATEFunctionalTests: XCTestCase {
         XCTAssertTrue(text.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "return")).firstMatch.exists, app.debugDescription, file: file, line: line)
     }
     func testTabsNativePickersAndRelaunch() {
+        exerciseModesAndProjects()
         rename("native.c")
         let first = editor()
         first.tap(); first.typeText("int main(void) { return 0; }")

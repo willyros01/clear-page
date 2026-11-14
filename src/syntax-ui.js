@@ -3,7 +3,7 @@ import {createCheckRunner} from './check-runner.js';
 import {checkableLanguages,MAX_CHECK_LENGTH} from './syntax-common.js';
 import {languageLabels} from './languages.js';
 
-export function setupSyntax({editor,getDocument,nativeCheck,chooseCompiler,chooseProject,compilerSetupInfo,installCCompiler,cancelCompilerSetup,desktop,keepIdleWorker=false}) {
+export function setupSyntax({editor,getDocument,nativeCheck,chooseCompiler,chooseProject,compilerSetupInfo,installCCompiler,cancelCompilerSetup,desktop,keepIdleWorker=false,isEnabled=()=>true}) {
  const $=id=>document.getElementById(id),settingsKey='ate-syntax-preferences-v1';
  let revision=0,timer,diagnostics=[],settings={automatic:true,cChecker:'basic',standard:'c17',includes:'',defines:''};
  try{Object.assign(settings,JSON.parse(localStorage.getItem(settingsKey))||{})}catch{}
@@ -42,6 +42,7 @@ export function setupSyntax({editor,getDocument,nativeCheck,chooseCompiler,choos
   }
  }
  async function check() {
+  if(!isEnabled())return;
   clearTimeout(timer);const current=++revision;runner.cancel();
   const request={...getDocument(),...options()};
   if(request.text.length>MAX_CHECK_LENGTH){render({status:'skipped',message:'Checking is limited to 512K characters. Editing and saving still work.'});return;}
@@ -52,6 +53,7 @@ export function setupSyntax({editor,getDocument,nativeCheck,chooseCompiler,choos
  }
  function changed() {
   revision++;if(getDocument().text)runner.cancel();else runner.dispose();clearTimeout(timer);render({status:'pending'});
+  if(!isEnabled()){runner.dispose();return}
   if($('autoCheck').checked&&checkableLanguages.has(getDocument().language))timer=setTimeout(check,700);
  }
  function saveSettings(){try{localStorage.setItem(settingsKey,JSON.stringify({automatic:$('autoCheck').checked,cChecker:desktop?$('cChecker').value:'basic',standard:$('cStandard').value,includes:$('cIncludes').value,defines:$('cDefines').value}))}catch{}changed()}
