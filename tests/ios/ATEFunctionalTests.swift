@@ -45,16 +45,23 @@ final class ATEFunctionalTests: XCTestCase {
     func assertWord(_ word: String) {
         XCTAssertTrue(editor().staticTexts.matching(NSPredicate(format: "label CONTAINS %@", word)).firstMatch.exists, app.debugDescription)
     }
+    func setMode(_ name: String) {
+        // aria-pressed controls may be exposed as native toggles rather than buttons.
+        let control = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", name + " mode")).firstMatch
+        XCTAssertTrue(control.waitForExistence(timeout: 15), app.debugDescription)
+        if !control.isHittable { dismissKeyboard(); app.webViews.firstMatch.swipeDown() }
+        control.tap()
+    }
     func exerciseModesAndProjects() {
         editor().tap(); editor().typeText("Keep this note")
         menu(); XCTAssertFalse(app.buttons["Projects"].exists)
-        app.buttons["Advanced mode"].tap(); XCTAssertTrue(app.buttons["Projects"].exists)
-        app.buttons["Basic mode"].tap(); XCTAssertFalse(app.buttons["Projects"].exists)
+        setMode("Advanced"); XCTAssertTrue(app.buttons["Projects"].exists)
+        setMode("Basic"); XCTAssertFalse(app.buttons["Projects"].exists)
         finishMenu(); assertWord("Keep")
         app.terminate(); app.launch()
         XCTAssertTrue(app.buttons["Menu"].waitForExistence(timeout: 30)); assertWord("Keep")
         menu(); XCTAssertFalse(app.buttons["Projects"].exists)
-        app.buttons["Advanced mode"].tap(); app.buttons["Projects"].tap()
+        setMode("Advanced"); app.buttons["Projects"].tap()
         let projectName = app.textFields["New project name"]
         XCTAssertTrue(projectName.waitForExistence(timeout: 15)); projectName.tap(); projectName.typeText("Native project")
         projectButton("Create project")
@@ -65,9 +72,9 @@ final class ATEFunctionalTests: XCTestCase {
         app.buttons["Save file"].tap()
         let saved = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "Saved in project")).firstMatch
         XCTAssertTrue(saved.waitForExistence(timeout: 15), app.debugDescription)
-        menu(); app.buttons["Basic mode"].tap(); finishMenu()
+        menu(); setMode("Basic"); finishMenu()
         app.terminate(); app.launch(); XCTAssertTrue(app.buttons["Menu"].waitForExistence(timeout: 30)); assertWord("echo")
-        menu(); XCTAssertFalse(app.buttons["Projects"].exists); app.buttons["Advanced mode"].tap(); app.buttons["Projects"].tap()
+        menu(); XCTAssertFalse(app.buttons["Projects"].exists); setMode("Advanced"); app.buttons["Projects"].tap()
         projectButton("Export project ZIP")
         let close = app.buttons["Close"].firstMatch
         XCTAssertTrue(close.waitForExistence(timeout: 15), app.debugDescription); close.tap()
@@ -77,7 +84,7 @@ final class ATEFunctionalTests: XCTestCase {
         app.buttons["Close current tab"].tap()
         let discard = app.buttons["Close without saving"]
         if discard.waitForExistence(timeout: 5) { discard.tap() }
-        menu(); app.buttons["Basic mode"].tap(); finishMenu()
+        menu(); setMode("Basic"); finishMenu()
         print("PASS native UI: Basic/Advanced preserve text and preferences; project create/save/reopen/ZIP share/remove work")
     }
     func editor() -> XCUIElement {
