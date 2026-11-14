@@ -106,7 +106,10 @@ final class ATEFunctionalTests: XCTestCase {
         // Remove runs as a background save; the Projects panel ignores Close until it finishes.
         let removed = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "Removed run.sh")).firstMatch
         XCTAssertTrue(removed.waitForExistence(timeout: 15), app.debugDescription)
-        app.buttons["Close projects"].tap()
+        // The panel was scrolled up to reach Remove; scroll back so "Back to editor" is on screen.
+        let closeProjects = app.buttons["Close projects"].firstMatch
+        for _ in 0..<4 { if closeProjects.isHittable { break }; app.webViews.firstMatch.swipeDown() }
+        closeProjects.tap()
         XCTAssertTrue(app.buttons["Close current tab"].waitForExistence(timeout: 15), app.debugDescription)
         app.buttons["Close current tab"].tap()
         app.buttons["Close current tab"].tap()
