@@ -146,7 +146,7 @@ final class ATEFunctionalTests: XCTestCase {
         XCTAssertTrue(text.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "return")).firstMatch.exists, app.debugDescription, file: file, line: line)
     }
     func assertToolbarVisible() {
-        let buttons = [app.buttons["Menu"], app.buttons["Close document"], app.buttons["Save file"]]
+        let buttons = [app.buttons["Menu"], app.buttons["Close current tab"], app.buttons["Save file"]]
         for button in buttons {
             XCTAssertTrue(button.waitForExistence(timeout: 15), app.debugDescription)
             XCTAssertTrue(button.isHittable, app.debugDescription)
