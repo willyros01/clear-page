@@ -108,7 +108,7 @@ import {Filesystem,Directory,Encoding} from '@capacitor/filesystem';
   assert($('cPlatformNote').textContent.includes('No compiler download'),'iPad C needs no download');
   assert($('chooseCompiler').hidden,'iPad does not offer a desktop executable installer');
   $('closeCSettings').click();
-  await open('function hello() {','indent.js');content.focus();key('End');key('Enter');
+  await open('function hello() {','indent.js');view.dispatch({selection:{anchor:view.state.doc.length}});content.focus();key('Enter');
   assert(/\n    /.test(text()),'iPad Enter indentation works');key('Tab');key('Tab',{shiftKey:true});
   assert(/\n    $/.test(text()),'iPad Tab/Shift Tab indentation works');
   await open('const first = 1;\nconst second = 2;','vim.js');
@@ -131,6 +131,6 @@ import {Filesystem,Directory,Encoding} from '@capacitor/filesystem';
   await Filesystem.writeFile({path:'ate-ipad-restart-ready.json',directory:Directory.Data,encoding:Encoding.UTF8,data:'ready'});return;
   }
   }
- }catch(e){error=(e.message||String(e))+'\n'+(e.stack||'')}
+ }catch(e){error=(e.message||String(e))+'\n'+(e.stack||'');const v=EditorView.findFromDOM(document.querySelector('.cm-editor'));if(v)error+='\nDocument: '+JSON.stringify(v.state.doc.toString())+'\nSelection: '+JSON.stringify(v.state.selection.toJSON());}
  await Filesystem.writeFile({path:'ate-ipad-syntax-verification.json',directory:Directory.Data,encoding:Encoding.UTF8,data:JSON.stringify({marker,passed,checks,error},null,2)});
 })();

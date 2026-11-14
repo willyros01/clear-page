@@ -8,6 +8,8 @@ reference = project.main_group.new_file(File.join(__dir__, 'ATEFunctionalTests.s
 test.source_build_phase.add_file_reference(reference)
 test.build_configurations.each do |config|
   config.build_settings.merge!({
+    'PRODUCT_NAME' => 'ATEFunctionalTests',
+    'PRODUCT_MODULE_NAME' => 'ATEFunctionalTests',
     'PRODUCT_BUNDLE_IDENTIFIER' => 'io.github.willyros01.clearpage.functionaltests',
     'GENERATE_INFOPLIST_FILE' => 'YES',
     'TEST_TARGET_NAME' => 'App',
