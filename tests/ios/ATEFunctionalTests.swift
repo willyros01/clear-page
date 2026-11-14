@@ -52,6 +52,31 @@ final class ATEFunctionalTests: XCTestCase {
         if !control.isHittable { dismissKeyboard(); app.webViews.firstMatch.swipeDown() }
         control.tap()
     }
+    func dismissShareSheet() {
+        // The iOS 26 share sheet does not always expose a "Close" button
+        // (the ZIP export sheet shows only its share and action rows).
+        // Wait for the sheet itself, then close it the way a person would.
+        let close = app.buttons["Close"].firstMatch
+        let sheet = app.otherElements["ActivityListView"]
+        let copy = app.cells.matching(NSPredicate(format: "label == %@", "Copy")).firstMatch
+        let shown = { close.exists || sheet.exists || copy.exists }
+        let deadline = Date().addingTimeInterval(15)
+        while !shown() && Date() < deadline { RunLoop.current.run(until: Date().addingTimeInterval(0.25)) }
+        XCTAssertTrue(shown(), app.debugDescription)
+        if close.exists && close.isHittable {
+            close.tap()
+        } else {
+            // Tap above the sheet (iPhone) or outside the popover (iPad).
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.2)).tap()
+        }
+        if copy.exists && !waitForGone(copy, timeout: 5) { app.swipeDown() }
+        XCTAssertTrue(waitForGone(copy, timeout: 10), app.debugDescription)
+    }
+    func waitForGone(_ element: XCUIElement, timeout: TimeInterval) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while element.exists && Date() < deadline { RunLoop.current.run(until: Date().addingTimeInterval(0.25)) }
+        return !element.exists
+    }
     func exerciseModesAndProjects() {
         editor().tap(); editor().typeText("Keep this note")
         menu(); XCTAssertFalse(app.buttons["Projects"].exists)
@@ -76,8 +101,7 @@ final class ATEFunctionalTests: XCTestCase {
         app.terminate(); app.launch(); XCTAssertTrue(app.buttons["Menu"].waitForExistence(timeout: 30)); assertWord("echo")
         menu(); XCTAssertFalse(app.buttons["Projects"].exists); setMode("Advanced"); app.buttons["Projects"].tap()
         projectButton("Export project ZIP")
-        let close = app.buttons["Close"].firstMatch
-        XCTAssertTrue(close.waitForExistence(timeout: 15), app.debugDescription); close.tap()
+        dismissShareSheet()
         projectButton("Remove run.sh from project")
         app.buttons["Close projects"].tap()
         app.buttons["Close current tab"].tap()
