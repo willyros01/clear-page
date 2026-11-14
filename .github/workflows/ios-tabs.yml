@@ -96,7 +96,8 @@ jobs:
         run: |
           DEVICE=$(cat "$RUNNER_TEMP/ipad-device.txt")
           xcrun simctl terminate "$DEVICE" io.github.willyros01.clearpage || true
-          xcodebuild test -project ios/App/App.xcodeproj -scheme ATEFunctional -configuration Debug -destination "platform=iOS Simulator,id=$DEVICE" -derivedDataPath "$RUNNER_TEMP/DerivedData" -resultBundlePath "$RUNNER_TEMP/ATEFunctional.xcresult" CODE_SIGNING_ALLOWED=NO > "$RUNNER_TEMP/ui-tests.log" 2>&1 || { tail -120 "$RUNNER_TEMP/ui-tests.log"; exit 1; }
+          xcrun simctl uninstall "$DEVICE" io.github.willyros01.clearpage
+          xcodebuild test -project ios/App/App.xcodeproj -scheme ATEFunctional -configuration Debug -destination "platform=iOS Simulator,id=$DEVICE" -derivedDataPath "$RUNNER_TEMP/DerivedData" -resultBundlePath "$RUNNER_TEMP/ATEFunctional.xcresult" CODE_SIGNING_ALLOWED=NO > "$RUNNER_TEMP/ui-tests.log" 2>&1 || { rg 'error:|XCTAssert|failed|Test Case|PASS native' "$RUNNER_TEMP/ui-tests.log" | tail -35 || true; tail -70 "$RUNNER_TEMP/ui-tests.log"; exit 1; }
       - uses: actions/upload-artifact@v4
         if: always()
         with:

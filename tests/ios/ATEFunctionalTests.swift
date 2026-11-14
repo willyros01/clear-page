@@ -28,6 +28,13 @@ final class ATEFunctionalTests: XCTestCase {
         XCTAssertTrue(field.waitForExistence(timeout: 10), app.debugDescription)
         return field
     }
+    func assertCText(file: StaticString = #filePath, line: UInt = #line) {
+        // WKWebView's value may contain only the first syntax-highlighted span.
+        // Inspect the rendered descendants; the in-webview suite verifies exact bytes.
+        let text = editor()
+        XCTAssertTrue(text.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "main")).firstMatch.exists, app.debugDescription, file: file, line: line)
+        XCTAssertTrue(text.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "return")).firstMatch.exists, app.debugDescription, file: file, line: line)
+    }
     func testTabsNativePickersAndRelaunch() {
         rename("native.c")
         let first = editor()
@@ -39,18 +46,20 @@ final class ATEFunctionalTests: XCTestCase {
         let cTab = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "native.c, unsaved changes")).firstMatch
         XCTAssertTrue(cTab.waitForExistence(timeout: 10), app.debugDescription)
         cTab.tap()
-        XCTAssertTrue((editor().value as? String ?? "").contains("int main"), app.debugDescription)
+        assertCText()
         app.buttons["Close current tab"].tap()
         XCTAssertTrue(app.buttons["Keep editing"].waitForExistence(timeout: 10))
         app.buttons["Keep editing"].tap()
-        XCTAssertTrue((editor().value as? String ?? "").contains("int main"))
+        assertCText()
+        print("PASS native UI: typed two files, switched tabs, cancelled close")
         // Exercise the actual iOS document picker and cancel it.
         menu(); app.buttons["Open"].tap()
         let cancel = app.buttons["Cancel"].firstMatch
         XCTAssertTrue(cancel.waitForExistence(timeout: 15), app.debugDescription)
         cancel.tap()
         XCTAssertTrue(app.buttons["Menu"].waitForExistence(timeout: 10))
-        XCTAssertTrue((editor().value as? String ?? "").contains("int main"))
+        assertCText()
+        print("PASS native UI: actual document picker cancellation preserves C tab")
         // Exercise the actual native Share/Save sheet and cancel without losing text.
         app.buttons["Save file"].tap()
         let sheet = app.otherElements["ActivityListView"]
@@ -58,16 +67,19 @@ final class ATEFunctionalTests: XCTestCase {
         XCTAssertTrue(close.waitForExistence(timeout: 15) || sheet.exists, app.debugDescription)
         if close.exists { close.tap() } else { app.swipeDown() }
         XCTAssertTrue(app.buttons["Menu"].waitForExistence(timeout: 10), app.debugDescription)
-        XCTAssertTrue((editor().value as? String ?? "").contains("int main"))
+        assertCText()
+        print("PASS native UI: actual share cancellation preserves C tab")
         // Force process restart, rather than merely reloading the web page.
         app.terminate(); app.launch()
         XCTAssertTrue(app.buttons["Menu"].waitForExistence(timeout: 30))
-        XCTAssertTrue((editor().value as? String ?? "").contains("int main"), app.debugDescription)
+        assertCText()
         XCTAssertTrue(app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "native.py, unsaved changes")).firstMatch.exists)
+        print("PASS native UI: forced process restart restores both files")
         XCUIDevice.shared.orientation = .landscapeLeft
         XCTAssertTrue(app.buttons["Menu"].exists)
         XCUIDevice.shared.orientation = .portrait
         XCUIDevice.shared.press(.home); app.activate()
-        XCTAssertTrue((editor().value as? String ?? "").contains("int main"))
+        assertCText()
+        print("PASS native UI: rotation and background/resume preserve C tab")
     }
 }
