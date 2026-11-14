@@ -1,3 +1,4 @@
+import {checkToolbarLayout} from './toolbar-layout.js';
 import {createProjectStore} from '../src/projects.js';
 import {iosProjectAdapter} from '../src/ios-projects.js';
 import {EditorView} from '@codemirror/view';
@@ -14,6 +15,7 @@ import {Filesystem,Directory,Encoding} from '@capacitor/filesystem';
   await until(()=>!!document.querySelector('.cm-content'),'iPad editor initialized');
   const content=document.querySelector('.cm-content');
   const view=EditorView.findFromDOM(document.querySelector('.cm-editor'));
+  for(const scale of [1,2,3])for(const icons of [false,true])assert(!!checkToolbarLayout([scale,icons]),`Native toolbar/save reflow at ${scale*100}% ${icons?'icons':'text'}`);
   const tabs=()=>[...document.querySelectorAll('#tabs [role=tab]')];
   const closeCurrent=()=>{ $('exit').click();if($('exitDialog').open)$('discardExit').click(); };
   const restart=JSON.parse(localStorage.getItem('ate-tabs-verification-restart')||'null');

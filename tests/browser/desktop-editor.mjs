@@ -2,6 +2,7 @@ import {createServer} from 'node:http';
 import {readFile,mkdir} from 'node:fs/promises';
 import assert from 'node:assert/strict';
 import {chromium, webkit} from 'playwright';
+import {checkToolbarLayout} from '../toolbar-layout.js';
 
 // Exercise the built assets under the nonce policy Tauri applies to its assets.
 // A plain development server misses the desktop-only stylesheet failure.
@@ -138,6 +139,13 @@ try{
    assert.match(await page.locator('#cPlatformNote').innerText(),/No compiler download/);
    await page.locator('#closeCSettings').click();
    await page.reload();await page.waitForSelector('.cm-content');
+   for(const width of [320,375,390,430,768]){
+    await page.setViewportSize({width,height:1000});
+    for(const scale of [1,2,3])for(const icons of [false,true]){
+     const result=await page.evaluate(checkToolbarLayout, [scale,icons]);
+     console.log('PASS '+name+': '+result);
+    }
+   }
    await page.setViewportSize({width:390,height:844});
    const projectNavigation=await page.evaluate(()=>{
     const dialog=document.getElementById('projects'),body=dialog.querySelector('.project-body'),back=document.getElementById('closeProjects'),rows=[];

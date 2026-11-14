@@ -145,6 +145,48 @@ final class ATEFunctionalTests: XCTestCase {
         XCTAssertTrue(text.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "main")).firstMatch.exists, app.debugDescription, file: file, line: line)
         XCTAssertTrue(text.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "return")).firstMatch.exists, app.debugDescription, file: file, line: line)
     }
+    func assertToolbarVisible() {
+        let buttons = [app.buttons["Menu"], app.buttons["Close document"], app.buttons["Save file"]]
+        for button in buttons {
+            XCTAssertTrue(button.waitForExistence(timeout: 15), app.debugDescription)
+            XCTAssertTrue(button.isHittable, app.debugDescription)
+            XCTAssertTrue(app.frame.contains(button.frame), "Toolbar button clipped: \(button.label) \(button.frame)")
+            XCTAssertGreaterThanOrEqual(button.frame.width, 44)
+            XCTAssertGreaterThanOrEqual(button.frame.height, 44)
+            let status = app.statusBars.firstMatch
+            if status.exists && status.frame.width > 0 {
+                XCTAssertGreaterThanOrEqual(button.frame.minY, status.frame.maxY, "Toolbar overlaps status bar")
+            }
+        }
+        for i in 0..<buttons.count {
+            for j in (i+1)..<buttons.count {
+                XCTAssertFalse(buttons[i].frame.intersects(buttons[j].frame), "Toolbar buttons overlap")
+            }
+        }
+    }
+    func testToolbarAndSaveVisibility() {
+        XCUIDevice.shared.orientation = .portrait
+        assertToolbarVisible()
+        editor().tap(); editor().typeText("Large text save check")
+        assertToolbarVisible()
+        dismissKeyboard()
+        app.buttons["Save file"].tap()
+        dismissShareSheet()
+        assertWord("Large")
+        assertToolbarVisible()
+        let portrait = XCTAttachment(screenshot: app.screenshot())
+        portrait.name = "Toolbar portrait after save cancellation"
+        portrait.lifetime = .keepAlways; add(portrait)
+        XCUIDevice.shared.orientation = .landscapeLeft
+        assertToolbarVisible()
+        let landscape = XCTAttachment(screenshot: app.screenshot())
+        landscape.name = "Toolbar landscape"
+        landscape.lifetime = .keepAlways; add(landscape)
+        XCUIDevice.shared.orientation = .portrait
+        menu(); finishMenu()
+        assertToolbarVisible()
+        print("PASS native UI: Menu, Close and Save fully visible, status bar clear, keyboard, native Save cancellation and rotation")
+    }
     func testTabsNativePickersAndRelaunch() {
         exerciseModesAndProjects()
         rename("native.c")

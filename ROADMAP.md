@@ -125,3 +125,7 @@ Owner approved using the existing mobile C parser as the Mac/Windows default. Ad
 Authorized after owner acceptance of 0.7.0. Implementation is complete locally: mode preference, portable text projects, exact-name project saves and ZIP transfer, and shell recognition/highlighting/structural checks. Existing project file changes are guarded by revision hashes; removal only changes manifest membership. Regression/native functional verification and TestFlight processing are required before release. No project build/run or arbitrary command execution is included.
 
 0.8.0 release repair: keep Projects navigation outside the scrolling content; the iPhone failure was an off-screen Back button. Preserve native UI gates and verify direct return to the editor after removal/export.
+
+### iOS 0.8.1 (22) — large-text toolbar repair
+
+Owner reported Save clipped at the right edge and status-bar overlap in 0.8.0 (21). Header reflow, wrapped notices and explicit CSS safe-area ownership implemented on ios-tabs. Preserve all 0.8.0 project/Shell functionality and document sizing. New layout amplification tests supplement actual simulator accessibility-size tests. Full browser, iPhone/iPad functional and Apple processing gates required before release; physical iPhone acceptance remains separate.

@@ -25,3 +25,11 @@ Owner acceptance: open C/header/Python files, edit and switch tabs, save each to
 ## Recorded result — 14 November 2026
 
 Run 43613292921 at `d23b3ff66fc3555983027a74cf75d01a8c307242` passed every gate: 44 Node tests, Chromium/WebKit, 199 native-webview assertions per simulator, actual native Files/Share cancellation, two-file typing/switching, close cancellation, process restart, rotation and background/resume. TestFlight 0.7.0 (20) is VALID / IN_BETA_TESTING in the existing internal group. Physical-device and Files-destination acceptance remain pending. See RELEASE-0.7.0.md.
+
+## 0.8.1 (22) accessibility regression
+
+- Browser tests: widths 320/375/390/430/768px; 100/200/300% controls with text and icon buttons; all toolbar targets fully visible, uncovered, non-overlapping and at least 44px; long/unbroken save messages wrap without page overflow.
+- Native WKWebView: repeat amplified control/icon checks on both device types.
+- Production XCUITest: full prior functional suite plus toolbar bounds/status-bar clearance, keyboard, actual Save sheet cancellation and orientation. Repeat the focused toolbar test with simulator OS content size accessibility-extra-extra-extra-large. Retain both result bundles and screenshots.
+- Native contentInset is never; CSS safe-area padding owns the full-screen webview insets. Do not disable iPhone text enlargement or reduce the document font to hide layout errors.
+- Release pending; verify on the owner’s physical iPhone at their chosen text/display settings after TestFlight availability.
