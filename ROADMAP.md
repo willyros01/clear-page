@@ -123,3 +123,5 @@ Owner approved using the existing mobile C parser as the Mac/Windows default. Ad
 ### iOS 0.8.0 — Basic/Advanced, projects and Shell
 
 Authorized after owner acceptance of 0.7.0. Implementation is complete locally: mode preference, portable text projects, exact-name project saves and ZIP transfer, and shell recognition/highlighting/structural checks. Existing project file changes are guarded by revision hashes; removal only changes manifest membership. Regression/native functional verification and TestFlight processing are required before release. No project build/run or arbitrary command execution is included.
+
+0.8.0 release repair: keep Projects navigation outside the scrolling content; the iPhone failure was an off-screen Back button. Preserve native UI gates and verify direct return to the editor after removal/export.

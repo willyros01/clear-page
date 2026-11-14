@@ -106,17 +106,10 @@ final class ATEFunctionalTests: XCTestCase {
         // Remove runs as a background save; the Projects panel ignores Close until it finishes.
         let removed = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "Removed run.sh")).firstMatch
         XCTAssertTrue(removed.waitForExistence(timeout: 15), app.debugDescription)
-        // The panel was scrolled up to reach Remove; scroll back so "Back to editor" is on screen.
+        // Back must remain available after scrolling the project list; no swipe workaround.
         let closeProjects = app.buttons["Close projects"].firstMatch
-        // isHittable is not enough: a button half under the status bar counts as hittable,
-        // but a tap there goes to the status bar. Scroll until it sits below the top edge.
-        let panelText = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "Project files are stored")).firstMatch
-        for attempt in 0..<6 {
-            if closeProjects.exists && closeProjects.frame.minY >= 60 && closeProjects.isHittable { break }
-            // Alternate: scroll the Projects panel itself, then the whole page.
-            if attempt % 2 == 0 && panelText.exists { panelText.swipeDown() } else { app.webViews.firstMatch.swipeDown() }
-        }
-        XCTAssertTrue(closeProjects.frame.minY >= 60, app.debugDescription)
+        XCTAssertTrue(closeProjects.waitForExistence(timeout: 15), app.debugDescription)
+        XCTAssertTrue(closeProjects.isHittable, app.debugDescription)
         closeProjects.tap()
         XCTAssertTrue(app.buttons["Close current tab"].waitForExistence(timeout: 15), app.debugDescription)
         app.buttons["Close current tab"].tap()

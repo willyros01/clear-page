@@ -30,7 +30,7 @@ try{
    await page.goto(url);
    await page.waitForSelector('.cm-content');
    const editor=page.locator('.cm-content');
-   for(const id of ['menu','cSettings','compilerInstall']){
+   for(const id of ['menu','cSettings','compilerInstall','projects']){
     const fonts=await page.locator('#'+id).evaluate(dialog=>{dialog.showModal();const result=[...dialog.querySelectorAll('button,input,select,textarea,label,p,h1,h2,h3')].filter(e=>e.getBoundingClientRect().width).map(e=>parseFloat(getComputedStyle(e).fontSize));dialog.close();return result});
     assert.ok(fonts.every(size=>size<=18.67),'Controls must not exceed 14pt: '+id+' '+fonts);
    }
@@ -139,6 +139,16 @@ try{
    await page.locator('#closeCSettings').click();
    await page.reload();await page.waitForSelector('.cm-content');
    await page.setViewportSize({width:390,height:844});
+   const projectNavigation=await page.evaluate(()=>{
+    const dialog=document.getElementById('projects'),body=dialog.querySelector('.project-body'),back=document.getElementById('closeProjects'),rows=[];
+    dialog.showModal();
+    for(let i=0;i<40;i++){const row=document.createElement('p');row.textContent='Project source file '+i;body.append(row);rows.push(row)}
+    body.scrollTop=body.scrollHeight;
+    const d=dialog.getBoundingClientRect(),b=back.getBoundingClientRect(),result={scrolled:body.scrollTop>0,inside:b.top>=d.top&&b.bottom<=d.bottom,visible:b.top>=0&&b.bottom<=innerHeight,height:b.height};
+    for(const row of rows)row.remove();dialog.close();return result;
+   });
+   assert.ok(projectNavigation.scrolled&&projectNavigation.inside&&projectNavigation.visible&&projectNavigation.height>=44,'Back to editor must remain visible after scrolling project contents: '+JSON.stringify(projectNavigation));
+
    await menu();await page.locator('#checkSyntax').click();
    await page.waitForFunction(()=>document.getElementById('syntaxIssues').children.length>0);
    assert.ok(await page.locator('#syntaxDialog').evaluate(e=>e.scrollWidth<=e.clientWidth+1),'Syntax results must fit a narrow screen');

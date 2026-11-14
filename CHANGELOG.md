@@ -173,3 +173,5 @@ Automated release: run 43613292921 passed 44 Node tests, Chromium/WebKit, 199 WK
 - Existing syntax checkers, tabs, draft recovery, Vim and approved control/document font sizes are retained.
 
 Owner confirmed 0.7.0 (20) worked flawlessly on physical testing before authorizing this update.
+
+- Native UI verification found that scrolling the Projects panel could move Back to editor above the iPhone screen. Project navigation now stays in a separate fixed header, with browser geometry and native direct-tap regressions.
