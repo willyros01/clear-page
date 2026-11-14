@@ -90,7 +90,7 @@ if(tabbed){
  $('exitDialog').querySelector('p').textContent='Save a copy before closing, or discard this tab’s unsaved changes. Other tabs and existing files are kept.';
  workspace=createDocumentTabs({editor,storage:localStorage,
  getMeta:()=>({name:$('name').value,language:$('language').value,manual:languageManual}),
- setMeta:t=>{loading=true;$('name').value=t.name;$('language').value=languages[t.language]?t.language:'plain';languageManual=!!t.manual;editor.setLanguage($('language').value);editor.setDark(document.body.classList.contains('dark'));editor.setVim($('editingMode').value==='vim');dirty=!!t.dirty;},
+ setMeta:t=>{loading=true;$('name').value=t.name;const id=!t.manual&&!t.state?languageForDocument(t.name,t.text):t.language;$('language').value=languages[id]?id:'plain';t.language=$('language').value;languageManual=!!t.manual;editor.setLanguage($('language').value);editor.setDark(document.body.classList.contains('dark'));editor.setVim($('editingMode').value==='vim');dirty=!!t.dirty;},
  changed:()=>{loading=false;counts();syntax?.changed()},
  status:ok=>{$('status').textContent=ok?'Tabs recovered on this device':'Draft not saved — use Save file';$('recoveryWarning').hidden=ok},
  render:items=>{
