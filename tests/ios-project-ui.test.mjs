@@ -9,9 +9,10 @@ test('iOS Basic/Advanced preferences preserve work; project UI creates, saves, e
  Object.defineProperty(globalThis,'navigator',{configurable:true,value:window.navigator});globalThis.webkit=window.webkit={messageHandlers:{bridge:{postMessage(){}}}};
  window.HTMLDialogElement.prototype.showModal=function(){this.open=true};window.HTMLDialogElement.prototype.close=function(){this.open=false};window.Range.prototype.getClientRects=()=>[];window.Range.prototype.getBoundingClientRect=()=>({left:0,right:0,top:0,bottom:0,width:0,height:0});
  const files=new Map(),dirs=new Set();let shares=0;
- globalThis.Capacitor={PluginHeaders:[{name:'Filesystem',methods:['readFile','writeFile','mkdir','readdir'].map(name=>({name,rtype:'promise'}))},{name:'Share',methods:[{name:'share',rtype:'promise'}]}],nativePromise:async(plugin,method,o)=>{
+ globalThis.Capacitor={PluginHeaders:[{name:'Filesystem',methods:['readFile','writeFile','mkdir','readdir','stat'].map(name=>({name,rtype:'promise'}))},{name:'Share',methods:[{name:'share',rtype:'promise'}]}],nativePromise:async(plugin,method,o)=>{
   if(plugin==='Share'){shares++;return {activityType:'SaveToFiles'}}
-  if(method==='mkdir'){dirs.add(o.path);return {}}
+  if(method==='mkdir'){if(dirs.has(o.path))throw Object.assign(Error('Directory already exists'),{code:'OS-PLUG-FILE-0010'});dirs.add(o.path);return {}}
+  if(method==='stat')return {type:dirs.has(o.path)?'directory':'file'};
   if(method==='writeFile'){const parts=o.path.split('/');for(let i=1;i<parts.length;i++)dirs.add(parts.slice(0,i).join('/'));files.set(o.path,o.data);return {uri:'file:///'+o.path}}
   if(method==='readFile'){if(!files.has(o.path))throw Error('Missing file');return {data:files.get(o.path)}}
   if(method==='readdir'){const result=new Map();for(const path of [...dirs,...files.keys()])if(path.startsWith(o.path+'/')){const name=path.slice(o.path.length+1).split('/')[0];if(name)result.set(name,{name,type:dirs.has(o.path+'/'+name)?'directory':'file'})}return {files:[...result.values()]}}

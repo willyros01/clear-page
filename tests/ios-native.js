@@ -136,9 +136,9 @@ import {Filesystem,Directory,Encoding} from '@capacitor/filesystem';
   const prior=text(),priorName=$('name').value;$('basicMode').click();assert(text()===prior&&$('name').value===priorName,'Switch to Basic preserves text and filename');$('advancedMode').click();assert(text()===prior,'Switch to Advanced preserves edits');
   $('projectsButton').click();await until(()=>$('projects').open&&!$('createProject').disabled,'Project dialog ready');
   $('projectName').value='Native verification';await $('createProject').onclick();
-  const projectId=localStorage.getItem('ate-current-project-v1');assert(!!projectId,'Native project created');
-  $('projectFileName').value='src';await $('newProjectFolder').onclick();
-  $('projectFileName').value='src/main.c';await $('newProjectFile').onclick();
+  const projectId=localStorage.getItem('ate-current-project-v1');assert(!!projectId&&$('projectHeading').textContent==='Native verification','Native project created and listed: '+$('projectStatus').textContent);
+  $('projectFileName').value='src';await $('newProjectFolder').onclick();assert($('projectStatus').textContent==='Folder created.','Native project folder created: '+$('projectStatus').textContent);
+  $('projectFileName').value='src/main.c';await $('newProjectFile').onclick();assert($('name').value==='src/main.c'&&!$('projects').open,'Project file opened in a bound tab: '+$('projectStatus').textContent);
   view.dispatch({changes:{from:0,insert:'// café\r\nint main(void) { return 0; }\r\n'}});assert(await $('save').onclick(),'Project tab saves through real native filesystem');
   const store=createProjectStore(iosProjectAdapter());let original=await store.read(projectId,'src/main.c');assert(original.text===text(),'Project UTF-8 disk bytes match editor text');
   $('name').value='src/copy';$('name').dispatchEvent(new Event('change'));assert(await $('save').onclick(),'Project Save As accepts extensionless name');
@@ -147,7 +147,7 @@ import {Filesystem,Directory,Encoding} from '@capacitor/filesystem';
   await store.add(projectId,[{path:'src/windows.c',text:'// café\r\nint value;\r\n'}]);assert((await store.read(projectId,'src/windows.c')).text==='// café\r\nint value;\r\n','Native project storage preserves UTF-8 and CRLF bytes');
   const zip=await store.export(projectId),imported=await store.import(zip.bytes);assert(imported.id!==projectId,'ZIP import creates a separate project');assert((await store.read(imported.id,'src/main.c')).text===original.text,'ZIP round trip preserves native project text');
   $('projectsButton').click();await until(()=>$('projects').open&&!$('createProject').disabled,'Projects reopen');$('projectSelect').value=projectId;await $('projectSelect').onchange();
-  $('projectFileName').value='recovery.c';await $('newProjectFile').onclick();view.dispatch({changes:{from:0,insert:'int main(void) { return 0; }'}});assert(await $('save').onclick(),'Recovery project file saved');
+  $('projectFileName').value='recovery.c';await $('newProjectFile').onclick();assert($('name').value==='recovery.c','Recovery project tab opened: '+$('projectStatus').textContent);view.dispatch({changes:{from:0,insert:'int main(void) { return 0; }'}});assert(await $('save').onclick(),'Recovery project file saved');
   while(tabs().length>1){const other=tabs().find(t=>t.getAttribute('aria-label')!=='recovery.c');other.click();closeCurrent();}
   await open('print(42)','recovery.py',true);$('language').value='plain';$('language').dispatchEvent(new Event('change'));view.dispatch({changes:{from:view.state.doc.length,insert:'\n# unsaved'}});
   $('basicMode').click();
@@ -155,6 +155,6 @@ import {Filesystem,Directory,Encoding} from '@capacitor/filesystem';
   await Filesystem.writeFile({path:'ate-ipad-restart-ready.json',directory:Directory.Data,encoding:Encoding.UTF8,data:'ready'});return;
   }
   }
- }catch(e){error=(e.message||String(e))+'\n'+(e.stack||'');const v=EditorView.findFromDOM(document.querySelector('.cm-editor'));if(v)error+='\nDocument: '+JSON.stringify(v.state.doc.toString())+'\nSelection: '+JSON.stringify(v.state.selection.toJSON());}
+ }catch(e){error=(e.message||String(e))+'\n'+(e.stack||'');const v=EditorView.findFromDOM(document.querySelector('.cm-editor'));if(v)error+='\nDocument: '+JSON.stringify(v.state.doc.toString())+'\nSelection: '+JSON.stringify(v.state.selection.toJSON())+'\nProject status: '+$('projectStatus').textContent;}
  await Filesystem.writeFile({path:'ate-ipad-syntax-verification.json',directory:Directory.Data,encoding:Encoding.UTF8,data:JSON.stringify({marker,passed,checks,error},null,2)});
 })();
