@@ -188,15 +188,17 @@ Owner executed Cuberoot `atec.txt` successfully. Independent public aggregation 
 
 All website/cockpit/Firebase/email items are complete. Live acceptance run 43302545498 at Cuberoot source `3d68a1e5114b8cdac02a92a810b27c434d40dbe8` verified three real downloads, release-file checksums and new anonymous timestamp/build/America-Toronto events: ATE Windows, Mac Universal and Android each 0 → 1 lifetime click. Ten-category plain-text/HTML email and totals passed; the single requested test email was independently found in Gmail Inbox at 15:40:35 Toronto and confirmed by the owner’s screenshot. Subject: Cuberoot Download Clicks - 2026-11-12 (TEST). Morning-cutoff ATE rows correctly show zero; afternoon verification clicks belong to the next daily report. The existing 09:17 Toronto cron job, numeric workflow ID 386014186, daily duplicate protection and sender credentials/recipient were preserved. Corrected legacy preflight 43303064986 passed. See Cuberoot docs/APK-COCKPIT.md for full evidence. Editor/parser development remains paused; no app rebuild occurred.
 
-## iOS tabs — 0.7.0 (20), in progress
+## iOS tabs — 0.7.0 (20), TestFlight released; physical acceptance pending
 
 - [x] Independent document tabs, unsaved indicators, per-tab in-session undo/selection/scroll/language.
 - [x] Save/cancel/discard guards; preserve extensionless names; protect edits during sharing.
 - [x] Workspace recovery, legacy migration, 12-tab limit, visible storage-failure warning.
-- [ ] Chromium/WebKit regression checks.
-- [ ] iPhone and iPad simulator: all ten parsers, editing/Vim, tabs and process restart.
-- [ ] Native XCUITest: tab switching, close cancellation, actual Files/Share cancellation, background/rotation/relaunch.
-- [ ] TestFlight upload after all automated gates pass.
+- [x] Chromium/WebKit regression checks.
+- [x] iPhone and iPad simulator: all ten parsers, editing/Vim, tabs and process restart.
+- [x] Native XCUITest: tab switching, close cancellation, actual Files/Share cancellation, background/rotation/relaunch.
+- [x] TestFlight upload after all automated gates pass.
 - [ ] Physical iPhone/iPad validation by owner.
 
 Tabs are enabled on iOS only. Current Mac/Windows/Android distributions remain 0.6.0 (19).
+
+Final automated gates: run 43613292921 at source `d23b3ff66fc3555983027a74cf75d01a8c307242` passed 44 Node tests, Chromium/WebKit, 199 native-webview assertions per device, and full XCUITest on both iPhone/iPad. TestFlight is VALID / IN_BETA_TESTING in the existing internal group; Apple build ID `ecae3ae1-3131-411d-90c5-c05caab20d7f`. See IOS-TABS-TEST-PLAN.md for coverage and physical-device limits.

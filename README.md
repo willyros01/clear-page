@@ -1,12 +1,14 @@
 # Another Text Editor (ATE)
 
-Current release: **0.6.0 (19)** for iPhone/iPad, universal Mac TestFlight/website, Windows and Android. All existing offline checkers are retained, with Python syntax, SQLite SQL and selected Markdown lint now included. Menus and configuration use **12pt text**, headings at most **14pt**. Document text keeps an independent **27pt / 36px default**, adjustable from 10 to 54pt.
+Current iOS TestFlight release: **0.7.0 (20)** for iPhone/iPad, with document tabs, independent undo/selection/scroll and workspace recovery. Universal Mac TestFlight/website, Windows and Android remain **0.6.0 (19)**. All existing offline checkers are retained, with Python syntax, SQLite SQL and selected Markdown lint now included. Menus and configuration use **12pt text**, headings at most **14pt**. Document text keeps an independent **27pt / 36px default**, adjustable from 10 to 54pt.
 
-[Downloads](https://www.cuberoot-systems.com/ate/) · [Release verification](RELEASE-0.6.0.md) · [Progress tracking](TODO.md)
+[Downloads](https://www.cuberoot-systems.com/ate/) · [iOS tabs release verification](RELEASE-0.7.0.md) · [0.6.0 platform release](RELEASE-0.6.0.md) · [Progress tracking](TODO.md)
 
 ## Build and verify
 
 Use Node.js 22 or newer. Run `npm ci`, `npm test`, `npm run build`, `npx playwright install --with-deps chromium webkit`, then `npm run test:browser`. Serve `dist/` using a static web server. CodeMirror, parser workers, C Wasm assets and license notices are bundled locally.
+
+The iOS tabs workflow is `.github/workflows/ios-tabs.yml` on `ios-tabs`. It gates upload on 44 Node tests, Chromium/WebKit, iPhone/iPad native-webview and XCUITest suites; release evidence is in RELEASE-0.7.0.md.
 
 The coordinated release workflow is `.github/workflows/all-platforms.yml` on desktop. Android compatibility/file-manager rebuilds use `android-052.yml` with the same release version/build. Native iPad/Mac/Windows webviews and Android document-provider tests gate production packaging. Verification drivers and timing probes are excluded from release assets. Version/build are recorded in release.json; current release evidence is in RELEASE-0.6.0.md. Automated evidence does not replace physical-device acceptance.
 

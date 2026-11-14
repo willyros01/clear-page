@@ -21,3 +21,7 @@ Target: iPhone/iPad, 0.7.0 (20). Other platform distributions stay at 0.6.0 (19)
 - No code samples are executed by syntax checking.
 
 Owner acceptance: open C/header/Python files, edit and switch tabs, save each to Files and reopen the copies, cancel a save, close/discard one tab, background/restart, verify text and filenames, repeat using hardware-keyboard Vim and touch editing.
+
+## Recorded result — 14 November 2026
+
+Run 43613292921 at `d23b3ff66fc3555983027a74cf75d01a8c307242` passed every gate: 44 Node tests, Chromium/WebKit, 199 native-webview assertions per simulator, actual native Files/Share cancellation, two-file typing/switching, close cancellation, process restart, rotation and background/resume. TestFlight 0.7.0 (20) is VALID / IN_BETA_TESTING in the existing internal group. Physical-device and Files-destination acceptance remain pending. See RELEASE-0.7.0.md.
