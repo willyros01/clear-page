@@ -107,9 +107,10 @@ import {Filesystem,Directory,Encoding} from '@capacitor/filesystem';
   }
   for(const id of ['menu','cSettings','compilerInstall','projects']){
    const dialog=$(id);dialog.showModal();
-   assert(id==='projects'?parseFloat(getComputedStyle(dialog).fontSize)>=20:getComputedStyle(dialog).fontSize==='16px',id+' control text follows its approved size');
+   // Owner approved 15 Nov 2026: Projects uses the Menu's sizes.
+   assert(getComputedStyle(dialog).fontSize==='16px',id+' control text follows its approved size');
    for(const element of dialog.querySelectorAll('button,input,select,textarea,label,h1,h2,h3,p')){
-    if(element.getBoundingClientRect().width&&id!=='projects')assert(parseFloat(getComputedStyle(element).fontSize)<=18.67,'Control text is at most 14pt: '+id);
+    if(element.getBoundingClientRect().width)assert(parseFloat(getComputedStyle(element).fontSize)<=18.67,'Control text is at most 14pt: '+id);
    }
    dialog.close();
   }
