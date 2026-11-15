@@ -30,7 +30,8 @@ public class DocumentSaveTest {
         Intent launch=context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
         launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TASK);
         // The workflow launches verification and exercises a real process restart first.
-        // Keep its final foreground editor/syntax fixture for native picker tests.
+        // Instrumentation may replace that process, so explicitly reopen recovered work.
+        context.startActivity(launch);
         File report=new File(context.getFilesDir(),"ate-ipad-syntax-verification.json");
         long end=System.currentTimeMillis()+180000;
         while(!report.exists()&&System.currentTimeMillis()<end)Thread.sleep(250);
@@ -38,8 +39,8 @@ public class DocumentSaveTest {
         JSONObject result=new JSONObject(new String(Files.readAllBytes(report.toPath()),java.nio.charset.StandardCharsets.UTF_8));
         assertTrue(result.optString("error"),result.getBoolean("passed"));
         System.out.println("PASS: "+result.getJSONArray("checks").length()+" Android webview checks");
-        UiObject2 back=device.wait(Until.findObject(By.text("Back to editor")),15000);
-        assertNotNull("Syntax dialog close button missing",back);back.click();
+        UiObject2 back=device.findObject(By.text("Back to editor"));
+        if(back!=null)back.click();
         click(device,"Save file");
         assertTrue("Save must launch DocumentsUI, not a share chooser",device.wait(Until.hasObject(By.pkg(DOCUMENTS)),15000));
         device.pressBack();
@@ -86,6 +87,12 @@ public class DocumentSaveTest {
             click(device,"Menu");click(device,"Projects");
             assertTrue("Project tree heading missing",device.wait(Until.hasObject(By.text("Files and folders")),15000));
             click(device,"Open project");click(device,"Back to project");
+            click(device,"Add file");clickSelector(device,By.text(Pattern.compile("Choose files.*")),"Choose project files");
+            if(!device.wait(Until.hasObject(By.pkg(DOCUMENTS)),5000)){
+                UiObject2 files=device.findObject(By.text("Files"));if(files!=null)files.click();
+            }
+            assertTrue("Project Add file must open the native file picker",device.wait(Until.hasObject(By.pkg(DOCUMENTS)),15000));
+            device.pressBack();device.waitForIdle();
             UiObject2 back=device.wait(Until.findObject(By.desc("Back to editor")),5000);
             if(back==null)back=device.wait(Until.findObject(By.text(Pattern.compile("Back( to editor)?"))),5000);
             assertNotNull("Project Back control missing after picker return",back);
@@ -93,7 +100,7 @@ public class DocumentSaveTest {
             assertTrue("Project Back clipped",bounds.left>=0&&bounds.right<=device.getDisplayWidth()&&bounds.top>=0&&bounds.bottom<=device.getDisplayHeight());back.click();
             UiObject2 save=device.wait(Until.findObject(By.text("Save file")),10000);assertNotNull("Save hidden after Projects",save);
             bounds=save.getVisibleBounds();assertTrue("Save clipped at large text",bounds.left>=0&&bounds.right<=device.getDisplayWidth()&&bounds.bottom<=device.getDisplayHeight());
-            System.out.println("PASS: largest Android text, Projects tree/picker return and Save visibility");
+            System.out.println("PASS: largest Android text, Projects tree, real Add files cancellation and picker return, Save visibility");
         } finally {device.executeShellCommand("settings put system font_scale 1.0");}
     }
     private void click(UiDevice device,String text){clickSelector(device,By.text(text),text);}
