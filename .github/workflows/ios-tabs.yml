@@ -9,7 +9,7 @@ concurrency:
   group: ate-ios-tabs
   cancel-in-progress: true
 env:
-  ATE_BUILD_NUMBER: "25"
+  ATE_BUILD_NUMBER: "26"
 jobs:
   regression:
     runs-on: ubuntu-latest

@@ -9,7 +9,7 @@ concurrency:
   group: ate-android-083
   cancel-in-progress: true
 env:
-  ATE_BUILD_NUMBER: '25'
+  ATE_BUILD_NUMBER: '26'
 jobs:
   browser:
     runs-on: ubuntu-latest

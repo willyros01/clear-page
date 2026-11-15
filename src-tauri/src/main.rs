@@ -77,6 +77,10 @@ fn editor_verification_result(app: tauri::AppHandle, passed: bool, report: Strin
     app.exit(if passed { 0 } else { 1 });
 }
 
+// True inside the Mac App Store sandbox, where macOS refuses to start Clang.
+#[tauri::command]
+fn app_sandboxed() -> bool { std::env::var_os("APP_SANDBOX_CONTAINER_ID").is_some() }
+
 // Open the window no larger than the screen it is on (above the taskbar or Dock),
 // so the bottom line and the right-hand buttons are never off-screen.
 fn fit_to_screen(window: &tauri::WebviewWindow) {
@@ -125,14 +129,14 @@ fn main() {
     #[cfg(feature = "editor-verification")]
     let builder = builder
         .manage(CVerificationCalls(std::sync::atomic::AtomicUsize::new(0)))
-        .invoke_handler(tauri::generate_handler![project_io, save_project_zip, save_document, exit_editor, check_c, choose_c_compiler, choose_c_project, compiler_setup_info, install_c_compiler, cancel_compiler_setup, editor_verification_result, c_verification_calls, window_fit_report])
+        .invoke_handler(tauri::generate_handler![project_io, save_project_zip, save_document, exit_editor, check_c, choose_c_compiler, choose_c_project, compiler_setup_info, install_c_compiler, cancel_compiler_setup, app_sandboxed, editor_verification_result, c_verification_calls, window_fit_report])
         .on_page_load(|webview, payload| {
             if matches!(payload.event(), tauri::webview::PageLoadEvent::Finished) {
                 let _ = webview.eval(include_str!("../../tests/native-editor.js"));
             }
         });
     #[cfg(not(feature = "editor-verification"))]
-    let builder = builder.invoke_handler(tauri::generate_handler![project_io, save_project_zip, save_document, exit_editor, check_c, choose_c_compiler, choose_c_project, compiler_setup_info, install_c_compiler, cancel_compiler_setup]);
+    let builder = builder.invoke_handler(tauri::generate_handler![project_io, save_project_zip, save_document, exit_editor, check_c, choose_c_compiler, choose_c_project, compiler_setup_info, install_c_compiler, cancel_compiler_setup, app_sandboxed]);
     let app = builder
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {

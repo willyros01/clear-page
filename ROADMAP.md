@@ -2,6 +2,9 @@
 
 Work in small, reviewable steps. Keep one shared editor for all platforms.
 
+## 0.8.5 (26) — editing space and Mac App Store C checking
+Owner-approved layout from real-screen mock-ups; Clang hidden only inside the Mac App Store sandbox. Physical-device acceptance recorded separately from CI.
+
 ## 0.8.4 (25) — window fits the screen; all platforms on one source
 Release 0.8.4 (25) from one merged source for web, Mac, Windows, Android, iPhone and iPad. Mac/Windows windows fit the screen. Physical-device acceptance is recorded separately from CI.
 

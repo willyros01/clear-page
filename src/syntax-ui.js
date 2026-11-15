@@ -3,28 +3,30 @@ import {createCheckRunner} from './check-runner.js';
 import {checkableLanguages,MAX_CHECK_LENGTH} from './syntax-common.js';
 import {languageLabels} from './languages.js';
 
-export function setupSyntax({editor,getDocument,nativeCheck,chooseCompiler,chooseProject,compilerSetupInfo,installCCompiler,cancelCompilerSetup,desktop,keepIdleWorker=false,isEnabled=()=>true}) {
+export function setupSyntax({editor,getDocument,nativeCheck,chooseCompiler,chooseProject,compilerSetupInfo,installCCompiler,cancelCompilerSetup,desktop,isSandboxed=null,keepIdleWorker=false,isEnabled=()=>true}) {
  const $=id=>document.getElementById(id),settingsKey='ate-syntax-preferences-v1';
+ // Clang runs only in desktop builds that may start other programs (not the Mac App Store sandbox).
+ let clang=desktop;
  let revision=0,timer,diagnostics=[],settings={automatic:true,cChecker:'basic',standard:'c17',includes:'',defines:''};
  try{Object.assign(settings,JSON.parse(localStorage.getItem(settingsKey))||{})}catch{}
  $('autoCheck').checked=settings.automatic!==false;
- $('cChecker').value=desktop&&settings.cChecker==='clang'?'clang':'basic';
- $('cCheckerLabel').hidden=!desktop;
+ $('cChecker').value=clang&&settings.cChecker==='clang'?'clang':'basic';
+ $('cCheckerLabel').hidden=!clang;
  $('cStandard').value=['c99','c11','c17','c23'].includes(settings.standard)?settings.standard:'c17';
  $('cIncludes').value=typeof settings.includes==='string'?settings.includes:'';
  $('cDefines').value=typeof settings.defines==='string'?settings.defines:'';
  $('cSettingsButton').textContent=desktop?'Syntax / C settings':'About syntax checking';$('cSettingsTitle').textContent='Syntax checking';
- $('chooseCompiler').disabled=$('chooseProject').disabled=!desktop;
+ $('chooseCompiler').disabled=$('chooseProject').disabled=!clang;
  function updateMode(){
-  const advanced=desktop&&$('cChecker').value==='clang';
+  const advanced=clang&&$('cChecker').value==='clang';
   $('cAdvanced').hidden=!advanced;
   $('cPlatformNote').textContent=advanced?'Advanced checks use a local Clang compiler. Choose a project folder for relative headers; paths and macros are optional.':'Basic C syntax checking is included and works offline. No compiler download is needed. It checks C structure, but not headers, macro expansion, types or C-standard conformance.';
  }
  updateMode();
  if(!desktop)for(const id of ['chooseCompiler','compilerChoice','chooseProject','projectChoice','cStandard','cIncludes','cDefines'])($(id).closest('label')||$(id)).hidden=true;
  const runner=createCheckRunner({workerFactory:()=>new Worker(new URL('syntax-worker.js',document.baseURI)),nativeCheck:desktop?nativeCheck:null,keepIdleWorker});
- function options(){return {cChecker:desktop?$('cChecker').value:'basic',standard:$('cStandard').value,includes:$('cIncludes').value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean),defines:$('cDefines').value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean)}}
- const compilerInstall=setupCompilerInstall({desktop,info:compilerSetupInfo,install:installCCompiler,cancel:cancelCompilerSetup,chooseCompiler,ready:()=>check(),enabled:()=>desktop&&$('cChecker').value==='clang'});
+ function options(){return {cChecker:clang?$('cChecker').value:'basic',standard:$('cStandard').value,includes:$('cIncludes').value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean),defines:$('cDefines').value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean)}}
+ const compilerInstall=setupCompilerInstall({desktop,info:compilerSetupInfo,install:installCCompiler,cancel:cancelCompilerSetup,chooseCompiler,ready:()=>check(),enabled:()=>clang&&$('cChecker').value==='clang'});
  function render(result) {
   compilerInstall.missing(result.setupNeeded===true);
   diagnostics=result.diagnostics||[];editor.diagnostics(diagnostics);
@@ -56,7 +58,7 @@ export function setupSyntax({editor,getDocument,nativeCheck,chooseCompiler,choos
   if(!isEnabled()){runner.dispose();return}
   if($('autoCheck').checked&&checkableLanguages.has(getDocument().language))timer=setTimeout(check,700);
  }
- function saveSettings(){try{localStorage.setItem(settingsKey,JSON.stringify({automatic:$('autoCheck').checked,cChecker:desktop?$('cChecker').value:'basic',standard:$('cStandard').value,includes:$('cIncludes').value,defines:$('cDefines').value}))}catch{}changed()}
+ function saveSettings(){try{localStorage.setItem(settingsKey,JSON.stringify({automatic:$('autoCheck').checked,cChecker:clang?$('cChecker').value:'basic',standard:$('cStandard').value,includes:$('cIncludes').value,defines:$('cDefines').value}))}catch{}changed()}
  $('cChecker').onchange=()=>{updateMode();compilerInstall.refresh();saveSettings()};
  for(const id of ['autoCheck','cStandard','cIncludes','cDefines'])$(id).onchange=saveSettings;
  $('checkSyntax').onclick=()=>{$('menu').close();if(!$('syntaxDialog').open)$('syntaxDialog').showModal();check()};
@@ -68,5 +70,6 @@ export function setupSyntax({editor,getDocument,nativeCheck,chooseCompiler,choos
  for(const [id,choose,label] of [['chooseCompiler',chooseCompiler,'compilerChoice'],['chooseProject',chooseProject,'projectChoice']])$(id).onclick=async()=>{
   try{const path=await choose();if(path){$(label).textContent=path;changed()}}catch{$(label).textContent='Selection could not complete. Please try again.'}
  };
+ if(desktop&&isSandboxed)Promise.resolve().then(isSandboxed).then(sandboxed=>{if(sandboxed!==true)return;clang=false;$('cChecker').value='basic';$('cCheckerLabel').hidden=true;$('chooseCompiler').disabled=$('chooseProject').disabled=true;for(const id of ['chooseCompiler','compilerChoice','chooseProject','projectChoice','cStandard','cIncludes','cDefines'])($(id).closest('label')||$(id)).hidden=true;updateMode();compilerInstall.refresh();changed()}).catch(()=>{});
  changed();return {changed,check};
 }

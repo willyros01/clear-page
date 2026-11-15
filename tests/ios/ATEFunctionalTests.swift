@@ -262,6 +262,14 @@ final class ATEFunctionalTests: XCTestCase {
         assertToolbarVisible()
         editor().tap(); editor().typeText("Large text save check")
         assertToolbarVisible()
+        // 0.8.5: the word-count line gives its space to the editor while the keyboard is up.
+        let counts = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "characters")).firstMatch
+        if app.keyboards.count > 0 {
+            XCTAssertFalse(counts.exists && counts.isHittable, app.debugDescription)
+            let typing = XCTAttachment(screenshot: app.screenshot())
+            typing.name = "Editor with keyboard up"
+            typing.lifetime = .keepAlways; add(typing)
+        }
         app.buttons["Save file"].tap()
         dismissShareSheet()
         assertWord("Large")
@@ -277,7 +285,8 @@ final class ATEFunctionalTests: XCTestCase {
         rotateToLandscape(false)
         menu(); finishMenu()
         assertToolbarVisible()
-        print("PASS native UI: Menu, Close and Save fully visible, status bar clear, keyboard, native Save cancellation and rotation")
+        if app.keyboards.count == 0 { XCTAssertTrue(counts.waitForExistence(timeout: 10), app.debugDescription) }
+        print("PASS native UI: Menu, Close and Save fully visible, status bar clear, bottom line hidden while typing, native Save cancellation and rotation")
     }
     func projectWorkspace() {
         menu(); setMode("Advanced"); app.buttons["Projects"].tap()

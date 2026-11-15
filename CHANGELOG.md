@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.5 (26) — more room to edit; Clang only where it can run
+- Editing screen: one top row (Menu, tabs, Exit, Save); the version moves into the Menu title; the "Open files" heading stays for screen readers only. Long tab names keep their start and end (full name on long press/hover).
+- Bottom line is slim; the full "Opened …" and other messages move into it and wrap rather than being cut. On touch devices the line hides while the on-screen keyboard is up.
+- Projects uses the Menu's sizes (12pt controls, 14pt headings) with the full folder tree unchanged.
+- Mac App Store (sandboxed) build: the Clang choice is hidden because the sandbox blocks starting Clang (xcrun refuses to run in an App Sandbox); the built-in C check remains. Cuberoot Mac and Windows keep Clang.
+
 ## 0.8.4 (25) — window fits the screen; one shared code base
 - Mac and Windows: when the screen (above the taskbar or Dock) is smaller than the normal 1200 x 850 window, ATE opens the window at the screen's size and centres it, so the Syntax line and Save button are never off-screen. Larger screens keep the normal size. Native tests now require the whole window inside the screen and the Syntax line and Save button inside the window.
 - The tested Android 0.8.3 fixes (older WebView support, Android tab scroll restore, single-open syntax dialogs, no re-save while exiting) are merged into the shared code, so web, Mac, Windows, Android, iPhone and iPad build from the same source.
