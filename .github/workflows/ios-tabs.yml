@@ -92,6 +92,13 @@ jobs:
         run: |
           if ! ruby -e "require 'xcodeproj'"; then gem install --user-install xcodeproj --no-document; fi
           ruby tests/ios/add-ui-tests.rb
+      - name: Focused project layout and nested-dialog accessibility regression
+        run: |
+          set -o pipefail
+          DEVICE=$(cat "$RUNNER_TEMP/ipad-device.txt")
+          xcrun simctl terminate "$DEVICE" io.github.willyros01.clearpage || true
+          xcrun simctl uninstall "$DEVICE" io.github.willyros01.clearpage
+          xcodebuild test -project ios/App/App.xcodeproj -scheme ATEFunctional -configuration Debug -destination "platform=iOS Simulator,id=$DEVICE" -derivedDataPath "$RUNNER_TEMP/DerivedData" -only-testing:ATEFunctionalTests/ATEFunctionalTests/testProjectLayoutAccessibility -resultBundlePath "$RUNNER_TEMP/ATEProjectFocus.xcresult" CODE_SIGNING_ALLOWED=NO -test-timeouts-enabled YES -default-test-execution-time-allowance 600 -maximum-test-execution-time-allowance 900 2>&1 | tee "$RUNNER_TEMP/project-focus-tests.log" | awk '/Test Case|PASS native|error:|failed|TEST SUCCEEDED/ { print; fflush() }' || { tail -180 "$RUNNER_TEMP/project-focus-tests.log"; exit 1; }
       - name: Native functional tests including Files and Share cancellation
         run: |
           set -o pipefail
@@ -114,6 +121,8 @@ jobs:
             ${{ runner.temp }}/ipad-syntax.json
             ${{ runner.temp }}/ipad-syntax.png
             ${{ runner.temp }}/ui-tests.log
+            ${{ runner.temp }}/project-focus-tests.log
+            ${{ runner.temp }}/ATEProjectFocus.xcresult
             ${{ runner.temp }}/ATEFunctional.xcresult
             ${{ runner.temp }}/ATELargeText.xcresult
             ${{ runner.temp }}/large-text-tests.log
