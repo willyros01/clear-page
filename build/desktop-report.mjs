@@ -13,3 +13,7 @@ const mac=jobs.some(j=>j.name.includes('mac-release')&&j.name.includes('website'
 const report={app:'ATE',workflow:'ATE Apple and Desktop',branch:'desktop',version,run_id:Number(process.env.GITHUB_RUN_ID),source_sha:process.env.GITHUB_SHA,web_artifact_id:web?.id??null,windows_artifact_id:windows?.id??null,mac_artifact_id:mac?.id??null,created_at:new Date().toISOString()};
 mkdirSync('desktop-report',{recursive:true});writeFileSync('desktop-report/ate-desktop-last-run.json',JSON.stringify(report,null,2)+'\n');
 console.log('Desktop report: Windows artifact '+(windows?.id??'unavailable')+', Mac release artifact '+(mac?.id??'unavailable'));
+
+const apk=artifacts.find(x=>x.name==='ate-android-apk'&&!x.expired);
+if(!web||!windows||!mac||!apk)throw Error('All verified platform artifacts are required before publication');
+writeFileSync('desktop-report/ate-last-run.json',JSON.stringify({workflow:'ATE Apple and Desktop',branch:'desktop',outcome:'success',run_id:Number(process.env.GITHUB_RUN_ID),run_number:Number(process.env.ATE_BUILD_NUMBER),source_sha:process.env.GITHUB_SHA,artifact_id:apk.id,apk_name:'ate.v'+version+'.apk',version,signer_sha256:readFileSync('resources/android-signer.sha256','utf8').trim(),reported_at:new Date().toISOString()},null,2)+'\n');

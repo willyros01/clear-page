@@ -6,6 +6,13 @@ on:
       - desktop
     paths:
       - .github/workflows/all-platforms.yml
+      - 'src/**'
+      - 'src-tauri/**'
+      - 'tests/**'
+      - 'build/**'
+      - 'scripts/**'
+      - 'index.html'
+      - 'package*.json'
   workflow_dispatch: {}
 permissions:
   contents: read
@@ -16,6 +23,7 @@ env:
   ATE_BUILD_NUMBER: "24"
 jobs:
   browser:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[all-platforms]')
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -104,7 +112,7 @@ jobs:
           name: ate-mac-native-evidence
           path: ${{ runner.temp }}/mac-testflight-native.txt
   mac-release:
-    needs: mac-build
+    needs: [mac-build, windows, android]
     strategy:
       fail-fast: false
       matrix:
@@ -120,6 +128,11 @@ jobs:
       APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
     steps:
       - uses: actions/checkout@v4
+      - name: Require the latest tested source
+        shell: bash
+        run: |
+          CURRENT=$(git ls-remote origin refs/heads/desktop | cut -f1)
+          if [ "$CURRENT" != "$GITHUB_SHA" ]; then echo 'Newer desktop work exists; refusing stale publication.'; exit 1; fi
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -218,6 +231,11 @@ jobs:
           if ($app.HasExited) { throw 'Installed app exited unexpectedly' }
           Stop-Process -Id $app.Id
           'PASS: exact Windows installer installed and app launched; physical acceptance pending' | Add-Content "$env:RUNNER_TEMP/compiler-setup-evidence.txt"
+      - name: Require the latest tested source
+        shell: bash
+        run: |
+          CURRENT=$(git ls-remote origin refs/heads/desktop | cut -f1)
+          if [ "$CURRENT" != "$GITHUB_SHA" ]; then echo 'Newer desktop work exists; refusing stale publication.'; exit 1; fi
       - name: Stage verified installer and checksum manifest
         shell: bash
         run: |
@@ -242,7 +260,7 @@ jobs:
             ${{ runner.temp }}/compiler-status.txt
             ${{ runner.temp }}/windows-native.txt
   report:
-    if: ${{ always() }}
+    if: ${{ always() && needs.browser.result == 'success' && needs.windows.result == 'success' && needs.mac-release.result == 'success' && needs.android.result == 'success' }}
     needs:
       - browser
       - windows
@@ -256,12 +274,18 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Require the latest tested source
+        shell: bash
+        run: |
+          CURRENT=$(git ls-remote origin refs/heads/desktop | cut -f1)
+          if [ "$CURRENT" != "$GITHUB_SHA" ]; then echo 'Newer desktop work exists; refusing stale publication.'; exit 1; fi
       - run: node build/desktop-report.mjs
       - name: Publish release result for Cuberoot
         shell: bash
         run: |
           set -euo pipefail
           cp desktop-report/ate-desktop-last-run.json "$RUNNER_TEMP/ate-desktop-last-run.json"
+          cp desktop-report/ate-last-run.json "$RUNNER_TEMP/ate-last-run.json"
           git fetch origin desktop-releases || true
           if git show-ref --verify --quiet refs/remotes/origin/desktop-releases; then
             git checkout -B desktop-releases origin/desktop-releases
@@ -275,6 +299,12 @@ jobs:
           git add ate-desktop-last-run.json
           git commit -m "Record ATE desktop run $GITHUB_RUN_ID"
           git push origin HEAD:desktop-releases
+          git fetch origin apk-releases
+          git checkout -B apk-releases origin/apk-releases
+          cp "$RUNNER_TEMP/ate-last-run.json" ate-last-run.json
+          git add ate-last-run.json
+          git commit -m "Record verified ATE Android release $GITHUB_RUN_ID"
+          git push origin HEAD:apk-releases
     permissions:
       contents: write
       actions: read
@@ -337,6 +367,11 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: bash tests/android/verify.sh
+      - name: Require the latest tested source
+        shell: bash
+        run: |
+          CURRENT=$(git ls-remote origin refs/heads/desktop | cut -f1)
+          if [ "$CURRENT" != "$GITHUB_SHA" ]; then echo 'Newer desktop work exists; refusing stale publication.'; exit 1; fi
       - name: Rebuild production assets without the verification driver
         run: |-
           npm run build
@@ -355,23 +390,6 @@ jobs:
           name: ate-android-apk
           path: out/*.apk
           if-no-files-found: error
-      - name: Record verified APK for Cuberoot
-        env:
-          ARTIFACT_ID: ${{ steps.apk.outputs.artifact-id }}
-          APK_NAME: ${{ steps.sign.outputs.apk_name }}
-        run: |-
-          node --input-type=module <<'NODE'
-          import {readFileSync,writeFileSync} from 'node:fs';
-          const e=process.env;writeFileSync(e.RUNNER_TEMP+'/ate-last-run.json',JSON.stringify({workflow:'ATE Apple and Desktop',branch:'desktop',outcome:'success',run_id:Number(e.GITHUB_RUN_ID),run_number:Number(e.ATE_BUILD_NUMBER),source_sha:e.GITHUB_SHA,artifact_id:Number(e.ARTIFACT_ID),apk_name:e.APK_NAME,version:JSON.parse(readFileSync('package.json')).version,signer_sha256:readFileSync('resources/android-signer.sha256','utf8').trim(),reported_at:new Date().toISOString()},null,2)+'\n');
-          NODE
-          git fetch origin apk-releases
-          git checkout -B apk-releases origin/apk-releases
-          cp "$RUNNER_TEMP/ate-last-run.json" ate-last-run.json
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add ate-last-run.json
-          git commit -m "Record verified ATE Android release $GITHUB_RUN_ID"
-          git push origin HEAD:apk-releases
       - uses: actions/upload-artifact@v4
         if: always()
         with:
