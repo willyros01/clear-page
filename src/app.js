@@ -12,7 +12,7 @@ import {createEditor} from './editor.js';
 import {languageForDocument} from './languages.js';
 import {languages} from './editor.js';
 import {setupSyntax} from './syntax-ui.js';
-import {checkC,chooseCCompiler,chooseCProject,compilerSetupInfo,installCCompiler,cancelCompilerSetup} from './desktop.js';
+import {checkC,chooseCCompiler,chooseCProject,compilerSetupInfo,installCCompiler,cancelCompilerSetup,appSandboxed} from './desktop.js';
 const $=id=>document.getElementById(id);
 const ios=Capacitor.getPlatform()==='ios',tabbed=true;
 const iosViewport=native?setupIOSViewport():null;
@@ -102,7 +102,7 @@ $('closeCopy').onclick=()=>{$('copyDialog').close();editor.focus()};
 $('helpButton').onclick=()=>{$('menu').close();$('help').showModal();$('help').scrollTop=0};
 $('closeHelp').onclick=()=>{$('help').close();editor.focus()};
 editor.commands(save,()=>{$('exit').click()},async()=>{if(ios){closingTabId=workspace.current.id;if(await save()&&!workspace.current.dirty)await closeEditor(true)}else{requestExit();await $('saveExit').onclick()}});
-syntax=setupSyntax({editor,getDocument:()=>({text:editor.value,language:$('language').value,name:$('name').value}),nativeCheck:checkC,chooseCompiler:chooseCCompiler,chooseProject:chooseCProject,compilerSetupInfo,installCCompiler,cancelCompilerSetup,desktop,isEnabled:()=>advanced,keepIdleWorker:Capacitor.getPlatform()==='android'});
+syntax=setupSyntax({editor,getDocument:()=>({text:editor.value,language:$('language').value,name:$('name').value}),nativeCheck:checkC,chooseCompiler:chooseCCompiler,chooseProject:chooseCProject,compilerSetupInfo,installCCompiler,cancelCompilerSetup,desktop,isSandboxed:desktop?appSandboxed:null,isEnabled:()=>advanced,keepIdleWorker:Capacitor.getPlatform()==='android'});
 
 
 function requestClose(id){
@@ -122,8 +122,8 @@ if(tabbed){
  render:items=>{
   $('tabs').textContent='';
   for(const t of items){const group=document.createElement('div'),button=document.createElement('button'),close=document.createElement('button');
-   group.className='document-tab';group.setAttribute('role','presentation');button.type=close.type='button';button.setAttribute('role','tab');button.setAttribute('aria-selected',String(t.active));button.tabIndex=t.active?0:-1;button.onkeydown=e=>{const keys=['ArrowLeft','ArrowRight','Home','End'];if(!keys.includes(e.key)||saving)return;e.preventDefault();const index=items.findIndex(x=>x.id===t.id);const next=e.key==='Home'?0:e.key==='End'?items.length-1:(index+(e.key==='ArrowRight'?1:-1)+items.length)%items.length;workspace.activate(items[next].id);$('tabs').querySelector('[aria-selected=true]').focus()};button.textContent=(t.name||'Untitled')+(t.dirty?' •':'');button.setAttribute('aria-label',(t.name||'Untitled')+(t.dirty?', unsaved changes':''));button.onclick=()=>{if(!saving)workspace.activate(t.id)};
-   close.textContent='×';close.setAttribute('aria-label','Close '+t.name);close.onclick=()=>requestClose(t.id);group.append(button,close);$('tabs').append(group);
+   group.className='document-tab';group.setAttribute('role','presentation');button.type=close.type='button';button.setAttribute('role','tab');button.setAttribute('aria-selected',String(t.active));button.tabIndex=t.active?0:-1;button.onkeydown=e=>{const keys=['ArrowLeft','ArrowRight','Home','End'];if(!keys.includes(e.key)||saving)return;e.preventDefault();const index=items.findIndex(x=>x.id===t.id);const next=e.key==='Home'?0:e.key==='End'?items.length-1:(index+(e.key==='ArrowRight'?1:-1)+items.length)%items.length;workspace.activate(items[next].id);$('tabs').querySelector('[aria-selected=true]').focus()};const full=t.name||'Untitled';button.title=full;button.textContent=(full.length>24?full.slice(0,9)+'…'+full.slice(-12):full)+(t.dirty?' •':'');button.setAttribute('aria-label',(t.name||'Untitled')+(t.dirty?', unsaved changes':''));button.onclick=()=>{if(!saving)workspace.activate(t.id)};
+   close.textContent='×';close.setAttribute('aria-label','Close '+t.name);close.onclick=()=>requestClose(t.id);group.append(button,close);$('tabs').append(group);if(t.active)requestAnimationFrame(()=>group.scrollIntoView({block:'nearest',inline:'nearest'}));
   }
  }
  });
@@ -146,3 +146,6 @@ if(tabbed){
  $('exportCopy').onclick=async()=>{if(saving)return;leaveMenu({focus:false});saving=true;try{notice(await saveText(editor.value,$('name').value.split('/').pop()||'Untitled'))}catch{notice('Export cancelled or unavailable. Your editor tab is kept.')}finally{saving=false;iosViewport?.restore()}};
  applyExperience();persistPreferences();
 }
+
+// Touch devices: hide the bottom line while the on-screen keyboard takes the screen.
+if(window.visualViewport&&matchMedia('(pointer:coarse)').matches){const vv=window.visualViewport;let base=0,wide=innerWidth>innerHeight;const keyboard=()=>{const now=innerWidth>innerHeight;if(now!==wide){wide=now;base=0}base=Math.max(base,vv.height);document.documentElement.classList.toggle('keyboard-up',vv.height<base*0.75)};vv.addEventListener('resize',keyboard);addEventListener('resize',keyboard);keyboard()}

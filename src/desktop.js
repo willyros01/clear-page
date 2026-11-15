@@ -4,6 +4,7 @@ import {clangDiagnostics} from './syntax-common.js';
 
 export const desktop=isTauri();
 export const compilerSetupInfo=()=>invoke('compiler_setup_info');
+export const appSandboxed=()=>invoke('app_sandboxed');
 export const installCCompiler=()=>invoke('install_c_compiler');
 export const cancelCompilerSetup=()=>invoke('cancel_compiler_setup');
 export const chooseCCompiler=()=>invoke('choose_c_compiler');

@@ -113,6 +113,11 @@
   assert($('syntaxDetails').textContent.includes('Headers, macros, types and C-standard conformance are not checked'),'Basic mode discloses header limitations');
   $('closeSyntax').click();
   assert(await nativeCRequests()===0,'Basic C checks do not invoke a native compiler');
+  const sandboxed=await window.__TAURI_INTERNALS__.invoke('app_sandboxed');
+  if(sandboxed){
+   await wait(300);
+   assert($('cCheckerLabel').hidden&&$('cChecker').value==='basic','Mac App Store sandbox offers only the built-in C check');
+  }else{
   $('cSettingsButton').click();
   $('cChecker').value='clang';$('cChecker').dispatchEvent(new Event('change'));
   assert(!$('cAdvanced').hidden,'Advanced Clang controls appear only after selection');
@@ -132,6 +137,7 @@
   assert($('cAdvanced').hidden,'Switching back to Basic hides compiler configuration');
   assert(JSON.parse(localStorage.getItem('ate-syntax-preferences-v1')).cChecker==='basic','C checker preference is persisted');
   $('closeCSettings').click();
+  }
   // The real native project bridge, not a mocked browser filesystem.
   $('projectsButton').click();await until(()=>$('projects').open&&!$('createProject').disabled);
   $('openProjectPicker').click();await until(()=>$('projectPicker').open&&!$('createProject').disabled);
