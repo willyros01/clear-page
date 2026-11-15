@@ -99,6 +99,16 @@ final class ATEFunctionalTests: XCTestCase {
         if !control.isHittable { dismissKeyboard(); app.webViews.firstMatch.swipeDown() }
         control.tap()
     }
+    func cancelDocumentPicker() {
+        // An unrestricted input keeps SQL/extensionless UTIs selectable. iOS
+        // first offers its source menu, then the actual Files document picker.
+        let choose = app.buttons.matching(NSPredicate(format: "label IN %@", ["Choose File", "Choose Files"])).firstMatch
+        if choose.waitForExistence(timeout: 5) { choose.tap() }
+        let cancel = app.buttons["Cancel"].firstMatch
+        XCTAssertTrue(cancel.waitForExistence(timeout: 15), app.debugDescription)
+        cancel.tap()
+        XCTAssertTrue(waitForGone(cancel, timeout: 10), app.debugDescription)
+    }
     func dismissShareSheet() {
         // The iOS 26 share sheet does not always expose a "Close" button
         // (the ZIP export sheet shows only its share and action rows).
@@ -258,8 +268,7 @@ final class ATEFunctionalTests: XCTestCase {
         XCTAssertTrue(folder.waitForExistence(timeout: 10), app.debugDescription)
         XCTAssertEqual(folder.value as? String, "src", app.debugDescription)
         projectButton("Add files")
-        let cancel = app.buttons["Cancel"].firstMatch
-        XCTAssertTrue(cancel.waitForExistence(timeout: 15), app.debugDescription); cancel.tap()
+        cancelDocumentPicker()
         XCTAssertTrue(app.buttons["Close projects"].waitForExistence(timeout: 15), app.debugDescription)
         XCTAssertEqual(folder.value as? String, "src", "Picker cancellation preserves the selected subdirectory")
         projectButton("Close project")
@@ -284,6 +293,15 @@ final class ATEFunctionalTests: XCTestCase {
     func testProjectLayoutAccessibility() {
         projectWorkspace()
         let name = app.textFields["New project name"]
+        if !name.exists {
+            let library = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Your projects")).firstMatch
+            XCTAssertTrue(library.waitForExistence(timeout: 10), app.debugDescription)
+            library.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        }
+        if !name.exists {
+            let create = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "New project")).firstMatch
+            XCTAssertTrue(create.waitForExistence(timeout: 10), app.debugDescription); create.tap()
+        }
         XCTAssertTrue(name.waitForExistence(timeout: 15), app.debugDescription)
         name.tap(); name.typeText("Layout test"); projectButton("Create project")
         let filename = app.textFields["New file or folder name"]
@@ -346,9 +364,7 @@ final class ATEFunctionalTests: XCTestCase {
         print("PASS native UI: typed two files, switched tabs, cancelled close")
         // Exercise the actual iOS document picker and cancel it.
         menu(); app.buttons["Open"].tap()
-        let cancel = app.buttons["Cancel"].firstMatch
-        XCTAssertTrue(cancel.waitForExistence(timeout: 15), app.debugDescription)
-        cancel.tap()
+        cancelDocumentPicker()
         XCTAssertTrue(app.buttons["Menu"].waitForExistence(timeout: 10))
         assertCText()
         print("PASS native UI: actual document picker cancellation preserves C tab")
