@@ -33,6 +33,8 @@ try{for(const [engineName,engine] of Object.entries(engines)){
    await page.setViewportSize(viewport);await page.locator('#menuButton').click();await page.locator('#name').fill('Qzzzzzzz.sql');await page.locator('#name').press('Enter');await page.locator('#closeMenu').click();
    assert.equal(await editor.innerText(),'Protected filename content');assert.ok(await page.getByRole('tab',{name:'Qzzzzzzz.sql, unsaved changes',exact:true}).count());
    await page.waitForTimeout(450);await page.evaluate(()=>{const r=document.getElementById('save').getBoundingClientRect(),v=visualViewport;if(r.left<0||r.right>v.width+1||r.top<v.offsetTop-1)throw Error('Save clipped after menu return')});
+   if(viewport.width===390)await page.evaluate(()=>{const style=document.documentElement.style,old=style.getPropertyValue('--ios-visible-width');style.setProperty('--ios-visible-width','140px');try{for(const id of ['menuButton','exit','save']){const r=document.getElementById(id).getBoundingClientRect();if(r.left<0||r.right>141||r.width<44)throw Error('Toolbar clipped in a narrow magnified visual viewport: '+id)}}finally{style.setProperty('--ios-visible-width',old)}});
+
   }
   await page.setViewportSize({width:1194,height:834});
   await page.locator('#file').setInputFiles({name:'query.sql',mimeType:'application/sql',buffer:Buffer.from('SELECT name FROM people;')});

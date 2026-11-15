@@ -50,7 +50,7 @@ header button{max-width:100%;overflow-wrap:anywhere}
 #notice,#recoveryWarning{overflow-wrap:anywhere;white-space:normal}
 #tabs{min-width:0;max-width:100%;padding-left:calc(8px + env(safe-area-inset-left,0px));padding-right:calc(8px + env(safe-area-inset-right,0px))}
 footer{padding-left:calc(12px + env(safe-area-inset-left,0px));padding-right:calc(12px + env(safe-area-inset-right,0px));padding-bottom:calc(6px + env(safe-area-inset-bottom,0px))}
-@media(max-width:600px){header .actions{width:100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}header .actions button{width:100%;min-width:44px}header .brand{flex-basis:100%}}
+@media(max-width:600px){header .actions{width:100%;display:grid;grid-template-columns:repeat(auto-fit,minmax(44px,1fr));gap:6px}header .actions button{width:100%;min-width:44px}header .brand{flex-basis:100%}}
 
 /* Project workspace: one scrolling surface, aligned rows at every depth. */
 #projects{width:min(900px,96vw);max-width:900px;max-height:calc(100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px) - 24px);font-size:12pt}
