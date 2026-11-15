@@ -28,9 +28,10 @@ try{for(const [engineName,engine] of Object.entries(engines)){
   const editor=page.locator('.cm-content'),projects=async()=>{await page.locator('#menuButton').click();await page.locator('#projectsButton').click();await page.waitForFunction(()=>document.getElementById('projects').open&&!document.getElementById('createProject').disabled)};
   assert.equal(await page.locator('#file').getAttribute('accept'),null);
   assert.equal(await page.locator('#projectFiles').getAttribute('accept'),null);
+  await editor.fill('Protected filename content');
   for(const viewport of [{width:390,height:844},{width:844,height:390}]){
    await page.setViewportSize(viewport);await page.locator('#menuButton').click();await page.locator('#name').fill('Qzzzzzzz.sql');await page.locator('#name').press('Enter');await page.locator('#closeMenu').click();
-   assert.equal(await editor.innerText(),'');assert.ok(await page.getByRole('tab',{name:'Qzzzzzzz.sql',exact:true}).count());
+   assert.equal(await editor.innerText(),'Protected filename content');assert.ok(await page.getByRole('tab',{name:'Qzzzzzzz.sql',exact:true}).count());
    await page.waitForTimeout(450);await page.evaluate(()=>{const r=document.getElementById('save').getBoundingClientRect(),v=visualViewport;if(r.left<0||r.right>v.width+1||r.top<v.offsetTop-1)throw Error('Save clipped after menu return')});
   }
   await page.setViewportSize({width:1194,height:834});
@@ -55,7 +56,7 @@ try{for(const [engineName,engine] of Object.entries(engines)){
   await page.locator('#closeProjectComposer').click();
   assert.ok(await page.locator('[data-path="src/util.h"]').count());assert.ok(await page.locator('[data-path="docs/README.md"]').count());assert.ok(await page.locator('[data-path="settings.json"]').count());
   for(const viewport of [{width:320,height:1000},{width:390,height:1000},{width:768,height:1024},{width:1194,height:834}]){
-   await page.setViewportSize(viewport);for(const scale of [1,2,3])console.log('PASS '+engineName+': '+await page.evaluate(checkProjectLayout,[scale]));
+   await page.setViewportSize(viewport);await page.waitForFunction(()=>Math.abs(parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ios-visible-width'))-visualViewport.width)<1);for(const scale of [1,2,3])console.log('PASS '+engineName+': '+await page.evaluate(checkProjectLayout,[scale]));
   }
   await mkdir('editor-evidence',{recursive:true});await page.setViewportSize({width:1194,height:834});await page.locator('[data-path="settings.json"]').scrollIntoViewIfNeeded();await page.screenshot({path:`editor-evidence/${engineName}-projects-aligned-bottom.png`});
   await plus('src').click();await page.locator('#projectFileName').fill('draft.txt');await page.locator('#newProjectFile').click();await page.waitForFunction(()=>!document.getElementById('projects').open);await editor.fill('project draft');
