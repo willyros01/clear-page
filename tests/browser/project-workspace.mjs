@@ -65,7 +65,7 @@ try{for(const [engineName,engine] of Object.entries(engines)){
 
   assert.ok(await page.locator('[data-path="src/util.h"]').count());assert.ok(await page.locator('[data-path="docs/README.md"]').count());assert.ok(await page.locator('[data-path="settings.json"]').count());
   for(const viewport of [{width:320,height:1000},{width:390,height:1000},{width:768,height:1024},{width:1194,height:834}]){
-   await page.setViewportSize(viewport);await page.waitForFunction(()=>Math.abs(parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ios-visible-width'))-visualViewport.width)<1);for(const scale of [1,2,3])console.log('PASS '+engineName+': '+await page.evaluate(checkProjectLayout,[scale]));
+   await page.setViewportSize(viewport);await page.waitForFunction(()=>Math.abs(parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ios-visible-width'))-visualViewport.width)<1);for(const scale of [1,2,3])try{console.log('PASS '+engineName+': '+await page.evaluate(checkProjectLayout,[scale]))}catch(error){await mkdir('editor-evidence',{recursive:true});await page.screenshot({path:'editor-evidence/'+engineName+'-project-layout-failure.png'});throw error}
   }
   await mkdir('editor-evidence',{recursive:true});await page.setViewportSize({width:1194,height:834});await page.locator('[data-path="settings.json"]').scrollIntoViewIfNeeded();await page.screenshot({path:`editor-evidence/${engineName}-projects-aligned-bottom.png`});
   await plus('src').click();await page.locator('#projectFileName').fill('draft.txt');await page.locator('#newProjectFile').click();await page.waitForFunction(()=>!document.getElementById('projects').open);await editor.fill('project draft');

@@ -2,7 +2,7 @@
 export function checkProjectLayout([scale=1]){
  const dialog=document.getElementById('projects'),body=dialog.querySelector('.project-body'),tree=document.getElementById('projectTree'),wasOpen=dialog.open,oldScroll=body.scrollTop;
  const style=document.createElement('style');style.nonce=document.querySelector('style[nonce]')?.nonce||'';
- style.textContent=`#projects,#projects button,#projects input,#projects select,#projects label,#projects summary{font-size:${20*scale}px!important}#projects h2,#projects h3{font-size:${26*scale}px!important}`;
+ style.textContent=`#projects,#projects button,#projects input,#projects select,#projects label,#projects summary{font-size:${20*scale}px!important}#projects h2{font-size:${(innerWidth<600?24:26)*scale}px!important}#projects h3{font-size:${26*scale}px!important}`;
  document.head.append(style);if(!wasOpen)dialog.showModal();
  try{
   const rows=[...tree.querySelectorAll('.project-file')];if(rows.length<2)throw Error('Project layout fixture needs root and nested files');
