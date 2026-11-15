@@ -33,7 +33,7 @@ loading=false;editor.setLanguage(advanced?$('language').value:'plain');counts();
 function commitFilename(){if(!$('name').value.trim())$('name').value='Untitled';dirty=true;if(!languageManual)setLanguage(languageForDocument($('name').value,editor.value));persist()}
 $('name').onchange=commitFilename;
 $('name').addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();event.stopPropagation();commitFilename();$('name').blur()}});
-function leaveMenu({focus=!tabbed}={}){commitFilename();if(document.activeElement instanceof HTMLElement)document.activeElement.blur();$('menu').close();iosViewport?.restore();if(focus)editor.focus()}
+function leaveMenu({focus=!native}={}){commitFilename();if(document.activeElement instanceof HTMLElement)document.activeElement.blur();$('menu').close();iosViewport?.restore();if(focus)editor.focus()}
 
 function setLanguage(id){languageManual=false;$('language').value=id;editor.setLanguage(advanced?id:'plain');syntax?.changed()}
 $('language').onchange=()=>{languageManual=true;editor.setLanguage(advanced?$('language').value:'plain');syntax?.changed();persist()};
