@@ -82,8 +82,12 @@ public class DocumentSaveTest {
     }
     @Test public void toolbarAndProjectsAtLargeText() throws Exception {
         UiDevice device=UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());
+        Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
         try {
             device.executeShellCommand("settings put system font_scale 1.8");device.waitForIdle();
+            Intent launch=context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
+            launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TASK);context.startActivity(launch);
+            assertTrue("ATE did not resume after changing system text size",device.wait(Until.hasObject(By.pkg(context.getPackageName())),15000));
             click(device,"Menu");click(device,"Projects");
             assertTrue("Project tree heading missing",device.wait(Until.hasObject(By.text("Files and folders")),15000));
             click(device,"Open project");click(device,"Back to project");
@@ -98,12 +102,24 @@ public class DocumentSaveTest {
             assertNotNull("Project Back control missing after picker return",back);
             android.graphics.Rect bounds=back.getVisibleBounds();
             assertTrue("Project Back clipped",bounds.left>=0&&bounds.right<=device.getDisplayWidth()&&bounds.top>=0&&bounds.bottom<=device.getDisplayHeight());back.click();
-            UiObject2 save=device.wait(Until.findObject(By.text("Save file")),10000);assertNotNull("Save hidden after Projects",save);
+            UiObject2 save=device.wait(Until.findObject(By.text("Save file")),5000);if(save==null)save=device.wait(Until.findObject(By.desc("Save file")),5000);assertNotNull("Save hidden after Projects",save);
             bounds=save.getVisibleBounds();assertTrue("Save clipped at large text",bounds.left>=0&&bounds.right<=device.getDisplayWidth()&&bounds.bottom<=device.getDisplayHeight());
             System.out.println("PASS: largest Android text, Projects tree, real Add files cancellation and picker return, Save visibility");
+        } catch(AssertionError failure) {
+            try{device.takeScreenshot(new File(context.getFilesDir(),"ate-large-failure.png"));device.dumpWindowHierarchy(new File(context.getFilesDir(),"ate-large-failure.xml"));}catch(Exception capture){System.out.println("Large-text evidence capture: "+capture);}
+            throw failure;
         } finally {device.executeShellCommand("settings put system font_scale 1.0");}
     }
-    private void click(UiDevice device,String text){clickSelector(device,By.text(text),text);}
+    private void click(UiDevice device,String text){
+        long end=System.currentTimeMillis()+15000;
+        while(System.currentTimeMillis()<end){
+            UiObject2 button=device.wait(Until.findObject(By.text(text)),500);
+            if(button==null)button=device.wait(Until.findObject(By.desc(text)),500);
+            if(button==null)continue;
+            try{button.click();device.waitForIdle();return;}catch(StaleObjectException changed){device.waitForIdle();}
+        }
+        fail(text+" missing or unstable");
+    }
     private void clickSelector(UiDevice device,BySelector selector,String label){
         long end=System.currentTimeMillis()+15000;
         while(System.currentTimeMillis()<end){

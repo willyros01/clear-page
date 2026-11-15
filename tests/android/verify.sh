@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 capture_failure(){
+ adb exec-out run-as io.github.willyros01.clearpage cat files/ate-large-failure.png > android-large-failure.png || rm -f android-large-failure.png
+ adb exec-out run-as io.github.willyros01.clearpage cat files/ate-large-failure.xml > android-large-failure.xml || rm -f android-large-failure.xml
  timeout 20s adb logcat -d > android-logcat.txt || true
  timeout 20s adb shell screencap -p /sdcard/ate-debug.png && adb pull /sdcard/ate-debug.png android-debug.png || true
  timeout 20s adb shell uiautomator dump /sdcard/ate-ui.xml && adb pull /sdcard/ate-ui.xml android-ui.xml || true
