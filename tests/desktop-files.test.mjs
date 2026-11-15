@@ -77,6 +77,11 @@ test('desktop Save cancellation/error preserves text and recovery; Save and Exit
   assert.equal(document.getElementById('name').value,'second.sql','Failed Exit returns to the original active tab');
   destination=payload=>payload.name;await document.getElementById('saveExit').onclick();
   assert.equal(exits,beforeExit+1,'Exit closes the app only after every file saves');
+  const savedRecovery=localStorage.getItem('clear-page-workspace-v1');
+  Object.defineProperty(document,'hidden',{configurable:true,value:true});document.dispatchEvent(new window.Event('visibilitychange'));
+  assert.equal(localStorage.getItem('clear-page-workspace-v1'),savedRecovery,'Exit visibility events must not replace saved recovery with the blank closing view');
+  Object.defineProperty(document,'hidden',{configurable:true,value:false});
+
   tabs=JSON.parse(localStorage.getItem('clear-page-workspace-v1')).tabs;
   assert.ok(tabs.some(t=>t.name==='first.sql'));assert.ok(tabs.some(t=>t.name==='second.sql'));
   await open('keep.sql','SELECT 3;');view.dispatch({changes:{from:0,insert:'-- keep\n'}});

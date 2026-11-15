@@ -1,9 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 capture_failure(){
+ adb exec-out run-as io.github.willyros01.clearpage cat files/ate-large-failure.png > android-large-failure.png || rm -f android-large-failure.png
+ adb exec-out run-as io.github.willyros01.clearpage cat files/ate-large-failure.xml > android-large-failure.xml || rm -f android-large-failure.xml
  timeout 20s adb logcat -d > android-logcat.txt || true
  timeout 20s adb shell screencap -p /sdcard/ate-debug.png && adb pull /sdcard/ate-debug.png android-debug.png || true
  timeout 20s adb shell uiautomator dump /sdcard/ate-ui.xml && adb pull /sdcard/ate-ui.xml android-ui.xml || true
+ # Print what was on screen and the app's last messages into the log itself.
+ for f in android-ui.xml android-large-failure.xml; do
+  [ -f "$f" ] || continue; echo "=== Screen at failure: $f ==="
+  grep -oE '(package|text|content-desc)="[^"]+"' "$f" | sort -u | head -80 || true
+ done
+ [ -f android-logcat.txt ] && { echo '=== App log at failure ==='; grep -E 'Capacitor|DocumentFiles|AndroidRuntime|ActivityTaskManager' android-logcat.txt | tail -60 || true; }
 }
 trap 'status=$?; if [ "$status" -ne 0 ]; then capture_failure; fi' EXIT
 adb install android/app/build/outputs/apk/debug/app-debug.apk
@@ -25,6 +33,10 @@ for attempt in {1..600}; do
  if adb shell run-as io.github.willyros01.clearpage test -f files/ate-ipad-syntax-verification.json; then finished=true; break; fi
  if adb shell run-as io.github.willyros01.clearpage test -f files/ate-ipad-restart-ready.json; then
   adb shell run-as io.github.willyros01.clearpage rm files/ate-ipad-restart-ready.json
+  # Like a real Android kill: app goes to the background first, giving the
+  # WebView time to write its saved state to disk, then the process is stopped.
+  adb shell input keyevent KEYCODE_HOME
+  sleep 10
   adb shell am force-stop io.github.willyros01.clearpage
   adb shell am start -n io.github.willyros01.clearpage/.MainActivity
  fi

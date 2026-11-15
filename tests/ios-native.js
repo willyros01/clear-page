@@ -23,7 +23,9 @@ import {Filesystem,Directory,Encoding} from '@capacitor/filesystem';
   const tabs=()=>[...document.querySelectorAll('#tabs [role=tab]')];
   const askClose=()=>document.querySelector('#tabs [aria-selected=true]')?.nextElementSibling.click();
   const closeCurrent=()=>{askClose();if($('exitDialog').open)$('discardExit').click();};
-  const restart=JSON.parse(localStorage.getItem('ate-tabs-verification-restart')||'null');
+  let restart=null;
+  if(android){try{restart=JSON.parse((await Filesystem.readFile({path:'ate-ipad-restart-state.json',directory:Directory.Data,encoding:Encoding.UTF8})).data)}catch{}}
+  else restart=JSON.parse(localStorage.getItem('ate-tabs-verification-restart')||'null');
   if(!restart&&!$('experienceModes').hidden){assert(document.body.classList.contains('basic-mode'),'New iOS install starts in Basic mode');$('advancedMode').click();assert(!document.body.classList.contains('basic-mode'),'Advanced mode enables coding tools');}
   if(restart){
    checks.push(...restart.checks);
@@ -41,6 +43,7 @@ import {Filesystem,Directory,Encoding} from '@capacitor/filesystem';
    const saved=await Filesystem.readFile({path:'ATEProjects/'+restart.projectId+'/recovery.c',directory:projectDirectory,encoding:Encoding.UTF8});
    assert(saved.data==='int main(void) { return 0; }\n// saved from Basic','Project save after process recovery preserves exact disk text');
    localStorage.removeItem('ate-tabs-verification-restart');
+   if(android)try{await Filesystem.deleteFile({path:'ate-ipad-restart-state.json',directory:Directory.Data})}catch{}
    if(android){
     $('advancedMode').click();
     while(tabs().length>1)closeCurrent();closeCurrent();
@@ -95,8 +98,11 @@ import {Filesystem,Directory,Encoding} from '@capacitor/filesystem';
   await wait(300);view.scrollDOM.scrollTop=800;await wait(100);
   const oldScroll=view.scrollDOM.scrollTop;
   assert(oldScroll>100,'Long document can scroll');
-  await open('print(1)','scroll.py',true);tabs()[1].click();await wait(200);
-  assert(Math.abs(view.scrollDOM.scrollTop-oldScroll)<50,'Each tab preserves its scroll position');
+  await open('print(1)','scroll.py',true);tabs()[1].click();
+  // Slow emulators can take several frames to restore the position; wait for it, then make sure it stays put.
+  for(let i=0;i<50&&Math.abs(view.scrollDOM.scrollTop-oldScroll)>=50;i++)await wait(100);
+  await wait(500);
+  assert(Math.abs(view.scrollDOM.scrollTop-oldScroll)<50,'Each tab preserves its scroll position (expected '+oldScroll+', got '+view.scrollDOM.scrollTop+')');
   tabs()[2].click();closeCurrent();closeCurrent();
   }
   for(const id of ['menu','cSettings','compilerInstall','projects']){
@@ -202,6 +208,7 @@ import {Filesystem,Directory,Encoding} from '@capacitor/filesystem';
   await open('print(42)','recovery.py',true);$('language').value='plain';$('language').dispatchEvent(new Event('change'));view.dispatch({changes:{from:view.state.doc.length,insert:'\n# unsaved'}});
   $('basicMode').click();
   localStorage.setItem('ate-tabs-verification-restart',JSON.stringify({checks,projectId}));
+  if(android)await Filesystem.writeFile({path:'ate-ipad-restart-state.json',directory:Directory.Data,encoding:Encoding.UTF8,data:JSON.stringify({checks,projectId})});
   await Filesystem.writeFile({path:'ate-ipad-restart-ready.json',directory:Directory.Data,encoding:Encoding.UTF8,data:'ready'});return;
   }
   }

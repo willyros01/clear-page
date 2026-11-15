@@ -1,0 +1,144 @@
+name: ATE Android APK
+on:
+  push:
+    branches: [android]
+  workflow_dispatch: {}
+permissions:
+  contents: read
+concurrency:
+  group: ate-android-083
+  cancel-in-progress: true
+env:
+  ATE_BUILD_NUMBER: '24'
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium webkit
+      - run: npm run test:browser
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-browser-evidence
+          path: editor-evidence/*
+  android:
+    needs: browser
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq imagemagick > /dev/null
+      - run: npm ci
+      - name: Build native Android verification app
+        run: |-
+          ATE_ANDROID_VERIFICATION=1 npm run build
+          ATE_ANDROID_VERIFICATION=1 node build/prepare-android.mjs
+          cd android && chmod +x gradlew && ./gradlew --no-daemon --console=plain :app:assembleDebug :app:assembleDebugAndroidTest
+      - name: Enable KVM
+        run: |-
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Verify Android 11 tablet parser, tabs, Projects, restart and native Files
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          target: google_apis
+          arch: x86_64
+          profile: pixel_c
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: bash tests/android/verify.sh
+      - name: Save Android 11 evidence
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ate-android-11-native-evidence
+          path: |
+            android-*.txt
+            android-*.json
+            android-*.xml
+            android-*.png
+            android-saved*
+      - name: Verify Android 15 phone parser, tabs, Projects, restart and native Files
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: bash tests/android/verify.sh
+      - name: Require the latest tested source
+        shell: bash
+        run: |
+          CURRENT=$(git ls-remote origin refs/heads/android | cut -f1)
+          if [ "$CURRENT" != "$GITHUB_SHA" ]; then echo 'Newer Android work exists; refusing stale publication.'; exit 1; fi
+      - name: Rebuild production assets without the verification driver
+        run: |-
+          npm run build
+          node build/prepare-android.mjs
+          node -e 'if(require("fs").readFileSync("dist/app.js","utf8").includes("ATE_IPAD_SYNTAX_VERIFICATION_ONLY"))throw Error("Test driver in release");'
+          cd android && ./gradlew --no-daemon --console=plain assembleRelease
+          cd .. && mkdir -p out && cp android/app/build/outputs/apk/release/app-release-unsigned.apk out/ate-unsigned.apk
+      - name: Sign with permanent ATE certificate
+        id: sign
+        env:
+          ATE_ANDROID_SIGNING: ${{ secrets.ATE_ANDROID_SIGNING }}
+        run: node build/android-sign.mjs
+      - uses: actions/upload-artifact@v4
+        id: apk
+        with:
+          name: ate-android-apk
+          path: out/*.apk
+          if-no-files-found: error
+      - name: Record independently verified APK for Cuberoot
+        env:
+          ARTIFACT_ID: ${{ steps.apk.outputs.artifact-id }}
+          APK_NAME: ${{ steps.sign.outputs.apk_name }}
+        run: |
+          node --input-type=module <<'JS'
+          import {readFileSync,writeFileSync} from 'node:fs';
+          const e=process.env;writeFileSync(e.RUNNER_TEMP+'/ate-last-run.json',JSON.stringify({workflow:'ATE Android APK',branch:'android',outcome:'success',run_id:Number(e.GITHUB_RUN_ID),run_number:Number(e.ATE_BUILD_NUMBER),source_sha:e.GITHUB_SHA,artifact_id:Number(e.ARTIFACT_ID),apk_name:e.APK_NAME,version:JSON.parse(readFileSync('package.json')).version,signer_sha256:readFileSync('resources/android-signer.sha256','utf8').trim(),reported_at:new Date().toISOString()},null,2)+'\n');
+          JS
+          git fetch origin apk-releases
+          git checkout -B apk-releases origin/apk-releases
+          cp "$RUNNER_TEMP/ate-last-run.json" ate-last-run.json
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add ate-last-run.json
+          git commit -m "Record independent ATE APK release $GITHUB_RUN_ID"
+          git push origin HEAD:apk-releases
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ate-android-native-evidence
+          path: |-
+            android-logcat.txt
+            android-debug.png
+            android-ui.xml
+            android-webview-report.json
+            android-instrumentation.txt
+            android-native.png
+            android-saved.c
+            android/app/build/outputs/androidTest-results/**
