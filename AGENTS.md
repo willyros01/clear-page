@@ -1,7 +1,7 @@
 # Clear Page development instructions
 
 - Preserve the default 36px editor text and adjustable document sizing. The owner specified 12pt menu/configuration/control text (14pt maximum for headings) on 12 November 2026; retain touch targets of at least 44px.
-- Owner approved a new Projects mockup on 15 November 2026: large 20px controls/22px file labels and 24–28px headings for Projects and its picker/confirmation panels. This explicit approval supersedes the earlier 12pt restriction for Projects only; keep the independent 36px editor default.
+- Owner approved a new Projects mockup on 15 November 2026. Projects and its picker/confirmation panels use large 20px controls, 22px tablet/20px phone file labels and 24–28px headings, with a compact 20px phone header. The approved larger Projects design supersedes the earlier 12pt restriction for Projects only; keep the independent 36px editor default.
 - Work in small steps and report completed work, checks, and remaining limitations accurately.
 - Keep shared editor behavior in one codebase, with thin platform adapters for file handling and native features.
 - Planned editor: CodeMirror. Planned mobile shells: Capacitor. Planned desktop shells: Tauri.
