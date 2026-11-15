@@ -40,5 +40,20 @@ try{for(const [engineName,engine] of Object.entries(engines)){
   await page.reload();await page.waitForSelector('.cm-content');await projects();await $('openProjectPicker').click();assert.equal(await page.locator('#projectList button').count(),2,'Exiting discards drafts without deleting stored projects');await $('closeProjectPicker').click();await page.waitForSelector('#projects[open]');
   await mkdir('editor-evidence',{recursive:true});await page.screenshot({path:'editor-evidence/'+engineName+'-web-projects.png'});assert.deepEqual(errors,[]);
   console.log('PASS '+engineName+': legacy-WebView API compatibility, real IndexedDB projects, cross-platform ZIP bytes, prototype-safe names, restart, independent deletion, tab recovery and whole-workspace Exit');
+  // Exercise the Android-specific restoration path with a mobile viewport.
+  const phone=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+  const phoneErrors=[];phone.on('pageerror',e=>phoneErrors.push(e.message));
+  await phone.addInitScript(()=>{window.androidBridge={postMessage(){}};window.Capacitor={PluginHeaders:[{name:'App',methods:[{name:'addListener',rtype:'callback'}]}],nativeCallback:()=> 'test-listener'};Object.hasOwn=undefined});
+  await phone.goto('http://127.0.0.1:'+server.address().port);await phone.waitForSelector('.cm-content');
+  await phone.locator('#menuButton').click();await phone.locator('#advancedMode').click();await phone.locator('#closeMenu').click();
+  const long=Array.from({length:200},(_,i)=>'// source line '+i).join('\n');
+  await phone.locator('#file').setInputFiles({name:'long.c',mimeType:'text/plain',buffer:Buffer.from(long)});await phone.waitForTimeout(300);
+  const scroll=phone.locator('.cm-scroller');await scroll.evaluate(e=>e.scrollTop=800);await phone.waitForTimeout(100);const top=await scroll.evaluate(e=>e.scrollTop);assert.ok(top>100);
+  await phone.locator('#file').setInputFiles({name:'short.py',mimeType:'text/plain',buffer:Buffer.from('print(1)')});
+  await phone.getByRole('tab',{name:'long.c',exact:true}).click();await phone.waitForTimeout(250);assert.ok(Math.abs(await scroll.evaluate(e=>e.scrollTop)-top)<50);
+  await phone.reload();await phone.waitForSelector('.cm-content');await phone.waitForTimeout(300);assert.ok(Math.abs(await scroll.evaluate(e=>e.scrollTop)-top)<50);
+  assert.equal(await phone.evaluate(()=>JSON.parse(localStorage.getItem('clear-page-workspace-v1')).tabs.find(t=>t.name==='long.c').text),long);
+  assert.deepEqual(phoneErrors,[]);
+  console.log('PASS '+engineName+': Android-specific long-tab scroll restoration, persisted recovery and exact document bytes');
  }finally{await browser.close()}
 }}finally{await new Promise(r=>server.close(r))}

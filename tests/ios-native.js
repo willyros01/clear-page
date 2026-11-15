@@ -96,7 +96,7 @@ import {Filesystem,Directory,Encoding} from '@capacitor/filesystem';
   const oldScroll=view.scrollDOM.scrollTop;
   assert(oldScroll>100,'Long document can scroll');
   await open('print(1)','scroll.py',true);tabs()[1].click();await wait(200);
-  assert(Math.abs(view.scrollDOM.scrollTop-oldScroll)<50,'Each tab preserves its scroll position');
+  assert(Math.abs(view.scrollDOM.scrollTop-oldScroll)<50,'Each tab preserves its scroll position (expected '+oldScroll+', got '+view.scrollDOM.scrollTop+')');
   tabs()[2].click();closeCurrent();closeCurrent();
   }
   for(const id of ['menu','cSettings','compilerInstall','projects']){
