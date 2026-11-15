@@ -280,3 +280,10 @@ ATE **0.8.2 (23)** is released to the existing internal TestFlight group. [Run 4
 - [x] Close project with Cancel/Save/Discard, stale-save protection and ordinary/other-project tab preservation.
 - [x] All automated gates, signed upload, Apple processing and internal tester assignment.
 - [ ] Owner physical-device acceptance, especially preferred iPhone text/display settings and SQL selection from each Files provider.
+
+
+## iOS 0.8.3 (24) — approved Projects redesign, implementation in verification
+
+Owner approved the reviewed mockup on 15 November 2026. The tree is the primary view: folder names select, arrows expand/collapse, filenames open an editor tab. Clear Open project / Close project controls; Open project also offers Create new project, ZIP import/export and secondary membership management. The selected-folder action bar offers Add file (Create file / Choose files), New folder and Delete folder; destination remains explicit. No scattered + buttons, Your projects section, always-visible filename/path form or per-file Remove boxes in the main tree. Projects uses the approved larger 20px controls, 22px file labels and 24–28px headings; document font remains independent.
+
+Folder deletion previews all contents (including unlisted on-disk files), refuses project root or unsaved affected tabs, detects changed contents before confirmation, stages the directory by rename, commits membership removal and rolls back on write failure before cleaning the staged directory. Clean affected tabs close only after successful deletion; other tabs, sibling folders, outside originals and other projects remain. Failed cleanup leaves a recovery copy and reports it. Regression and full iPhone/iPad native suites, plus largest-text checks, must pass before TestFlight upload. No change to the editor’s existing Close/Exit behavior is included in this Projects build. Physical-device acceptance follows TestFlight availability.

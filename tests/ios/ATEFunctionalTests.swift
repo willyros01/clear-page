@@ -80,13 +80,15 @@ final class ATEFunctionalTests: XCTestCase {
     func visibleProjectButton(_ label: String) -> XCUIElement {
         let button = app.webViews.buttons[label].firstMatch
         XCTAssertTrue(button.waitForExistence(timeout: 15), app.debugDescription)
-        let contents = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@", "Project contents")).firstMatch
-        XCTAssertTrue(contents.waitForExistence(timeout: 15), app.debugDescription)
-        let panel = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@", "Projects,")).firstMatch
+        let picker = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@", "Open project, web dialog")).firstMatch
+        let panel = picker.exists ? picker : app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@", "Projects,")).firstMatch
         XCTAssertTrue(panel.waitForExistence(timeout: 15), app.debugDescription)
+        let region = ["Add file", "New folder", "Delete folder"].contains(label) ? "Selected folder actions" : "Project contents"
+        let contents = picker.exists ? picker : app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@", region)).firstMatch
+        XCTAssertTrue(contents.waitForExistence(timeout: 15), app.debugDescription)
         func fullyVisible() -> Bool {
             let viewport = contents.frame.intersection(panel.frame).intersection(app.frame)
-            let headerBottom = app.buttons["Close projects"].frame.maxY
+            let headerBottom = picker.exists ? panel.frame.minY : app.buttons["Back to editor"].frame.maxY
             return !viewport.isEmpty && viewport.contains(button.frame) && button.frame.minY >= headerBottom && button.isHittable
         }
         if !fullyVisible() { dismissKeyboard() }
@@ -177,9 +179,11 @@ final class ATEFunctionalTests: XCTestCase {
         XCTAssertTrue(app.buttons["Menu"].waitForExistence(timeout: 30)); assertWord("Keep")
         menu(); XCTAssertFalse(app.buttons["Projects"].exists)
         setMode("Advanced"); app.buttons["Projects"].tap()
+        projectButton("Open project")
         let projectName = app.textFields["New project name"]
         XCTAssertTrue(projectName.waitForExistence(timeout: 15)); projectName.tap(); projectName.typeText("Native project")
-        projectButton("Create project")
+        projectButton("Create new project")
+        projectButton("Add file")
         let filename = app.textFields["New file or folder name"]
         XCTAssertTrue(filename.waitForExistence(timeout: 15)); filename.tap(); filename.typeText("run.sh")
         projectButton("Create file")
@@ -190,14 +194,16 @@ final class ATEFunctionalTests: XCTestCase {
         menu(); setMode("Basic"); finishMenu()
         app.terminate(); app.launch(); XCTAssertTrue(app.buttons["Menu"].waitForExistence(timeout: 30)); assertWord("echo")
         menu(); XCTAssertFalse(app.buttons["Projects"].exists); setMode("Advanced"); app.buttons["Projects"].tap()
-        projectButton("Export project ZIP")
+        projectButton("Open project"); projectButton("Export project ZIP")
         dismissShareSheet()
+        projectButton("Manage files")
         projectButton("Remove run.sh from project")
         // Remove runs as a background save; the Projects panel ignores Close until it finishes.
         let removed = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "Removed run.sh")).firstMatch
         XCTAssertTrue(removed.waitForExistence(timeout: 15), app.debugDescription)
+        projectButton("Back to project")
         // Back must remain available after scrolling the project list; no swipe workaround.
-        let closeProjects = app.buttons["Close projects"].firstMatch
+        let closeProjects = app.buttons["Back to editor"].firstMatch
         XCTAssertTrue(closeProjects.waitForExistence(timeout: 15), app.debugDescription)
         XCTAssertTrue(closeProjects.isHittable, app.debugDescription)
         closeProjects.tap()
@@ -274,78 +280,79 @@ final class ATEFunctionalTests: XCTestCase {
     }
     func projectWorkspace() {
         menu(); setMode("Advanced"); app.buttons["Projects"].tap()
-        XCTAssertTrue(app.buttons["Close projects"].waitForExistence(timeout: 15), app.debugDescription)
+        XCTAssertTrue(app.buttons["Back to editor"].waitForExistence(timeout: 15), app.debugDescription)
     }
     func testProjectDestinationsAndClose() {
         editor().tap(); editor().typeText("Protected ordinary note")
-        projectWorkspace()
+        projectWorkspace(); projectButton("Select folder Project root"); projectButton("New folder")
         let filename = app.textFields["New file or folder name"]
         XCTAssertTrue(filename.waitForExistence(timeout: 15), app.debugDescription)
         filename.tap(); filename.typeText("src"); projectButton("Create folder")
-        filename.tap(); filename.typeText("draft.txt"); projectButton("Create file")
+        projectButton("Add file"); filename.tap(); filename.typeText("draft.txt"); projectButton("Create file")
         editor().tap(); editor().typeText("Project content")
-        projectWorkspace(); projectButton("Add files to src")
-        let folder = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "Project folder")).firstMatch
-        XCTAssertTrue(folder.waitForExistence(timeout: 10), app.debugDescription)
-        XCTAssertEqual(folder.value as? String, "src", app.debugDescription)
-        projectButton("Add files")
+        projectWorkspace(); projectButton("Select folder src"); projectButton("Add file")
+        let destination = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "Add to src")).firstMatch
+        XCTAssertTrue(destination.waitForExistence(timeout: 10), app.debugDescription)
+        projectButton("Choose files…")
         cancelDocumentPicker()
-        XCTAssertTrue(app.buttons["Close projects"].waitForExistence(timeout: 15), app.debugDescription)
-        XCTAssertEqual(folder.value as? String, "src", "Picker cancellation preserves the selected subdirectory")
+        XCTAssertTrue(destination.waitForExistence(timeout: 10), "Picker cancellation preserves selected destination")
+        projectButton("Cancel adding")
         projectButton("Close project")
         XCTAssertTrue(app.buttons["Keep project open"].waitForExistence(timeout: 10), app.debugDescription)
         app.buttons["Keep project open"].tap()
         projectButton("Close project"); app.buttons["Save and close project"].tap()
         let closed = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "Closed Native project.")).firstMatch
         XCTAssertTrue(closed.waitForExistence(timeout: 15), app.debugDescription)
-        app.buttons["Close projects"].tap(); assertWord("Protected")
-        projectWorkspace(); projectButton("Open project Native project"); projectButton("Open project file src/draft.txt"); assertWord("Project")
+        app.buttons["Back to editor"].tap(); assertWord("Protected")
+        projectWorkspace(); projectButton("Open project"); projectButton("Open project Native project"); projectButton("Open project file src/draft.txt"); assertWord("Project")
         editor().tap(); editor().typeText(" discard this")
         projectWorkspace(); projectButton("Close project"); app.buttons["Close without saving"].tap()
         XCTAssertTrue(closed.waitForExistence(timeout: 15), app.debugDescription)
-        projectButton("Open project Native project"); projectButton("Open project file src/draft.txt"); assertWord("Project")
+        projectButton("Open project"); projectButton("Open project Native project"); projectButton("Open project file src/draft.txt"); assertWord("Project")
         XCTAssertFalse(editor().staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "discard")).firstMatch.exists, app.debugDescription)
         projectWorkspace(); projectButton("Close project"); XCTAssertTrue(closed.waitForExistence(timeout: 15), app.debugDescription)
-        app.buttons["Close projects"].tap(); assertWord("Protected")
+        app.buttons["Back to editor"].tap(); assertWord("Protected")
         app.buttons["Close current tab"].tap(); app.buttons["Close without saving"].tap()
         menu(); setMode("Basic"); finishMenu()
-        print("PASS native UI: folder + destination, actual Add files picker cancellation, project Close Cancel/Save/Discard/reopen and ordinary-note preservation")
+        print("PASS native UI: folder selection/destination, actual Add files picker cancellation, project Close Cancel/Save/Discard/reopen and ordinary-note preservation")
     }
     func testProjectLayoutAccessibility() {
         projectWorkspace()
+        projectButton("Open project")
         let name = app.textFields["New project name"]
-        if !name.exists {
-            let library = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Your projects")).firstMatch
-            XCTAssertTrue(library.waitForExistence(timeout: 10), app.debugDescription)
-            library.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
-        }
         if !name.exists {
             let create = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "New project")).firstMatch
             XCTAssertTrue(create.waitForExistence(timeout: 10), app.debugDescription); create.tap()
         }
         XCTAssertTrue(name.waitForExistence(timeout: 15), app.debugDescription)
-        name.tap(); name.typeText("Layout test"); projectButton("Create project")
+        name.tap(); name.typeText("Layout test"); projectButton("Create new project"); projectButton("New folder")
         let filename = app.textFields["New file or folder name"]
         XCTAssertTrue(filename.waitForExistence(timeout: 15)); filename.tap(); filename.typeText("src"); projectButton("Create folder")
-        filename.tap(); filename.typeText("code.c"); projectButton("Create file")
+        projectButton("Add file"); filename.tap(); filename.typeText("code.c"); projectButton("Create file")
         editor().tap(); editor().typeText("int value;"); app.buttons["Save file"].tap()
         XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "Saved in project")).firstMatch.waitForExistence(timeout: 15))
-        projectWorkspace(); projectButton("Add files to Project root")
+        projectWorkspace(); projectButton("Select folder Project root"); projectButton("Add file")
         filename.tap(); filename.typeText("settings.json"); projectButton("Create file")
         editor().tap(); editor().typeText("{}"); app.buttons["Save file"].tap()
         XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "settings.json")).matching(NSPredicate(format: "label BEGINSWITH %@", "Saved in project")).firstMatch.waitForExistence(timeout: 15))
         projectWorkspace()
-        let last = visibleProjectButton("Remove settings.json from project")
+        let last = visibleProjectButton("Open project file settings.json")
         XCTAssertGreaterThanOrEqual(last.frame.height, 44); XCTAssertGreaterThanOrEqual(last.frame.width, 44)
         let nested = app.buttons["Open project file src/code.c"], root = app.buttons["Open project file settings.json"]
-        XCTAssertEqual(nested.frame.minX, root.frame.minX, accuracy: 1, "Root and nested file boxes must align on the left")
+        XCTAssertGreaterThan(nested.frame.minX, root.frame.minX, "Nested filenames must be visibly indented")
         XCTAssertEqual(nested.frame.maxX, root.frame.maxX, accuracy: 1, "Root and nested file boxes must align on the right")
-        XCTAssertTrue(app.buttons["Close projects"].isHittable, app.debugDescription)
+        XCTAssertTrue(app.buttons["Back to editor"].isHittable, app.debugDescription)
         let shot = XCTAttachment(screenshot: app.screenshot()); shot.name = "Aligned project root and nested rows"; shot.lifetime = .keepAlways; add(shot)
+        projectButton("Select folder src"); projectButton("Delete folder")
+        XCTAssertTrue(app.buttons["Keep folder"].waitForExistence(timeout: 10), app.debugDescription); app.buttons["Keep folder"].tap()
+        projectButton("Delete folder"); app.buttons["Delete folder and contents"].tap()
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "Deleted folder src.")).firstMatch.waitForExistence(timeout: 15), app.debugDescription)
+        XCTAssertFalse(app.buttons["Select folder src"].exists, app.debugDescription)
+        XCTAssertTrue(app.buttons["Open project file settings.json"].exists, app.debugDescription)
         projectButton("Close project")
         XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "Closed Layout test.")).firstMatch.waitForExistence(timeout: 15), app.debugDescription)
-        app.buttons["Close projects"].tap(); menu(); setMode("Basic"); finishMenu()
-        print("PASS native UI: root/nested project file boxes align, last Remove target is visible, Back stays reachable and project closes")
+        app.buttons["Back to editor"].tap(); menu(); setMode("Basic"); finishMenu()
+        print("PASS native UI: file hierarchy is indented, last file target is visible, folder deletion cancels/confirms safely, Back stays reachable and project closes")
     }
     func testFilenameMenuReturn() {
         editor().tap(); editor().typeText("Filename regression content")

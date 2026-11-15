@@ -91,9 +91,9 @@ import {Filesystem,Directory,Encoding} from '@capacitor/filesystem';
   }
   for(const id of ['menu','cSettings','compilerInstall','projects']){
    const dialog=$(id);dialog.showModal();
-   assert(getComputedStyle(dialog).fontSize==='16px','12pt '+id+' control text');
+   assert(id==='projects'?parseFloat(getComputedStyle(dialog).fontSize)>=20:getComputedStyle(dialog).fontSize==='16px',id+' control text follows its approved size');
    for(const element of dialog.querySelectorAll('button,input,select,textarea,label,h1,h2,h3,p')){
-    if(element.getBoundingClientRect().width)assert(parseFloat(getComputedStyle(element).fontSize)<=18.67,'Control text is at most 14pt: '+id);
+    if(element.getBoundingClientRect().width&&id!=='projects')assert(parseFloat(getComputedStyle(element).fontSize)<=18.67,'Control text is at most 14pt: '+id);
    }
    dialog.close();
   }
@@ -165,8 +165,8 @@ import {Filesystem,Directory,Encoding} from '@capacitor/filesystem';
   $('projectsButton').click();await until(()=>$('projects').open&&!$('createProject').disabled,'Projects reopen');await $('projectList').querySelector('[data-project-id="'+projectId+'"]').onclick();
   // Real native filesystem import into the folder chosen before the picker.
   $('projectFolder').value='';$('projectFolder').onchange();$('projectFileName').value='docs';await $('newProjectFolder').onclick();
-  const plus=path=>$('projectTree').querySelector('[aria-label="Add files to '+path+'"]');
-  plus('docs').click();assert($('projectDestination').textContent==='docs','Folder + selects a visible add destination');
+  const plus=path=>$('projectTree').querySelector('[aria-label="Select folder '+path+'"]');
+  plus('docs').click();$('showProjectAdd').click();assert($('projectDestination').textContent==='docs','Selected folder chooses a visible add destination');
   const input=$('projectFiles'),click=input.click;input.click=()=>{};$('addProjectFiles').onclick();input.click=click;
   $('projectFolder').value='';$('projectFolder').onchange();
   await input.onchange({target:{files:[{name:'README.md',size:8,arrayBuffer:async()=>new TextEncoder().encode('# native').buffer}],value:'picked'}});
@@ -174,6 +174,11 @@ import {Filesystem,Directory,Encoding} from '@capacitor/filesystem';
   const entries=Array.from({length:14},(_,i)=>({path:'note-'+i+'.txt',text:'note'}));entries.push({path:'settings.json',text:'{}'});await store.add(projectId,entries);
   await $('projectList').querySelector('[data-project-id="'+projectId+'"]').onclick();$('projectComposer').hidden=true;
   for(const scale of [1,2,3])assert(!!checkProjectLayout([scale]),'Native project root/nested alignment and reachable last row at '+scale*100+'%');
+  await store.folder(projectId,'delete-native/empty');await store.add(projectId,[{path:'delete-native/query.sql',text:'SELECT 1;'}]);await $('projectList').querySelector('[data-project-id="'+projectId+'"]').onclick();
+  plus('delete-native').click();await $('deleteProjectFolder').onclick();assert($('deleteFolderDialog').open&&$('deleteFolderContents').textContent.includes('delete-native/query.sql'),'Native folder deletion previews its contents');$('cancelDeleteFolder').click();assert((await store.read(projectId,'delete-native/query.sql')).text==='SELECT 1;','Cancel folder deletion keeps native bytes');
+  await $('deleteProjectFolder').onclick();await $('confirmDeleteFolder').onclick();assert(!(await store.load(projectId)).folders.includes('delete-native'),'Confirmed native folder deletion removes subtree membership');
+  let removed=false;try{await Filesystem.stat({path:'ATEProjects/'+projectId+'/delete-native',directory:Directory.Documents})}catch{removed=true}assert(removed,'Confirmed native folder deletion removes directory bytes');assert((await store.read(projectId,'src/main.c')).text===original.text,'Deleting a folder preserves its sibling native files');
+
   // Closing a project is distinct from dismissing its page or closing one tab.
   view.dispatch({changes:{from:view.state.doc.length,insert:'\n// save on close'}});
   $('closeProject').onclick();assert($('closeProjectDialog').open,'Dirty project close offers Save/Discard/Cancel');$('cancelProjectClose').click();assert(localStorage.getItem('ate-current-project-v1')===projectId&&text().includes('save on close'),'Cancel project close retains edits and selection');

@@ -33,7 +33,7 @@ try{
    const editor=page.locator('.cm-content');
    for(const id of ['menu','cSettings','compilerInstall','projects']){
     const fonts=await page.locator('#'+id).evaluate(dialog=>{dialog.showModal();const result=[...dialog.querySelectorAll('button,input,select,textarea,label,p,h1,h2,h3')].filter(e=>e.getBoundingClientRect().width).map(e=>parseFloat(getComputedStyle(e).fontSize));dialog.close();return result});
-    assert.ok(fonts.every(size=>size<=18.67),'Controls must not exceed 14pt: '+id+' '+fonts);
+    assert.ok(id==='projects'?fonts.every(size=>size>=18):fonts.every(size=>size<=18.67),'Controls follow approved project/editor sizes: '+id+' '+fonts);
    }
 
    const text=()=>page.locator('.cm-line').allTextContents().then(lines=>lines.join('\n'));

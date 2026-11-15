@@ -45,6 +45,14 @@ export function createProjectStore(adapter){
   for(const [path,text] of Object.entries(contents))await adapter.write(id,path,text);
   await commit(id,m);return {id,...m};
  }
+ async function deletionPlan(id,path){
+  projectPath(path);const m=await load(id);if(!m.folders.includes(path))throw Error('That folder is not in the project.');
+  if(!adapter.folderEntries||!adapter.renameFolder||!adapter.removeFolder)throw Error('Folder deletion is unavailable on this device.');
+  const entries=(await adapter.folderEntries(id,path)).sort((a,b)=>a.path.localeCompare(b.path));
+  for(const entry of entries){projectPath(entry.path);if(!entry.path.startsWith(path+'/')||!['file','directory'].includes(entry.type))throw Error('Unexpected folder contents. Nothing was deleted.');}
+  const fingerprint=revision(JSON.stringify({manifest:m,entries}));
+  return {id,path,entries,files:entries.filter(e=>e.type==='file').length,folders:entries.filter(e=>e.type==='directory').length,fingerprint};
+ }
  return {
   create:name=>serial(()=>create(name)),
   list:()=>serial(async()=>{const projects=[],issues=[];for(const id of await adapter.list()){try{projects.push({id,...await load(id)})}catch(e){issues.push(id+': '+e.message)}}return {projects,issues}}),
@@ -60,6 +68,23 @@ export function createProjectStore(adapter){
    return {name:path,projectRef:{id:ref.id,path,revision:revision(text),lineEnding:ending},message:'Saved in project '+m.name+': '+path};
   }),
   remove:(id,path)=>serial(async()=>{const m=await load(id);m.files=m.files.filter(p=>p!==path);await commit(id,m);return {id,...m};}),
+  folderDeletion:(id,path)=>serial(()=>deletionPlan(id,path)),
+  deleteFolder:plan=>serial(async()=>{
+   if(!plan||typeof plan.id!=='string')throw Error('Confirm a folder before deleting it.');
+   const fresh=await deletionPlan(plan.id,plan.path);if(fresh.fingerprint!==plan.fingerprint)throw Error('The folder contents changed. Keep the folder and review the deletion again.');
+   const original=await load(plan.id),m={...original,files:original.files.filter(p=>!p.startsWith(plan.path+'/')),folders:original.folders.filter(p=>p!==plan.path&&!p.startsWith(plan.path+'/'))};
+   const temporary='.ate-delete-'+(globalThis.crypto?.randomUUID?.()||Date.now().toString(36)+'-'+Math.random().toString(36).slice(2));
+   // Rename first: a failed manifest write can restore the entire directory,
+   // including files removed from project membership and unknown binary files.
+   await adapter.renameFolder(plan.id,plan.path,temporary);
+   try{await commit(plan.id,m)}catch(error){
+    const recovery=[];try{await adapter.renameFolder(plan.id,temporary,plan.path)}catch(e){recovery.push('Folder recovery remains at '+temporary)}
+    try{await commit(plan.id,original)}catch(e){recovery.push('Project settings could not be restored')}
+    throw Error((recovery.length?recovery.join('. ')+'. ':'Folder deletion cancelled; original files restored. ')+(error.message||'Could not update project settings.'));
+   }
+   let cleanupPending=false;try{await adapter.removeFolder(plan.id,temporary)}catch{cleanupPending=true}
+   return {id:plan.id,...m,cleanupPending};
+  }),
   export: id=>serial(async()=>{const m=await load(id);await budget(id,m);const files=Object.create(null);files[manifestName]=strToU8(JSON.stringify(m,null,2)+'\n');for(const path of m.files)files[path]=textBytes(await adapter.read(id,path));for(const folder of m.folders)files[folder+'/']=new Uint8Array();return {name:m.name.replace(/[\\/:%#\u0000-\u001f]/g,'_')+'.zip',bytes:zipSync(files,{level:6})};}),
   import: bytes=>serial(async()=>{
    if(!(bytes instanceof Uint8Array)||bytes.length>limits.totalBytes)throw Error('Choose a project ZIP smaller than 20 MB.');

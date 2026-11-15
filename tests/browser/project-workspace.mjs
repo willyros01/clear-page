@@ -15,9 +15,11 @@ try{for(const [engineName,engine] of Object.entries(engines)){
   await page.addInitScript(()=>{
    const prior=JSON.parse(localStorage.getItem('__ateTestDisk')||'null'),files=new Map(prior?.files||[]),dirs=new Set(prior?.dirs||[]);window.__ateFiles=files;const persistDisk=()=>localStorage.setItem('__ateTestDisk',JSON.stringify({files:[...files],dirs:[...dirs]}));
    window.webkit={messageHandlers:{bridge:{postMessage(){}}}};
-   window.Capacitor={PluginHeaders:[{name:'Filesystem',methods:['readFile','writeFile','mkdir','readdir','stat'].map(name=>({name,rtype:'promise'}))},{name:'Share',methods:[{name:'share',rtype:'promise'}]}],nativePromise:async(plugin,method,o)=>{
+   window.Capacitor={PluginHeaders:[{name:'Filesystem',methods:['readFile','writeFile','mkdir','readdir','stat','rename','rmdir'].map(name=>({name,rtype:'promise'}))},{name:'Share',methods:[{name:'share',rtype:'promise'}]}],nativePromise:async(plugin,method,o)=>{
     if(plugin==='Share')throw Error('Share cancelled');
     if(method==='mkdir'){if(dirs.has(o.path))throw Object.assign(Error('Already exists'),{code:'OS-PLUG-FILE-0010'});dirs.add(o.path);persistDisk();return {}}
+    if(method==='rename'){for(const p of [...dirs])if(p===o.from||p.startsWith(o.from+'/')){dirs.delete(p);dirs.add(o.to+p.slice(o.from.length))}for(const [p,v] of [...files])if(p.startsWith(o.from+'/')){files.delete(p);files.set(o.to+p.slice(o.from.length),v)}persistDisk();return {}}
+    if(method==='rmdir'){for(const p of [...dirs])if(p===o.path||p.startsWith(o.path+'/'))dirs.delete(p);for(const p of [...files.keys()])if(p.startsWith(o.path+'/'))files.delete(p);persistDisk();return {}}
     if(method==='stat')return {type:dirs.has(o.path)?'directory':'file'};
     if(method==='writeFile'){const parts=o.path.split('/');for(let i=1;i<parts.length;i++)dirs.add(parts.slice(0,i).join('/'));files.set(o.path,o.data);persistDisk();return {uri:'file:///'+o.path}}
     if(method==='readFile'){if(!files.has(o.path))throw Error('Missing');return {data:files.get(o.path)}}
@@ -42,20 +44,25 @@ try{for(const [engineName,engine] of Object.entries(engines)){
   await editor.fill('SELECT id FROM people;');await page.locator('#save').click();await page.waitForFunction(()=>document.getElementById('notice').textContent.includes('Your draft is kept'));
   assert.equal(await editor.innerText(),'SELECT id FROM people;');await page.locator('#exit').click();await page.locator('#discardExit').click();
   await editor.fill('Ordinary note');await page.locator('#menuButton').click();await page.locator('#advancedMode').click();await page.locator('#autoCheck').uncheck();await page.locator('#projectsButton').click();
-  await page.locator('#projectName').fill('Project UI');await page.locator('#createProject').click();await page.waitForFunction(()=>document.getElementById('projectHeading').textContent==='Project UI'&&!document.getElementById('createProject').disabled);
-  await page.locator('#projectFileName').fill('src');await page.locator('#newProjectFolder').click();await page.waitForFunction(()=>document.getElementById('projectFolder').value==='src');
-  await page.locator('#projectFileName').fill('main.c');await page.locator('#newProjectFile').click();await page.waitForFunction(()=>!document.getElementById('projects').open);
+  await page.locator('#openProjectPicker').click();await page.locator('#projectName').fill('Project UI');await page.locator('#createProject').click();await page.waitForFunction(()=>document.getElementById('projectHeading').textContent==='Project UI'&&!document.getElementById('createProject').disabled);
+  await page.locator('#showProjectFolder').click();await page.locator('#projectFileName').fill('src');await page.locator('#newProjectFolder').click();await page.waitForFunction(()=>document.getElementById('projectFolder').value==='src');
+  await page.locator('#showProjectAdd').click();await page.locator('#projectFileName').fill('main.c');await page.locator('#newProjectFile').click();await page.waitForFunction(()=>!document.getElementById('projects').open);
   await editor.fill('int main(void) { return 0; }');await page.locator('#save').click();await page.waitForFunction(()=>document.getElementById('notice').textContent.startsWith('Saved in project'));
   await projects();
-  const plus=folder=>page.getByRole('button',{name:'Add files to '+folder,exact:true});
+  const select=async folder=>page.getByRole('button',{name:'Select folder '+folder,exact:true}).click();
+  const plus=folder=>({click:async()=>{await select(folder);await page.locator('#showProjectAdd').click()}});
+  const newFolder=async(name,parent='Project root')=>{await select(parent);await page.locator('#showProjectFolder').click();await page.locator('#projectFileName').fill(name);await page.locator('#newProjectFolder').click();await page.waitForFunction(()=>document.getElementById('projectComposer').hidden)};
   const addFiles=async files=>{
    const chooserPromise=page.waitForEvent('filechooser');await page.locator('#addProjectFiles').click();const chooser=await chooserPromise;await chooser.setFiles(files.map(([name,text])=>({name,mimeType:'text/plain',buffer:Buffer.from(text)})));
    await page.waitForFunction(()=>!document.getElementById('addProjectFiles').disabled&&document.getElementById('projectStatus').textContent.startsWith('Added '));
   };
   await plus('src').click();assert.equal(await page.locator('#projectFolder').inputValue(),'src');await addFiles([['util.h','int value;'],['query.sql','SELECT 1;']]);
-  await plus('Project root').click();await page.locator('#projectFileName').fill('docs');await page.locator('#newProjectFolder').click();await page.waitForFunction(()=>document.getElementById('projectFolder').value==='docs');await addFiles([['README.md','# Project']]);
+  await newFolder('docs');await plus('docs').click();await addFiles([['README.md','# Project']]);
   await plus('Project root').click();await addFiles([['a-long-source-name.c.txt','int x;'],...Array.from({length:12},(_,i)=>['note-'+i+'.txt','note']),['settings.json','{}']]);
-  await page.locator('#closeProjectComposer').click();
+  assert.equal(await page.locator('#projectComposer').isVisible(),false);
+  assert.equal(await page.locator('.project-folder-add').count(),0);assert.equal(await page.locator('#projectPicker').isVisible(),false);
+  await newFolder('trash');await newFolder('empty','trash');await plus('trash').click();await addFiles([['delete.sql','SELECT 1;']]);await page.locator('#deleteProjectFolder').click();await page.waitForSelector('#deleteFolderDialog[open]');assert.match(await page.locator('#deleteFolderContents').innerText(),/trash\/delete.sql/);await page.locator('#cancelDeleteFolder').click();assert.ok(await page.locator('[data-folder=trash]').count());await page.locator('#deleteProjectFolder').click();await page.locator('#confirmDeleteFolder').click();await page.waitForFunction(()=>!document.querySelector('[data-folder=trash]'));assert.equal(await page.evaluate(()=>[...window.__ateFiles.keys()].some(p=>p.includes('/trash/'))),false);
+
   assert.ok(await page.locator('[data-path="src/util.h"]').count());assert.ok(await page.locator('[data-path="docs/README.md"]').count());assert.ok(await page.locator('[data-path="settings.json"]').count());
   for(const viewport of [{width:320,height:1000},{width:390,height:1000},{width:768,height:1024},{width:1194,height:834}]){
    await page.setViewportSize(viewport);await page.waitForFunction(()=>Math.abs(parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ios-visible-width'))-visualViewport.width)<1);for(const scale of [1,2,3])console.log('PASS '+engineName+': '+await page.evaluate(checkProjectLayout,[scale]));
@@ -67,7 +74,7 @@ try{for(const [engineName,engine] of Object.entries(engines)){
   assert.equal(await page.evaluate(()=>[...window.__ateFiles].find(([key])=>key.endsWith('/src/draft.txt'))?.[1]),'project draft');
   await page.locator('#closeProjects').click();assert.equal(await editor.innerText(),'Ordinary note');
   await page.reload();await page.waitForSelector('.cm-content');await projects();assert.equal(await page.locator('#projectActions').isVisible(),false,'Closed selection must stay closed after restart');
-  await page.getByRole('button',{name:'Open project Project UI',exact:true}).click();await page.getByRole('button',{name:'Open project file src/draft.txt',exact:true}).click();await editor.fill('discard this edit');await projects();await page.locator('#closeProject').click();await page.locator('#discardAndCloseProject').click();await page.waitForFunction(()=>document.getElementById('projectActions').hidden);
+  await page.locator('#openProjectPicker').click();await page.getByRole('button',{name:'Open project Project UI',exact:true}).click();await page.getByRole('button',{name:'Open project file src/draft.txt',exact:true}).click();await editor.fill('discard this edit');await projects();await page.locator('#closeProject').click();await page.locator('#discardAndCloseProject').click();await page.waitForFunction(()=>document.getElementById('projectActions').hidden);
   assert.equal(await page.evaluate(()=>[...window.__ateFiles].find(([key])=>key.endsWith('/src/draft.txt'))?.[1]),'project draft');
   assert.deepEqual(errors,[]);console.log(`PASS ${engineName}: real production project UI, root/nested destinations, aligned bottom rows, close cancel/save/discard and ordinary-note preservation`);
  }finally{await browser.close()}

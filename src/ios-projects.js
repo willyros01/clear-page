@@ -16,7 +16,12 @@ export function iosProjectAdapter(){return {
  async list(){return (await entries(root)).filter(x=>x.type==='directory'&&/^p-[a-z0-9-]+$/i.test(x.name)).map(x=>x.name)},
  async read(id,path){const full=location(id,path),parent=full.slice(0,full.lastIndexOf('/')),leaf=full.slice(full.lastIndexOf('/')+1);if(!(await entries(parent)).some(x=>x.name.normalize('NFC').toLowerCase()===leaf.normalize('NFC').toLowerCase()))return null;const result=await Filesystem.readFile({path:full,directory:Directory.Documents,encoding:Encoding.UTF8});if(typeof result.data!=='string')throw Error('Project file could not be read as UTF-8 text.');return result.data;},
  async write(id,path,text){const full=location(id,path),parent=full.slice(0,full.lastIndexOf('/')),leaf=full.slice(full.lastIndexOf('/')+1),existing=(await entries(parent)).find(x=>x.name.normalize('NFC').toLowerCase()===leaf.normalize('NFC').toLowerCase());if(existing&&existing.name.normalize('NFC')!==leaf.normalize('NFC'))throw Error('An existing file differs only by case. Choose another name.');await Filesystem.writeFile({path:location(id,path),directory:Directory.Documents,encoding:Encoding.UTF8,data:text,recursive:true})},
- async mkdir(id,path){await ensureDirectory(location(id,path))}
+ async mkdir(id,path){await ensureDirectory(location(id,path))},
+ async folderEntries(id,path){
+  const result=[];async function walk(relative){const children=(await Filesystem.readdir({path:location(id,relative),directory:Directory.Documents})).files;for(const child of children){if(child.name.includes('/')||child.name==='.'||child.name==='..')throw Error('Invalid folder entry.');const nested=relative+'/'+child.name;const stat=await Filesystem.stat({path:location(id,nested),directory:Directory.Documents});result.push({path:nested,type:stat.type,size:stat.size||0,mtime:stat.mtime||0});if(stat.type==='directory')await walk(nested);if(result.length>10000)throw Error('This folder has too many items to review safely.');}}await walk(path);return result;
+ },
+ async renameFolder(id,from,to){await Filesystem.rename({from:location(id,from),to:location(id,to),directory:Directory.Documents,toDirectory:Directory.Documents})},
+ async removeFolder(id,path){await Filesystem.rmdir({path:location(id,path),directory:Directory.Documents,recursive:true})}
 };}
 export async function shareProjectZip({name,bytes}){
  let binary='';for(let i=0;i<bytes.length;i+=8192)binary+=String.fromCharCode(...bytes.subarray(i,i+8192));
