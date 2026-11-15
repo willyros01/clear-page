@@ -33,10 +33,22 @@ final class ATEFunctionalTests: XCTestCase {
         finishMenu()
     }
     func dismissKeyboard() {
+        // A fresh iPhone simulator can show Apple's slide-to-type introduction.
+        // Dismiss that native overlay before using its keyboard Done accessory.
+        let introduction = app.otherElements["UIContinuousPathIntroductionView"].firstMatch
+        if introduction.exists {
+            let proceed = introduction.buttons["Continue"].firstMatch
+            if proceed.waitForExistence(timeout: 3) && proceed.isHittable {
+                proceed.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+            }
+        }
         let keyboardDone = app.toolbars.buttons["Done"].firstMatch
-        if keyboardDone.exists { keyboardDone.tap() }
+        if keyboardDone.exists && keyboardDone.isHittable {
+            keyboardDone.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        }
         let hide = app.buttons["Hide keyboard"].firstMatch
-        if hide.exists { hide.tap() }
+        if hide.exists && hide.isHittable { hide.tap() }
+        _ = waitForGone(app.keyboards.firstMatch, timeout: 5)
     }
     func finishMenu() {
         let done = app.webViews.buttons["Done"].firstMatch
