@@ -43,7 +43,7 @@ try{for(const [engineName,engine] of Object.entries(engines)){
   // Exercise the Android-specific restoration path with a mobile viewport.
   const phone=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
   const phoneErrors=[];phone.on('pageerror',e=>phoneErrors.push(e.message));
-  await phone.addInitScript(()=>{window.androidBridge={postMessage(){}};window.Capacitor={PluginHeaders:[{name:'App',methods:[{name:'addListener',rtype:'callback'}]}],nativeCallback:()=> 'test-listener'};Object.hasOwn=undefined});
+  await phone.addInitScript(()=>{const modal=HTMLDialogElement.prototype.showModal;HTMLDialogElement.prototype.showModal=function(){if(this.open)throw new DOMException('Legacy WebView cannot reopen an open modal','InvalidStateError');return modal.call(this)};window.androidBridge={postMessage(){}};window.Capacitor={PluginHeaders:[{name:'App',methods:[{name:'addListener',rtype:'callback'}]}],nativeCallback:()=> 'test-listener'};Object.hasOwn=undefined});
   await phone.goto('http://127.0.0.1:'+server.address().port);await phone.waitForSelector('.cm-content');
   await phone.locator('#menuButton').click();await phone.locator('#advancedMode').click();await phone.locator('#closeMenu').click();
   const long=Array.from({length:200},(_,i)=>'// source line '+i).join('\n');
@@ -53,6 +53,7 @@ try{for(const [engineName,engine] of Object.entries(engines)){
   await phone.getByRole('tab',{name:'long.c',exact:true}).click();await phone.waitForTimeout(250);assert.ok(Math.abs(await scroll.evaluate(e=>e.scrollTop)-top)<50);
   await phone.reload();await phone.waitForSelector('.cm-content');await phone.waitForTimeout(300);assert.ok(Math.abs(await scroll.evaluate(e=>e.scrollTop)-top)<50);
   assert.equal(await phone.evaluate(()=>JSON.parse(localStorage.getItem('clear-page-workspace-v1')).tabs.find(t=>t.name==='long.c').text),long);
+  await phone.evaluate(()=>{document.getElementById('checkSyntax').click();document.getElementById('checkSyntax').click()});await phone.waitForSelector('#syntaxDialog[open]');await phone.locator('#closeSyntax').click();
   assert.deepEqual(phoneErrors,[]);
   console.log('PASS '+engineName+': Android-specific long-tab scroll restoration, persisted recovery and exact document bytes');
  }finally{await browser.close()}

@@ -59,11 +59,11 @@ export function setupSyntax({editor,getDocument,nativeCheck,chooseCompiler,choos
  function saveSettings(){try{localStorage.setItem(settingsKey,JSON.stringify({automatic:$('autoCheck').checked,cChecker:desktop?$('cChecker').value:'basic',standard:$('cStandard').value,includes:$('cIncludes').value,defines:$('cDefines').value}))}catch{}changed()}
  $('cChecker').onchange=()=>{updateMode();compilerInstall.refresh();saveSettings()};
  for(const id of ['autoCheck','cStandard','cIncludes','cDefines'])$(id).onchange=saveSettings;
- $('checkSyntax').onclick=()=>{$('menu').close();$('syntaxDialog').showModal();check()};
- $('syntaxStatus').onclick=()=>{$('syntaxDialog').showModal()};
+ $('checkSyntax').onclick=()=>{$('menu').close();if(!$('syntaxDialog').open)$('syntaxDialog').showModal();check()};
+ $('syntaxStatus').onclick=()=>{if(!$('syntaxDialog').open)$('syntaxDialog').showModal()};
  $('checkAgain').onclick=check;
  $('closeSyntax').onclick=()=>{$('syntaxDialog').close();editor.focus()};
- $('cSettingsButton').onclick=()=>{$('menu').close();compilerInstall.refresh();$('cSettings').showModal()};
+ $('cSettingsButton').onclick=()=>{$('menu').close();compilerInstall.refresh();if(!$('cSettings').open)$('cSettings').showModal()};
  $('closeCSettings').onclick=()=>{$('cSettings').close();saveSettings();editor.focus()};
  for(const [id,choose,label] of [['chooseCompiler',chooseCompiler,'compilerChoice'],['chooseProject',chooseProject,'projectChoice']])$(id).onclick=async()=>{
   try{const path=await choose();if(path){$(label).textContent=path;changed()}}catch{$(label).textContent='Selection could not complete. Please try again.'}
