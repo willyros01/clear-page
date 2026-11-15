@@ -23,7 +23,9 @@ import {Filesystem,Directory,Encoding} from '@capacitor/filesystem';
   const tabs=()=>[...document.querySelectorAll('#tabs [role=tab]')];
   const askClose=()=>document.querySelector('#tabs [aria-selected=true]')?.nextElementSibling.click();
   const closeCurrent=()=>{askClose();if($('exitDialog').open)$('discardExit').click();};
-  const restart=JSON.parse(localStorage.getItem('ate-tabs-verification-restart')||'null');
+  let restart=null;
+  if(android){try{restart=JSON.parse((await Filesystem.readFile({path:'ate-ipad-restart-state.json',directory:Directory.Data,encoding:Encoding.UTF8})).data)}catch{}}
+  else restart=JSON.parse(localStorage.getItem('ate-tabs-verification-restart')||'null');
   if(!restart&&!$('experienceModes').hidden){assert(document.body.classList.contains('basic-mode'),'New iOS install starts in Basic mode');$('advancedMode').click();assert(!document.body.classList.contains('basic-mode'),'Advanced mode enables coding tools');}
   if(restart){
    checks.push(...restart.checks);
@@ -41,6 +43,7 @@ import {Filesystem,Directory,Encoding} from '@capacitor/filesystem';
    const saved=await Filesystem.readFile({path:'ATEProjects/'+restart.projectId+'/recovery.c',directory:projectDirectory,encoding:Encoding.UTF8});
    assert(saved.data==='int main(void) { return 0; }\n// saved from Basic','Project save after process recovery preserves exact disk text');
    localStorage.removeItem('ate-tabs-verification-restart');
+   if(android)try{await Filesystem.deleteFile({path:'ate-ipad-restart-state.json',directory:Directory.Data})}catch{}
    if(android){
     $('advancedMode').click();
     while(tabs().length>1)closeCurrent();closeCurrent();
@@ -202,6 +205,7 @@ import {Filesystem,Directory,Encoding} from '@capacitor/filesystem';
   await open('print(42)','recovery.py',true);$('language').value='plain';$('language').dispatchEvent(new Event('change'));view.dispatch({changes:{from:view.state.doc.length,insert:'\n# unsaved'}});
   $('basicMode').click();
   localStorage.setItem('ate-tabs-verification-restart',JSON.stringify({checks,projectId}));
+  if(android)await Filesystem.writeFile({path:'ate-ipad-restart-state.json',directory:Directory.Data,encoding:Encoding.UTF8,data:JSON.stringify({checks,projectId})});
   await Filesystem.writeFile({path:'ate-ipad-restart-ready.json',directory:Directory.Data,encoding:Encoding.UTF8,data:'ready'});return;
   }
   }

@@ -27,6 +27,10 @@ for attempt in {1..600}; do
  if adb shell run-as io.github.willyros01.clearpage test -f files/ate-ipad-syntax-verification.json; then finished=true; break; fi
  if adb shell run-as io.github.willyros01.clearpage test -f files/ate-ipad-restart-ready.json; then
   adb shell run-as io.github.willyros01.clearpage rm files/ate-ipad-restart-ready.json
+  # Like a real Android kill: app goes to the background first, giving the
+  # WebView time to write its saved state to disk, then the process is stopped.
+  adb shell input keyevent KEYCODE_HOME
+  sleep 10
   adb shell am force-stop io.github.willyros01.clearpage
   adb shell am start -n io.github.willyros01.clearpage/.MainActivity
  fi
