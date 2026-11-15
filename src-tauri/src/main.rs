@@ -77,6 +77,44 @@ fn editor_verification_result(app: tauri::AppHandle, passed: bool, report: Strin
     app.exit(if passed { 0 } else { 1 });
 }
 
+// Open the window no larger than the screen it is on (above the taskbar or Dock),
+// so the bottom line and the right-hand buttons are never off-screen.
+fn fit_to_screen(window: &tauri::WebviewWindow) {
+    let Some(monitor) = window.current_monitor().ok().flatten().or_else(|| window.primary_monitor().ok().flatten()) else { return };
+    let (Ok(outer), Ok(inner), Ok(pos)) = (window.outer_size(), window.inner_size(), window.outer_position()) else { return };
+    // A window not yet shown may report no frame size; then its frame is treated as zero.
+    let outer = if outer.width < inner.width || outer.height < inner.height { inner } else { outer };
+    let area = monitor.work_area();
+    let (ax, ay, aw, ah) = (area.position.x, area.position.y, area.size.width, area.size.height);
+    let (w, h) = (outer.width.min(aw), outer.height.min(ah));
+    if (w, h) != (outer.width, outer.height) {
+        let frame_w = outer.width.saturating_sub(inner.width);
+        let frame_h = outer.height.saturating_sub(inner.height);
+        let _ = window.set_size(tauri::PhysicalSize::new(w.saturating_sub(frame_w), h.saturating_sub(frame_h)));
+        let _ = window.set_position(tauri::PhysicalPosition::new(ax + ((aw - w) / 2) as i32, ay + ((ah - h) / 2) as i32));
+    } else {
+        // Same size, but keep the whole window on the screen.
+        let x = pos.x.clamp(ax, ax + (aw - w) as i32);
+        let y = pos.y.clamp(ay, ay + (ah - h) as i32);
+        if (x, y) != (pos.x, pos.y) { let _ = window.set_position(tauri::PhysicalPosition::new(x, y)); }
+    }
+}
+
+#[cfg(feature = "editor-verification")]
+#[tauri::command]
+fn window_fit_report(window: tauri::WebviewWindow) -> String {
+    let monitor = window.current_monitor().ok().flatten();
+    let (Some(m), Ok(pos), Ok(size)) = (monitor, window.outer_position(), window.outer_size()) else {
+        return r#"{"fits":false,"error":"window or screen size unavailable"}"#.into();
+    };
+    let a = m.work_area();
+    let fits = pos.x >= a.position.x && pos.y >= a.position.y
+        && pos.x + size.width as i32 <= a.position.x + a.size.width as i32
+        && pos.y + size.height as i32 <= a.position.y + a.size.height as i32;
+    format!(r#"{{"fits":{},"window":[{},{},{},{}],"screen":[{},{},{},{}]}}"#, fits, pos.x, pos.y, size.width, size.height,
+        a.position.x, a.position.y, a.size.width, a.size.height)
+}
+
 fn main() {
     let builder = tauri::Builder::default()
         .manage(compiler_setup::SetupState::default())
@@ -87,7 +125,7 @@ fn main() {
     #[cfg(feature = "editor-verification")]
     let builder = builder
         .manage(CVerificationCalls(std::sync::atomic::AtomicUsize::new(0)))
-        .invoke_handler(tauri::generate_handler![project_io, save_project_zip, save_document, exit_editor, check_c, choose_c_compiler, choose_c_project, compiler_setup_info, install_c_compiler, cancel_compiler_setup, editor_verification_result, c_verification_calls])
+        .invoke_handler(tauri::generate_handler![project_io, save_project_zip, save_document, exit_editor, check_c, choose_c_compiler, choose_c_project, compiler_setup_info, install_c_compiler, cancel_compiler_setup, editor_verification_result, c_verification_calls, window_fit_report])
         .on_page_load(|webview, payload| {
             if matches!(payload.event(), tauri::webview::PageLoadEvent::Finished) {
                 let _ = webview.eval(include_str!("../../tests/native-editor.js"));
@@ -103,6 +141,13 @@ fn main() {
                     let _ = window.emit("ate-exit-requested", ());
                 }
             }
+        })
+        .setup(|app| {
+                    if let Some(window) = app.get_webview_window("main") {
+                fit_to_screen(&window);
+                let _ = window.show();
+            }
+            Ok(())
         })
         .build(tauri::generate_context!())
         .expect("Could not start ATE");

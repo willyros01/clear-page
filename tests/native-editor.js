@@ -9,6 +9,10 @@
   for(let i=0;i<100&&!document.querySelector('.cm-content');i++)await wait(100);
   const content=document.querySelector('.cm-content');
   assert(!!content,'Editor initialized');
+  const fit=JSON.parse(await window.__TAURI_INTERNALS__.invoke('window_fit_report'));
+  assert(fit.fits,'Window fits inside the screen '+JSON.stringify(fit));
+  const status=$('syntaxStatus').getBoundingClientRect(),saveButton=$('save').getBoundingClientRect();
+  assert(status.bottom<=innerHeight&&saveButton.right<=innerWidth,'Syntax line and Save button are inside the window');
   const text=()=>[...document.querySelectorAll('.cm-line')].map(e=>e.textContent).join('\n');
   const key=(key,opts={})=>content.dispatchEvent(new KeyboardEvent('keydown',{key,bubbles:true,cancelable:true,...opts}));
   const keys=str=>{for(const char of str){
@@ -150,6 +154,6 @@
   assert(document.querySelectorAll('#tabs [role=tab]').length>0,'Closing a project keeps the ordinary workspace');
   await window.__TAURI_INTERNALS__.invoke('editor_verification_result',{passed:true,report:checks.map(x=>'PASS: '+x).join('\n')});
  }catch(error){
-  await window.__TAURI_INTERNALS__.invoke('editor_verification_result',{passed:false,report:checks.map(x=>'PASS: '+x).join('\n')+'\nFAIL: '+error.stack});
+  await window.__TAURI_INTERNALS__.invoke('editor_verification_result',{passed:false,report:checks.map(x=>'PASS: '+x).join('\n')+'\nFAIL: '+error.message+'\n'+error.stack});
  }
 })();
