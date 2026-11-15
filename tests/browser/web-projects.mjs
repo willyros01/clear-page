@@ -11,6 +11,7 @@ try{for(const [engineName,engine] of Object.entries(engines)){
  const browser=await engine.launch();
  try{
   const page=await browser.newPage({viewport:{width:1194,height:834},acceptDownloads:true});const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.addInitScript(()=>{Object.hasOwn=undefined;String.prototype.replaceAll=undefined});
   await page.goto('http://127.0.0.1:'+server.address().port);await page.waitForSelector('.cm-content');
   const $=id=>page.locator('#'+id),editor=page.locator('.cm-content');
   await $('menuButton').click();assert.equal(await $('basicMode').getAttribute('aria-pressed'),'true');await $('advancedMode').click();await $('closeMenu').click();
@@ -38,6 +39,6 @@ try{for(const [engineName,engine] of Object.entries(engines)){
   await $('exit').click();await $('exitCancel').click();assert.equal(await editor.innerText(),'ordinary portable name');await $('exit').click();await $('discardExit').click();await page.waitForFunction(()=>document.getElementById('name').value==='Untitled');assert.equal(await $('counts').innerText(),'0 words · 0 characters');assert.equal(await page.evaluate(()=>localStorage.getItem('clear-page-workspace-v1')),null);
   await page.reload();await page.waitForSelector('.cm-content');await projects();await $('openProjectPicker').click();assert.equal(await page.locator('#projectList button').count(),2,'Exiting discards drafts without deleting stored projects');await $('closeProjectPicker').click();await page.waitForSelector('#projects[open]');
   await mkdir('editor-evidence',{recursive:true});await page.screenshot({path:'editor-evidence/'+engineName+'-web-projects.png'});assert.deepEqual(errors,[]);
-  console.log('PASS '+engineName+': real IndexedDB projects, cross-platform ZIP bytes, prototype-safe names, restart, independent deletion, tab recovery and whole-workspace Exit');
+  console.log('PASS '+engineName+': legacy-WebView API compatibility, real IndexedDB projects, cross-platform ZIP bytes, prototype-safe names, restart, independent deletion, tab recovery and whole-workspace Exit');
  }finally{await browser.close()}
 }}finally{await new Promise(r=>server.close(r))}

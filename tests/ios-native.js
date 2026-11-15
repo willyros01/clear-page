@@ -11,7 +11,7 @@ import {Filesystem,Directory,Encoding} from '@capacitor/filesystem';
  const android=Capacitor.getPlatform()==='android';
  const marker='ATE_IPAD_SYNTAX_VERIFICATION_ONLY',checks=[],$=id=>document.getElementById(id);
  const wait=ms=>new Promise(r=>setTimeout(r,ms));
- const assert=(value,message)=>{if(!value)throw Error(message);checks.push(message)};
+ const assert=(value,message)=>{if(!value)throw Error(message);checks.push(message);if(android&&checks.length%10===0)console.info('ATE_NATIVE_PROGRESS',checks.length,message)};
  const until=async(fn,message)=>{for(let i=0;i<450&&!fn();i++)await wait(100);assert(fn(),message)};
  let passed=false,error='';
  try{

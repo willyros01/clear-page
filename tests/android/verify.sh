@@ -1,12 +1,27 @@
 #!/usr/bin/env bash
 set -euo pipefail
+capture_failure(){
+ timeout 20s adb logcat -d > android-logcat.txt || true
+ timeout 20s adb shell screencap -p /sdcard/ate-debug.png && adb pull /sdcard/ate-debug.png android-debug.png || true
+ timeout 20s adb shell uiautomator dump /sdcard/ate-ui.xml && adb pull /sdcard/ate-ui.xml android-ui.xml || true
+}
+trap 'status=$?; if [ "$status" -ne 0 ]; then capture_failure; fi' EXIT
 adb install android/app/build/outputs/apk/debug/app-debug.apk
 adb install android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+adb logcat -c
 adb shell am start -n io.github.willyros01.clearpage/.MainActivity
 # Validate recovery after a real app-process restart before instrumentation,
 # whose own target process must remain alive while native picker tests run.
 finished=false
 for attempt in {1..600}; do
+ if (( attempt % 5 == 0 )); then
+  adb logcat -d -s Capacitor/Console:E Capacitor:E > android-startup.txt
+  if grep -E 'Uncaught|JavaScript Error:' android-startup.txt; then echo 'Fatal Android JavaScript startup/runtime error'; exit 1; fi
+ fi
+ if (( attempt % 10 == 0 )); then
+  echo "Android native verification: ${attempt}s elapsed"
+  adb logcat -d -s Capacitor/Console:I | grep 'ATE_NATIVE_PROGRESS' | tail -1 || true
+ fi
  if adb shell run-as io.github.willyros01.clearpage test -f files/ate-ipad-syntax-verification.json; then finished=true; break; fi
  if adb shell run-as io.github.willyros01.clearpage test -f files/ate-ipad-restart-ready.json; then
   adb shell run-as io.github.willyros01.clearpage rm files/ate-ipad-restart-ready.json
