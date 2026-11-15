@@ -1,0 +1,64 @@
+name: ATE Mac App Store sandbox Clang check
+# Diagnostic only: builds the native verification app, signs it with the same
+# sandbox entitlements as the Mac App Store build, and runs the full native test
+# set (including the optional Clang check) inside the sandbox. Releases nothing.
+on:
+  push:
+    branches: [mac-sandbox-check]
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  sandbox:
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+      - run: npm ci
+      - run: npm run desktop:icons
+      - run: npm run build
+      - name: Build native verification app bundle
+        run: npm run tauri -- build --bundles app --features editor-verification
+      - name: Run the native tests inside the Mac App Store sandbox
+        shell: bash
+        run: |
+          set -uo pipefail
+          APP=$(ls -d src-tauri/target/release/bundle/macos/*.app | head -1)
+          cat > "$RUNNER_TEMP/sandbox.plist" <<'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+          <key>com.apple.security.app-sandbox</key><true/>
+          <key>com.apple.security.files.user-selected.read-write</key><true/>
+          <key>com.apple.security.network.client</key><true/>
+          </dict></plist>
+          PLIST
+          codesign --force --deep --sign - --options runtime --entitlements "$RUNNER_TEMP/sandbox.plist" "$APP"
+          echo "=== Entitlements now on the app ==="; codesign -d --entitlements - "$APP" 2>/dev/null | grep -o 'com.apple.security[a-z.-]*' || true
+          echo "=== Clang on this Mac ==="; which clang; clang --version | head -1
+          CONTAINER="$HOME/Library/Containers/io.github.willyros01.clearpage/Data"
+          export ATE_VERIFICATION_REPORT="$CONTAINER/sandbox-report.txt"
+          rm -f "$ATE_VERIFICATION_REPORT"
+          EXE="$APP/Contents/MacOS/$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP/Contents/Info.plist")"
+          "$EXE" > "$RUNNER_TEMP/app-output.txt" 2>&1 &
+          PID=$!
+          for i in $(seq 1 180); do [ -f "$ATE_VERIFICATION_REPORT" ] && break; kill -0 $PID 2>/dev/null || break; sleep 1; done
+          sleep 2; kill $PID 2>/dev/null || true
+          echo "=== Was the app really sandboxed? ==="
+          log show --last 5m --predicate 'sender == "Sandbox"' --style compact 2>/dev/null | grep -i -E "ate-desktop|clang" | tail -40 || true
+          echo "=== Test report ==="
+          if [ -f "$ATE_VERIFICATION_REPORT" ]; then cat "$ATE_VERIFICATION_REPORT"; else echo "No report file; app output:"; tail -80 "$RUNNER_TEMP/app-output.txt"; fi
+          echo "=== Summary ==="
+          grep -h -E "Clang|FAIL" "$ATE_VERIFICATION_REPORT" "$RUNNER_TEMP/app-output.txt" 2>/dev/null || echo "No Clang lines in report"
+          exit 0
