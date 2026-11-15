@@ -1,6 +1,6 @@
 import {createProjectStore,projectPath,textBytes} from './projects.js';
-import {iosProjectAdapter,shareProjectZip} from './ios-projects.js';
-export function setupProjects({workspace,openDocument,canChange,notice,exclusive=fn=>fn(),store=createProjectStore(iosProjectAdapter()),share=shareProjectZip}){
+import {projectAdapter,exportProjectZip} from './project-platform.js';
+export function setupProjects({workspace,openDocument,canChange,notice,exclusive=fn=>fn(),store=createProjectStore(projectAdapter()),share=exportProjectZip}){
  const $=id=>document.getElementById(id);
  let current=null,busy=false,destination='',pendingImport=null,closingId=null,deletePlan=null;
  const collapsed=new Set();
@@ -96,7 +96,7 @@ export function setupProjects({workspace,openDocument,canChange,notice,exclusive
  $('addProjectFiles').onclick=()=>{if(!busy&&canChange()&&current){pendingImport={id:current.id,folder:destination};$('projectFiles').click()}};
  $('projectFiles').oncancel=()=>{pendingImport=null};
  $('projectFiles').onchange=event=>{const files=[...event.target.files],target=pendingImport;pendingImport=null;event.target.value='';if(!files.length||!target)return;return task(async()=>{if(current?.id!==target.id)throw Error('The project changed. Add the files again to choose their destination.');const entries=[];let total=0;for(const file of files){total+=file.size;if(file.size>10*1024*1024||total>20*1024*1024)throw Error('Choose text files within the project size limits.');const text=new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(await file.arrayBuffer());textBytes(text);entries.push({path:(target.folder?target.folder+'/':'')+file.name,text})}current=await store.add(target.id,entries);destination=target.folder;await refresh();$('projectComposer').hidden=true;status('Added '+entries.length+' file(s) to '+(target.folder||'Project root')+'.');});};
- $('exportProject').onclick=()=>task(async()=>{if(workspace.documents().some(t=>t.projectRef?.id===current.id&&t.dirty))throw Error('Save the unsaved project tabs before exporting. ZIP export contains saved files only.');await share(await store.export(current.id));status('Project ZIP share sheet closed. Confirm the saved ZIP in Files.');});
+ $('exportProject').onclick=()=>task(async()=>{if(workspace.documents().some(t=>t.projectRef?.id===current.id&&t.dirty))throw Error('Save the unsaved project tabs before exporting. ZIP export contains saved files only.');await share(await store.export(current.id));status('Project ZIP export finished. Confirm the saved copy in your chosen destination.');});
  $('importProject').onclick=()=>{if(!busy&&canChange())$('projectZip').click()};
  $('projectZip').onchange=event=>{const file=event.target.files[0];event.target.value='';if(!file)return;return task(async()=>{if(file.size>20*1024*1024)throw Error('Choose a project ZIP smaller than 20 MB.');current=await store.import(new Uint8Array(await file.arrayBuffer()));destination='';collapsed.clear();selected(current.id);$('projectComposer').hidden=true;await refresh();$('projectPicker').close();status('Imported '+current.name+' as a new project.');});};
  const affectedTabs=(id,path)=>workspace.documents().filter(t=>t.projectRef?.id===id&&(t.projectRef.path===path||t.projectRef.path.startsWith(path+'/')));
@@ -130,5 +130,5 @@ export function setupProjects({workspace,openDocument,canChange,notice,exclusive
  $('cancelProjectClose').onclick=()=>{$('closeProjectDialog').close();closingId=null};
  $('discardAndCloseProject').onclick=()=>{const id=closingId;$('closeProjectDialog').close();closingId=null;return task(()=>finishClose(id))};
  $('saveAndCloseProject').onclick=()=>{const id=closingId;$('closeProjectDialog').close();closingId=null;return task(async()=>{if(current?.id!==id)throw Error('The active project changed.');for(const tab of workspace.documents().filter(t=>t.projectRef?.id===id&&t.dirty)){const result=await store.save(tab.projectRef,tab.name,tab.text);workspace.saved(tab.id,tab.text,result.name,result.projectRef)}if(workspace.documents().some(t=>t.projectRef?.id===id&&t.dirty))throw Error('New changes were made while saving. The project is still open.');await finishClose(id)});};
- return {save:async(ref,name,text)=>{const result=await store.save(ref,name,text);if(current?.id===ref.id){current=await store.load(ref.id);render()}return result},store,get current(){return current}};
+ return {dismiss(){projectReturn=null;for(const id of ['projectPicker','closeProjectDialog','deleteFolderDialog','projects'])if($(id).open)$(id).close()},save:async(ref,name,text)=>{const result=await store.save(ref,name,text);if(current?.id===ref.id){current=await store.load(ref.id);render()}return result},store,get current(){return current}};
 }

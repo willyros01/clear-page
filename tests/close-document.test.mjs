@@ -22,21 +22,21 @@ test('closing discards the document, undo history and panels without a closing p
  try{
   view.dispatch({changes:{from:0,insert:'Private unsaved document'}});
   assert.ok(undoDepth(view.state)>0);
-  assert.match(localStorage.getItem('clear-page-draft-v1'),/Private unsaved document/);
+  assert.match(localStorage.getItem('clear-page-workspace-v1'),/Private unsaved document/);
   openSearchPanel(view);
   document.getElementById('exit').click();
   document.getElementById('exitCancel').click();
   assert.equal(view.state.doc.toString(),'Private unsaved document');
   document.getElementById('exit').click();
-  document.getElementById('discardExit').click();
+  await document.getElementById('discardExit').onclick();
   assert.equal(view.state.doc.toString(),'');
   assert.equal(undoDepth(view.state),0);
-  assert.equal(localStorage.getItem('clear-page-draft-v1'),null);
+  assert.equal(localStorage.getItem('clear-page-workspace-v1'),null);
   assert.equal(document.querySelectorAll('dialog[open]').length,0);
   assert.equal(document.querySelector('.cm-search'),null);
   assert.equal(document.getElementById('closed'),null);
   assert.notEqual(document.activeElement,view.contentDOM);
   view.dispatch({changes:{from:0,insert:'Next document'}});
-  assert.match(localStorage.getItem('clear-page-draft-v1'),/Next document/);
+  assert.match(localStorage.getItem('clear-page-workspace-v1'),/Next document/);
  }finally{view.destroy();dom.window.close()}
 });

@@ -1,5 +1,5 @@
 import {EditorSelection} from '@codemirror/state';
-// iOS workspace: one editor view, independent immutable CodeMirror states per tab.
+// Shared workspace: one editor view, independent immutable CodeMirror states per tab.
 export const workspaceKey='clear-page-workspace-v1';
 export function createDocumentTabs({editor,storage,getMeta,setMeta,changed,render,status}){
  let tabs=[],active=0,serial=0,recoveryBlocked=false;
@@ -16,5 +16,6 @@ export function createDocumentTabs({editor,storage,getMeta,setMeta,changed,rende
  function saved(id,text,name,projectRef){const t=tabs.find(t=>t.id===id);if(!t)return;if(projectRef)t.projectRef=projectRef;t.savedText=text;t.savedName=name;if(t.id===tabs[active].id){capture();}t.dirty=t.text!==text||t.name!==name;persist();}
  function closeMany(ids,{focus=true}={}){const removing=new Set(ids);if(!tabs.some(t=>removing.has(t.id)))return;capture();const activeId=tabs[active].id,before=tabs.slice(0,active).filter(t=>!removing.has(t.id)).length;tabs=tabs.filter(t=>!removing.has(t.id));if(!tabs.length)tabs=[make()];const kept=tabs.findIndex(t=>t.id===activeId);active=kept>=0?kept:Math.min(before,tabs.length-1);show();persist();if(focus)editor.focus();}
  function close(id){closeMany([id])}
- return {init,activate,add,edit,saved,close,closeMany,persist,list,documents(){capture();return tabs.map(({state,...t})=>({...t}))},get current(){capture();return tabs[active]}};
+ function clear({keepRecovery=false}={}){tabs=[make()];active=0;recoveryBlocked=false;show();if(!keepRecovery)try{storage.removeItem(workspaceKey)}catch{status(false)}}
+ return {init,activate,add,edit,saved,close,closeMany,clear,persist,list,documents(){capture();return tabs.map(({state,...t})=>({...t}))},get current(){capture();return tabs[active]}};
 }

@@ -31,6 +31,7 @@ try{
    await page.goto(url);
    await page.waitForSelector('.cm-content');
    const editor=page.locator('.cm-content');
+   await page.locator('#menuButton').click();await page.locator('#advancedMode').click();await page.locator('#closeMenu').click();
    for(const id of ['menu','cSettings','compilerInstall','projects']){
     const fonts=await page.locator('#'+id).evaluate(dialog=>{dialog.showModal();const result=[...dialog.querySelectorAll('button,input,select,textarea,label,p,h1,h2,h3')].filter(e=>e.getBoundingClientRect().width).map(e=>parseFloat(getComputedStyle(e).fontSize));dialog.close();return result});
     assert.ok(id==='projects'?fonts.every(size=>size>=18):fonts.every(size=>size<=18.67),'Controls follow approved project/editor sizes: '+id+' '+fonts);
@@ -41,6 +42,7 @@ try{
    const done=async()=>page.locator('#closeMenu').click();
    const setMode=async mode=>{await menu();await page.locator('#editingMode').selectOption(mode);await done()};
    const open=async (content,name="fixture.js")=>{
+    await page.locator('#tabs [aria-selected=true]').locator('..').locator('button').last().click();if(await page.locator('#exitDialog').isVisible())await page.locator('#discardExit').click();
     await page.locator('#file').setInputFiles({name,mimeType:'text/javascript',buffer:Buffer.from(content)});
     await page.waitForFunction(expected=>[...document.querySelectorAll('.cm-line')].map(e=>e.textContent).join('\n')===expected,content);
    };

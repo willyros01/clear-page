@@ -4,6 +4,8 @@ use tauri::{Emitter, Manager};
 use tauri_plugin_dialog::DialogExt;
 use std::io::Write;
 mod c_check;
+mod projects;
+use projects::{project_io,save_project_zip};
 mod compiler_setup;
 use compiler_setup::{compiler_setup_info,install_c_compiler,cancel_compiler_setup};
 
@@ -85,14 +87,14 @@ fn main() {
     #[cfg(feature = "editor-verification")]
     let builder = builder
         .manage(CVerificationCalls(std::sync::atomic::AtomicUsize::new(0)))
-        .invoke_handler(tauri::generate_handler![save_document, exit_editor, check_c, choose_c_compiler, choose_c_project, compiler_setup_info, install_c_compiler, cancel_compiler_setup, editor_verification_result, c_verification_calls])
+        .invoke_handler(tauri::generate_handler![project_io, save_project_zip, save_document, exit_editor, check_c, choose_c_compiler, choose_c_project, compiler_setup_info, install_c_compiler, cancel_compiler_setup, editor_verification_result, c_verification_calls])
         .on_page_load(|webview, payload| {
             if matches!(payload.event(), tauri::webview::PageLoadEvent::Finished) {
                 let _ = webview.eval(include_str!("../../tests/native-editor.js"));
             }
         });
     #[cfg(not(feature = "editor-verification"))]
-    let builder = builder.invoke_handler(tauri::generate_handler![save_document, exit_editor, check_c, choose_c_compiler, choose_c_project, compiler_setup_info, install_c_compiler, cancel_compiler_setup]);
+    let builder = builder.invoke_handler(tauri::generate_handler![project_io, save_project_zip, save_document, exit_editor, check_c, choose_c_compiler, choose_c_project, compiler_setup_info, install_c_compiler, cancel_compiler_setup]);
     let app = builder
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {

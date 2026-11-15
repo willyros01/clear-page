@@ -11,11 +11,11 @@ import {languages} from './editor.js';
 import {setupSyntax} from './syntax-ui.js';
 import {checkC,chooseCCompiler,chooseCProject,compilerSetupInfo,installCCompiler,cancelCompilerSetup} from './desktop.js';
 const $=id=>document.getElementById(id);
-const tabbed=Capacitor.getPlatform()==='ios';
-const iosViewport=tabbed?setupIOSViewport():null;
+const ios=Capacitor.getPlatform()==='ios',tabbed=true;
+const iosViewport=native?setupIOSViewport():null;
 // iOS file-provider UTIs can classify .sql and extensionless source as non-text.
 // Let users choose a file, then validate its bytes before opening/copying it.
-if(tabbed)for(const id of ['file','projectFiles'])document.getElementById(id).removeAttribute('accept');
+for(const id of ['file','projectFiles'])document.getElementById(id).removeAttribute('accept');
 let workspace=null,projects=null,loading=true,syntax=null,languageManual=false,advanced=true;
 if(tabbed)try{const p=JSON.parse(localStorage.getItem('clear-page-preferences-v1')||'null');advanced=p?.experienceMode? p.experienceMode==='advanced':!!(p||localStorage.getItem('clear-page-workspace-v1')||localStorage.getItem('clear-page-draft-v1'));}catch{advanced=false}
 const editor=createEditor($('editor'),()=>{if(!loading){dirty=true;counts();persist();syntax?.changed()}});let font=27,dirty=false,pending=null;const key='clear-page-draft-v1';const prefsKey='clear-page-preferences-v1';
@@ -45,10 +45,14 @@ $('save').onclick=save;
 $('menuButton').onclick=()=>{$('menu').showModal();$('menu').scrollTop=0;iosViewport?.restore()};
 $('closeMenu').onclick=()=>leaveMenu();
 $('menu').addEventListener('cancel',()=>{commitFilename();if(document.activeElement instanceof HTMLElement)document.activeElement.blur();iosViewport?.restore()});
-$('exit').onclick=()=>{if(workspace)requestClose(workspace.current.id);else $('exitDialog').showModal()};
-$('exitCancel').onclick=()=>{$('exitDialog').close();editor.focus()};
+let closingTabId=null;
+function requestExit(){if(saving){notice('Wait for the current save to finish.');return}projects?.dismiss();closingTabId=null;$('exitTitle').textContent='Exit ATE?';$('exitDialog').querySelector('p').textContent='Save open files before exiting, or discard unsaved changes. Saved project and device files are kept.';$('saveExit').textContent='Save and exit';$('discardExit').textContent='Exit without saving';$('exitDialog').showModal()}
+if(!ios){$('exit').querySelector('.control-label').textContent='Exit';$('exit').setAttribute('aria-label','Exit')}
+$('exit').onclick=()=>ios?requestClose(workspace.current.id):requestExit();
+$('exitCancel').onclick=()=>{closingTabId=null;$('exitDialog').close();editor.focus()};
 async function closeEditor(saved){
- if(workspace){workspace.close(workspace.current.id);$('exitDialog').close();return}
+ if(workspace&&closingTabId!==null){workspace.close(closingTabId);closingTabId=null;$('exitDialog').close();return}
+ if(workspace){workspace.clear({keepRecovery:saved});if(!saved)try{localStorage.removeItem(key)}catch{}$('exitDialog').close();notice('');for(const dialog of document.querySelectorAll('dialog[open]'))dialog.close();await leave();document.activeElement?.blur();try{await closePlatform()}catch{notice('Your files are closed. You can close the window now.')}return}
 
  try{if(!saved)localStorage.removeItem(key)}catch(e){notice('Could not discard the draft. Please keep editing or clear this app’s data.');$('exitDialog').close();return}
  loading=true;editor.value='';loading=false;dirty=false;pending=null;
@@ -58,10 +62,17 @@ async function closeEditor(saved){
  const active=document.activeElement;if(active instanceof HTMLElement)active.blur();
  try{await closePlatform()}catch(e){notice('The document is closed. You can close the window now.')}
 }
-handleDesktopExit(()=>{if(!$('exitDialog').open)$('exitDialog').showModal()});
-handleBack(()=>{const dialogs=[...document.querySelectorAll('dialog[open]')];if(dialogs.length){dialogs[dialogs.length-1].close();editor.focus()}else $('exitDialog').showModal()});
+handleDesktopExit(()=>{if(!$('exitDialog').open)requestExit()});
+handleBack(()=>{const dialogs=[...document.querySelectorAll('dialog[open]')];if(dialogs.length){dialogs[dialogs.length-1].close();editor.focus()}else requestExit()});
 $('discardExit').onclick=()=>closeEditor(false);
-$('saveExit').onclick=async()=>{if(await save()){if(workspace?.current.dirty){notice('New changes were made during saving. Save again before closing.');return}closeEditor(true)}};
+$('saveExit').onclick=async()=>{
+ if(saving)return;
+ if(closingTabId!==null){if(await save()){if(workspace.current.dirty){notice('New changes were made during saving. Save again before closing.');return}await closeEditor(true)}return}
+ const active=workspace.current.id,dirty=workspace.documents().filter(t=>t.dirty),ids=[active,...dirty.map(t=>t.id).filter(id=>id!==active)];
+ for(const id of ids){workspace.activate(id);if(!await save()||workspace.current.dirty){workspace.activate(active);notice('Exit cancelled. Your open files and drafts are kept.');return}}
+ if(workspace.documents().some(t=>t.dirty)){notice('New changes were made during saving. Save again before exiting.');return}
+ await closeEditor(true);
+};
 
 function guard(action,title){if(editor.value){pending=action;$('dialogTitle').textContent=title;$('confirm').showModal()}else action()}
 $('cancel').onclick=()=>{$('confirm').close();pending=null};$('proceed').onclick=()=>{const fn=pending;pending=null;$('confirm').close();if(fn)fn()};
@@ -87,18 +98,18 @@ $('copy').onclick=async()=>{const text=editor.selectedText();if(!text){$('menu')
 $('closeCopy').onclick=()=>{$('copyDialog').close();editor.focus()};
 $('helpButton').onclick=()=>{$('menu').close();$('help').showModal();$('help').scrollTop=0};
 $('closeHelp').onclick=()=>{$('help').close();editor.focus()};
-editor.commands(save,()=>{$('exit').click()},async()=>{if(await save()){if(!workspace?.current.dirty)closeEditor(true)}});
+editor.commands(save,()=>{$('exit').click()},async()=>{if(ios){closingTabId=workspace.current.id;if(await save()&&!workspace.current.dirty)await closeEditor(true)}else{requestExit();await $('saveExit').onclick()}});
 syntax=setupSyntax({editor,getDocument:()=>({text:editor.value,language:$('language').value,name:$('name').value}),nativeCheck:checkC,chooseCompiler:chooseCCompiler,chooseProject:chooseCProject,compilerSetupInfo,installCCompiler,cancelCompilerSetup,desktop,isEnabled:()=>advanced,keepIdleWorker:Capacitor.getPlatform()==='android'});
 
 
 function requestClose(id){
  if(saving){notice('Wait for the current save to finish.');return}
- workspace.activate(id);
+ workspace.activate(id);closingTabId=id;$('saveExit').textContent='Save and close';$('discardExit').textContent='Close without saving';$('exitDialog').querySelector('p').textContent='Save a copy before closing this tab, or discard its unsaved changes. Other tabs and saved files are kept.';
  if(workspace.current.dirty){$('exitTitle').textContent='Close '+workspace.current.name+'?';$('exitDialog').showModal()}
- else workspace.close(id);
+ else {workspace.close(id);closingTabId=null;}
 }
 if(tabbed){
- $('tabs').hidden=false;$('documentBar').hidden=false;$('exit').setAttribute('aria-label','Close current tab');
+ $('tabs').hidden=false;$('documentBar').hidden=false;if(ios)$('exit').setAttribute('aria-label','Close current tab');
  $('exitDialog').querySelector('p').textContent='Save a copy before closing, or discard this tab’s unsaved changes. Other tabs and existing files are kept.';
  workspace=createDocumentTabs({editor,storage:localStorage,
  getMeta:()=>({name:$('name').value,language:$('language').value,manual:languageManual}),

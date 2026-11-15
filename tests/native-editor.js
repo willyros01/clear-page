@@ -18,7 +18,9 @@
     active.dispatchEvent(new Event('input',{bubbles:true}));
    }else key(char);
   }};
+  $('advancedMode').click();
   const open=async(value,name='native-fixture.js')=>{
+   const close=document.querySelector('#tabs [role=tab][aria-selected=true]')?.nextElementSibling;if(close){close.click();if($('exitDialog').open)$('discardExit').click();}
    const transfer=new DataTransfer();transfer.items.add(new File([value],name,{type:'text/javascript'}));
    $('file').files=transfer.files;$('file').dispatchEvent(new Event('change'));
    for(let i=0;i<50&&text()!==value;i++)await wait(50);
@@ -126,6 +128,26 @@
   assert($('cAdvanced').hidden,'Switching back to Basic hides compiler configuration');
   assert(JSON.parse(localStorage.getItem('ate-syntax-preferences-v1')).cChecker==='basic','C checker preference is persisted');
   $('closeCSettings').click();
+  // The real native project bridge, not a mocked browser filesystem.
+  $('projectsButton').click();await until(()=>$('projects').open&&!$('createProject').disabled);
+  $('openProjectPicker').click();await until(()=>$('projectPicker').open&&!$('createProject').disabled);
+  $('projectName').value='Native desktop';await $('createProject').onclick();await until(()=>$('projects').open);
+  const projectId=localStorage.getItem('ate-current-project-v1');assert(!!projectId,'Native desktop project created');
+  $('projectFileName').value='src';await $('newProjectFolder').onclick();$('projectFileName').value='query.sql';await $('newProjectFile').onclick();
+  assert($('name').value==='src/query.sql','Native desktop project file opens in its own tab');
+  // Use the ordinary input path to edit a bound project tab without a native dialog.
+  mode('vim');key('Escape');keys(':s/^/SELECT 1;/');document.querySelector('.cm-vim-panel input').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',keyCode:13,bubbles:true,cancelable:true}));mode('standard');
+  assert(await $('save').onclick(),'Native desktop project save completes');
+  const io=(op,path='',extra={})=>window.__TAURI_INTERNALS__.invoke('project_io',{request:{op,id:projectId,path,...extra}});
+  assert((await io('read','src/query.sql')).text.includes('SELECT 1;'),'Native project UTF-8 bytes persisted outside recovery');
+  await io('write','keep.sql',{text:'SELECT 2;'});
+  $('projectsButton').click();await until(()=>$('projects').open&&!$('createProject').disabled);
+  document.querySelector('[aria-label="Select folder src"]').click();await $('deleteProjectFolder').onclick();assert($('deleteFolderDialog').open,'Native folder deletion previews contents');$('cancelDeleteFolder').click();await until(()=>$('projects').open);
+  assert((await io('read','src/query.sql')).text.includes('SELECT 1;'),'Native cancellation keeps project bytes');
+  await $('deleteProjectFolder').onclick();await $('confirmDeleteFolder').onclick();await until(()=>$('projects').open);
+  assert((await io('read','src/query.sql')).text===null,'Native confirmed deletion removes directory bytes');assert((await io('read','keep.sql')).text==='SELECT 2;','Native folder deletion preserves sibling bytes');
+  $('closeProject').click();await until(()=>$('projectActions').hidden);$('closeProjects').click();
+  assert(document.querySelectorAll('#tabs [role=tab]').length>0,'Closing a project keeps the ordinary workspace');
   await window.__TAURI_INTERNALS__.invoke('editor_verification_result',{passed:true,report:checks.map(x=>'PASS: '+x).join('\n')});
  }catch(error){
   await window.__TAURI_INTERNALS__.invoke('editor_verification_result',{passed:false,report:checks.map(x=>'PASS: '+x).join('\n')+'\nFAIL: '+error.stack});

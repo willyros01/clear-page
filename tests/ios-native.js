@@ -1,24 +1,28 @@
+import {Capacitor} from '@capacitor/core';
 import {checkProjectLayout} from './project-layout.js';
 import {checkToolbarLayout} from './toolbar-layout.js';
 import {createProjectStore} from '../src/projects.js';
-import {iosProjectAdapter} from '../src/ios-projects.js';
+import {iosProjectAdapter,projectDirectory} from '../src/ios-projects.js';
 import {EditorView} from '@codemirror/view';
 import {undo} from '@codemirror/commands';
 // Included only by ATE_IOS_VERIFICATION=1, never in distribution assets.
 import {Filesystem,Directory,Encoding} from '@capacitor/filesystem';
 (async()=>{
+ const android=Capacitor.getPlatform()==='android';
  const marker='ATE_IPAD_SYNTAX_VERIFICATION_ONLY',checks=[],$=id=>document.getElementById(id);
  const wait=ms=>new Promise(r=>setTimeout(r,ms));
  const assert=(value,message)=>{if(!value)throw Error(message);checks.push(message)};
  const until=async(fn,message)=>{for(let i=0;i<450&&!fn();i++)await wait(100);assert(fn(),message)};
  let passed=false,error='';
  try{
+  if(android)try{const prior=await Filesystem.readFile({path:'ate-ipad-syntax-verification.json',directory:Directory.Data,encoding:Encoding.UTF8});if(JSON.parse(prior.data).passed)return}catch{}
   await until(()=>!!document.querySelector('.cm-content'),'iPad editor initialized');
   const content=document.querySelector('.cm-content');
   const view=EditorView.findFromDOM(document.querySelector('.cm-editor'));
   for(const scale of [1,2,3])for(const icons of [false,true])assert(!!checkToolbarLayout([scale,icons]),`Native toolbar/save reflow at ${scale*100}% ${icons?'icons':'text'}`);
   const tabs=()=>[...document.querySelectorAll('#tabs [role=tab]')];
-  const closeCurrent=()=>{ $('exit').click();if($('exitDialog').open)$('discardExit').click(); };
+  const askClose=()=>document.querySelector('#tabs [aria-selected=true]')?.nextElementSibling.click();
+  const closeCurrent=()=>{askClose();if($('exitDialog').open)$('discardExit').click();};
   const restart=JSON.parse(localStorage.getItem('ate-tabs-verification-restart')||'null');
   if(!restart&&!$('experienceModes').hidden){assert(document.body.classList.contains('basic-mode'),'New iOS install starts in Basic mode');$('advancedMode').click();assert(!document.body.classList.contains('basic-mode'),'Advanced mode enables coding tools');}
   if(restart){
@@ -34,9 +38,15 @@ import {Filesystem,Directory,Encoding} from '@capacitor/filesystem';
    assert(persisted.projectRef?.id===restart.projectId,'Project tab association survives restart');
    view.dispatch({changes:{from:view.state.doc.length,insert:'\n// saved from Basic'}});
    assert(await $('save').onclick(),'Basic mode saves an existing project tab');
-   const saved=await Filesystem.readFile({path:'ATEProjects/'+restart.projectId+'/recovery.c',directory:Directory.Documents,encoding:Encoding.UTF8});
+   const saved=await Filesystem.readFile({path:'ATEProjects/'+restart.projectId+'/recovery.c',directory:projectDirectory,encoding:Encoding.UTF8});
    assert(saved.data==='int main(void) { return 0; }\n// saved from Basic','Project save after process recovery preserves exact disk text');
    localStorage.removeItem('ate-tabs-verification-restart');
+   if(android){
+    $('advancedMode').click();
+    while(tabs().length>1)closeCurrent();closeCurrent();
+    const transfer=new DataTransfer();transfer.items.add(new File(['int main(void) { return 0 }'],'final.c',{type:'text/plain'}));$('file').files=transfer.files;$('file').dispatchEvent(new Event('change'));
+    await until(()=>$('name').value==='final.c','Android native Save fixture restored');$('checkSyntax').click();await until(()=>$('syntaxIssues').children.length>0,'Android native Save fixture checked');
+   }
    passed=true;
   }else{
 
@@ -78,8 +88,8 @@ import {Filesystem,Directory,Encoding} from '@capacitor/filesystem';
   tabs()[2].click();assert(view.state.doc.toString().startsWith('# edited'),'Python edits survive C undo');
   undo(view);assert(view.state.doc.toString()==='print(1)','Python undo is independent');
   view.dispatch({changes:{from:0,insert:'# keep\n'}});
-  $('exit').click();assert($('exitDialog').open,'Dirty close asks for a choice');$('exitCancel').click();assert(view.state.doc.toString().startsWith('# keep'),'Cancel close preserves edits');
-  $('exit').click();$('discardExit').click();assert(tabs().length===2,'Discard closes only one tab');
+  askClose();assert($('exitDialog').open,'Dirty close asks for a choice');$('exitCancel').click();assert(view.state.doc.toString().startsWith('# keep'),'Cancel close preserves edits');
+  askClose();$('discardExit').click();assert(tabs().length===2,'Discard closes only one tab');
   closeCurrent();
   await open(Array.from({length:120},(_,i)=>'// source line '+i).join('\n'),'scroll.c');
   await wait(300);view.scrollDOM.scrollTop=800;await wait(100);
@@ -159,7 +169,7 @@ import {Filesystem,Directory,Encoding} from '@capacitor/filesystem';
   const store=createProjectStore(iosProjectAdapter());let original=await store.read(projectId,'src/main.c');assert(original.text===text(),'Project UTF-8 disk bytes match editor text');
   $('name').value='src/copy';$('name').dispatchEvent(new Event('change'));assert(await $('save').onclick(),'Project Save As accepts extensionless name');
   assert((await store.read(projectId,'src/main.c')).text===original.text,'Project Save As keeps original file');assert((await store.read(projectId,'src/copy')).name==='src/copy','Project Save As never appends txt');
-  await store.remove(projectId,'src/copy');const retained=await Filesystem.readFile({path:'ATEProjects/'+projectId+'/src/copy',directory:Directory.Documents,encoding:Encoding.UTF8});assert(retained.data===original.text,'Removing project membership retains the native file');
+  await store.remove(projectId,'src/copy');const retained=await Filesystem.readFile({path:'ATEProjects/'+projectId+'/src/copy',directory:projectDirectory,encoding:Encoding.UTF8});assert(retained.data===original.text,'Removing project membership retains the native file');
   await store.add(projectId,[{path:'src/windows.c',text:'// café\r\nint value;\r\n'}]);assert((await store.read(projectId,'src/windows.c')).text==='// café\r\nint value;\r\n','Native project storage preserves UTF-8 and CRLF bytes');
   const zip=await store.export(projectId),imported=await store.import(zip.bytes);assert(imported.id!==projectId,'ZIP import creates a separate project');assert((await store.read(imported.id,'src/main.c')).text===original.text,'ZIP round trip preserves native project text');
   $('projectsButton').click();await until(()=>$('projects').open&&!$('createProject').disabled,'Projects reopen');await $('projectList').querySelector('[data-project-id="'+projectId+'"]').onclick();
@@ -177,14 +187,14 @@ import {Filesystem,Directory,Encoding} from '@capacitor/filesystem';
   await store.folder(projectId,'delete-native/empty');await store.add(projectId,[{path:'delete-native/query.sql',text:'SELECT 1;'}]);await $('projectList').querySelector('[data-project-id="'+projectId+'"]').onclick();
   plus('delete-native').click();await $('deleteProjectFolder').onclick();assert($('deleteFolderDialog').open&&$('deleteFolderContents').textContent.includes('delete-native/query.sql'),'Native folder deletion previews its contents');$('cancelDeleteFolder').click();assert((await store.read(projectId,'delete-native/query.sql')).text==='SELECT 1;','Cancel folder deletion keeps native bytes');
   await $('deleteProjectFolder').onclick();await $('confirmDeleteFolder').onclick();assert(!(await store.load(projectId)).folders.includes('delete-native'),'Confirmed native folder deletion removes subtree membership');
-  let removed=false;try{await Filesystem.stat({path:'ATEProjects/'+projectId+'/delete-native',directory:Directory.Documents})}catch{removed=true}assert(removed,'Confirmed native folder deletion removes directory bytes');assert((await store.read(projectId,'src/main.c')).text===original.text,'Deleting a folder preserves its sibling native files');
+  let removed=false;try{await Filesystem.stat({path:'ATEProjects/'+projectId+'/delete-native',directory:projectDirectory})}catch{removed=true}assert(removed,'Confirmed native folder deletion removes directory bytes');assert((await store.read(projectId,'src/main.c')).text===original.text,'Deleting a folder preserves its sibling native files');
 
   // Closing a project is distinct from dismissing its page or closing one tab.
   view.dispatch({changes:{from:view.state.doc.length,insert:'\n// save on close'}});
   $('closeProject').onclick();assert($('closeProjectDialog').open,'Dirty project close offers Save/Discard/Cancel');$('cancelProjectClose').click();assert(localStorage.getItem('ate-current-project-v1')===projectId&&text().includes('save on close'),'Cancel project close retains edits and selection');
   $('closeProject').onclick();await $('saveAndCloseProject').onclick();assert(localStorage.getItem('ate-current-project-v1')===null&&$('projectActions').hidden,'Save and close clears only the active project selection');
   assert(!JSON.parse(localStorage.getItem('clear-page-workspace-v1')).tabs.some(t=>t.projectRef?.id===projectId),'Closed project tabs are removed from native workspace recovery');
-  const savedCopy=await Filesystem.readFile({path:'ATEProjects/'+projectId+'/src/copy',directory:Directory.Documents,encoding:Encoding.UTF8});assert(savedCopy.data.includes('save on close'),'Save and close persists unsaved native project bytes');
+  const savedCopy=await Filesystem.readFile({path:'ATEProjects/'+projectId+'/src/copy',directory:projectDirectory,encoding:Encoding.UTF8});assert(savedCopy.data.includes('save on close'),'Save and close persists unsaved native project bytes');
   await $('projectList').querySelector('[data-project-id="'+projectId+'"]').onclick();assert($('projectHeading').textContent==='Native verification','A closed project reopens from the saved-project list');
   plus('Project root').click();
   $('projectFileName').value='recovery.c';await $('newProjectFile').onclick();assert($('name').value==='recovery.c','Recovery project tab opened: '+$('projectStatus').textContent);view.dispatch({changes:{from:0,insert:'int main(void) { return 0; }'}});assert(await $('save').onclick(),'Recovery project file saved');
