@@ -41,30 +41,31 @@ final class ATEFunctionalTests: XCTestCase {
     func finishMenu() {
         let done = app.webViews.buttons["Done"].firstMatch
         XCTAssertTrue(done.waitForExistence(timeout: 10), app.debugDescription)
+        let panel = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@", "Editor menu,")).firstMatch
         func fullyVisible() -> Bool {
-            return done.isHittable && app.frame.contains(done.frame) && done.frame.minY >= menuSafeTop
+            let viewport = panel.exists ? panel.frame.intersection(app.frame) : app.frame
+            return done.isHittable && viewport.contains(done.frame) && done.frame.minY >= menuSafeTop
         }
-        // WebKit can report a partially clipped button as hittable. Scroll the
-        // actual dialog instead of repeatedly toggling the software keyboard.
-        for _ in 0..<5 {
+        func revealDone() {
+            let target = panel.exists ? panel : app.webViews.firstMatch
+            if done.frame.minY < target.frame.minY { target.swipeDown() } else { target.swipeUp() }
+        }
+        for _ in 0..<6 {
             if fullyVisible() { break }
-            app.webViews.firstMatch.swipeDown()
+            revealDone()
         }
         if !fullyVisible() {
-            // On iPhone the focused filename can pan the entire web viewport;
-            // only dismiss the keyboard when scrolling cannot reveal Done.
             dismissKeyboard()
-            for _ in 0..<3 {
+            for _ in 0..<4 {
                 if fullyVisible() { break }
-                app.webViews.firstMatch.swipeDown()
+                revealDone()
             }
         }
         XCTAssertTrue(fullyVisible(), app.debugDescription)
         done.tap()
         XCTAssertTrue(waitForGone(app.staticTexts["Editor menu"], timeout: 10), app.debugDescription)
     }
-    func projectButton(_ label: String) {
-        dismissKeyboard()
+    func visibleProjectButton(_ label: String) -> XCUIElement {
         let button = app.webViews.buttons[label].firstMatch
         XCTAssertTrue(button.waitForExistence(timeout: 15), app.debugDescription)
         let contents = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@", "Project contents")).firstMatch
@@ -76,13 +77,17 @@ final class ATEFunctionalTests: XCTestCase {
             let headerBottom = app.buttons["Close projects"].frame.maxY
             return !viewport.isEmpty && viewport.contains(button.frame) && button.frame.minY >= headerBottom && button.isHittable
         }
-        for _ in 0..<6 {
+        if !fullyVisible() { dismissKeyboard() }
+        for _ in 0..<8 {
             if fullyVisible() { break }
             if button.frame.minY < contents.frame.minY { contents.swipeDown() } else { contents.swipeUp() }
         }
         XCTAssertTrue(fullyVisible(), app.debugDescription)
 
-        button.tap()
+        return button
+    }
+    func projectButton(_ label: String) {
+        visibleProjectButton(label).coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
     }
     func assertWord(_ word: String) {
         XCTAssertTrue(editor().staticTexts.matching(NSPredicate(format: "label CONTAINS %@", word)).firstMatch.exists, app.debugDescription)
@@ -235,6 +240,89 @@ final class ATEFunctionalTests: XCTestCase {
         menu(); finishMenu()
         assertToolbarVisible()
         print("PASS native UI: Menu, Close and Save fully visible, status bar clear, keyboard, native Save cancellation and rotation")
+    }
+    func projectWorkspace() {
+        menu(); setMode("Advanced"); app.buttons["Projects"].tap()
+        XCTAssertTrue(app.buttons["Close projects"].waitForExistence(timeout: 15), app.debugDescription)
+    }
+    func testProjectDestinationsAndClose() {
+        editor().tap(); editor().typeText("Protected ordinary note")
+        projectWorkspace()
+        let filename = app.textFields["New file or folder name"]
+        XCTAssertTrue(filename.waitForExistence(timeout: 15), app.debugDescription)
+        filename.tap(); filename.typeText("src"); projectButton("Create folder")
+        filename.tap(); filename.typeText("draft.txt"); projectButton("Create file")
+        editor().tap(); editor().typeText("Project content")
+        projectWorkspace(); projectButton("Add files to src")
+        let folder = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "Project folder")).firstMatch
+        XCTAssertTrue(folder.waitForExistence(timeout: 10), app.debugDescription)
+        XCTAssertEqual(folder.value as? String, "src", app.debugDescription)
+        projectButton("Add files")
+        let cancel = app.buttons["Cancel"].firstMatch
+        XCTAssertTrue(cancel.waitForExistence(timeout: 15), app.debugDescription); cancel.tap()
+        XCTAssertTrue(app.buttons["Close projects"].waitForExistence(timeout: 15), app.debugDescription)
+        XCTAssertEqual(folder.value as? String, "src", "Picker cancellation preserves the selected subdirectory")
+        projectButton("Close project")
+        XCTAssertTrue(app.buttons["Keep project open"].waitForExistence(timeout: 10), app.debugDescription)
+        app.buttons["Keep project open"].tap()
+        projectButton("Close project"); app.buttons["Save and close project"].tap()
+        let closed = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "Closed Native project.")).firstMatch
+        XCTAssertTrue(closed.waitForExistence(timeout: 15), app.debugDescription)
+        app.buttons["Close projects"].tap(); assertWord("Protected")
+        projectWorkspace(); projectButton("Open project Native project"); projectButton("Open project file src/draft.txt"); assertWord("Project")
+        editor().tap(); editor().typeText(" discard this")
+        projectWorkspace(); projectButton("Close project"); app.buttons["Close without saving"].tap()
+        XCTAssertTrue(closed.waitForExistence(timeout: 15), app.debugDescription)
+        projectButton("Open project Native project"); projectButton("Open project file src/draft.txt"); assertWord("Project")
+        XCTAssertFalse(editor().staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "discard")).firstMatch.exists, app.debugDescription)
+        projectWorkspace(); projectButton("Close project"); XCTAssertTrue(closed.waitForExistence(timeout: 15), app.debugDescription)
+        app.buttons["Close projects"].tap(); assertWord("Protected")
+        app.buttons["Close current tab"].tap(); app.buttons["Close without saving"].tap()
+        menu(); setMode("Basic"); finishMenu()
+        print("PASS native UI: folder + destination, actual Add files picker cancellation, project Close Cancel/Save/Discard/reopen and ordinary-note preservation")
+    }
+    func testProjectLayoutAccessibility() {
+        projectWorkspace()
+        let name = app.textFields["New project name"]
+        XCTAssertTrue(name.waitForExistence(timeout: 15), app.debugDescription)
+        name.tap(); name.typeText("Layout test"); projectButton("Create project")
+        let filename = app.textFields["New file or folder name"]
+        XCTAssertTrue(filename.waitForExistence(timeout: 15)); filename.tap(); filename.typeText("src"); projectButton("Create folder")
+        filename.tap(); filename.typeText("code.c"); projectButton("Create file")
+        editor().tap(); editor().typeText("int value;"); app.buttons["Save file"].tap()
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "Saved in project")).firstMatch.waitForExistence(timeout: 15))
+        projectWorkspace(); projectButton("Add files to Project root")
+        filename.tap(); filename.typeText("settings.json"); projectButton("Create file")
+        editor().tap(); editor().typeText("{}"); app.buttons["Save file"].tap()
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "settings.json")).matching(NSPredicate(format: "label BEGINSWITH %@", "Saved in project")).firstMatch.waitForExistence(timeout: 15))
+        projectWorkspace()
+        let last = visibleProjectButton("Remove settings.json from project")
+        XCTAssertGreaterThanOrEqual(last.frame.height, 44); XCTAssertGreaterThanOrEqual(last.frame.width, 44)
+        let nested = app.buttons["Open project file src/code.c"], root = app.buttons["Open project file settings.json"]
+        XCTAssertEqual(nested.frame.minX, root.frame.minX, accuracy: 1, "Root and nested file boxes must align on the left")
+        XCTAssertEqual(nested.frame.maxX, root.frame.maxX, accuracy: 1, "Root and nested file boxes must align on the right")
+        XCTAssertTrue(app.buttons["Close projects"].isHittable, app.debugDescription)
+        let shot = XCTAttachment(screenshot: app.screenshot()); shot.name = "Aligned project root and nested rows"; shot.lifetime = .keepAlways; add(shot)
+        projectButton("Close project")
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "Closed Layout test.")).firstMatch.waitForExistence(timeout: 15), app.debugDescription)
+        app.buttons["Close projects"].tap(); menu(); setMode("Basic"); finishMenu()
+        print("PASS native UI: root/nested project file boxes align, last Remove target is visible, Back stays reachable and project closes")
+    }
+    func testFilenameMenuReturn() {
+        editor().tap(); editor().typeText("Filename regression content")
+        rename("Qzzzzzzz.sql")
+        assertWord("Filename regression content")
+        XCTAssertFalse(editor().staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "Qzzzzzzz")).firstMatch.exists, app.debugDescription)
+        XCTAssertTrue(app.buttons["Save file"].isHittable, app.debugDescription)
+        XCTAssertTrue(app.frame.contains(app.buttons["Save file"].frame), app.debugDescription)
+        XCTAssertTrue(app.staticTexts["Open files"].exists, app.debugDescription)
+        menu()
+        XCTAssertEqual(app.textFields["File name"].value as? String, "Qzzzzzzz.sql")
+        finishMenu()
+        assertWord("Filename regression content")
+        app.buttons["Close current tab"].tap()
+        app.buttons["Close without saving"].tap()
+        print("PASS native UI: filename metadata stays separate from document text; menu return preserves readable toolbar and Open files label")
     }
     func testModesAndProjects() {
         exerciseModesAndProjects()

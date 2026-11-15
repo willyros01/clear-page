@@ -1,3 +1,4 @@
+import {setupIOSViewport} from './ios-viewport.js';
 import {setupProjects} from './project-ui.js';
 import {createDocumentTabs} from './document-tabs.js';
 import {Capacitor} from '@capacitor/core';
@@ -11,6 +12,10 @@ import {setupSyntax} from './syntax-ui.js';
 import {checkC,chooseCCompiler,chooseCProject,compilerSetupInfo,installCCompiler,cancelCompilerSetup} from './desktop.js';
 const $=id=>document.getElementById(id);
 const tabbed=Capacitor.getPlatform()==='ios';
+const iosViewport=tabbed?setupIOSViewport():null;
+// iOS file-provider UTIs can classify .sql and extensionless source as non-text.
+// Let users choose a file, then validate its bytes before opening/copying it.
+if(tabbed)for(const id of ['file','projectFiles'])document.getElementById(id).removeAttribute('accept');
 let workspace=null,projects=null,loading=true,syntax=null,languageManual=false,advanced=true;
 if(tabbed)try{const p=JSON.parse(localStorage.getItem('clear-page-preferences-v1')||'null');advanced=p?.experienceMode? p.experienceMode==='advanced':!!(p||localStorage.getItem('clear-page-workspace-v1')||localStorage.getItem('clear-page-draft-v1'));}catch{advanced=false}
 const editor=createEditor($('editor'),()=>{if(!loading){dirty=true;counts();persist();syntax?.changed()}});let font=27,dirty=false,pending=null;const key='clear-page-draft-v1';const prefsKey='clear-page-preferences-v1';
@@ -25,7 +30,11 @@ try{let d=JSON.parse(localStorage.getItem(key));if(d){languageManual=!!d.languag
 if(native){$('exit').textContent='Close';$('exit').setAttribute('aria-label','Close document');$('exitTitle').textContent='Close the document?';$('saveExit').textContent='Save and close';$('discardExit').textContent='Close without saving'}
 setupIcons();applyButtonStyle();
 loading=false;editor.setLanguage(advanced?$('language').value:'plain');counts();updateSize();themeLabel();editor.setVim(advanced&&$('editingMode').value==='vim');
-$('name').onchange=()=>{dirty=true;if(!languageManual)setLanguage(languageForDocument($('name').value,editor.value));persist()};
+function commitFilename(){if(!$('name').value.trim())$('name').value='Untitled';dirty=true;if(!languageManual)setLanguage(languageForDocument($('name').value,editor.value));persist()}
+$('name').onchange=commitFilename;
+$('name').addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();event.stopPropagation();commitFilename();$('name').blur()}});
+function leaveMenu({focus=!tabbed}={}){commitFilename();if(document.activeElement instanceof HTMLElement)document.activeElement.blur();$('menu').close();iosViewport?.restore();if(focus)editor.focus()}
+
 function setLanguage(id){languageManual=false;$('language').value=id;editor.setLanguage(advanced?id:'plain');syntax?.changed()}
 $('language').onchange=()=>{languageManual=true;editor.setLanguage(advanced?$('language').value:'plain');syntax?.changed();persist()};
 $('indent').onclick=()=>editor.indent();$('unindent').onclick=()=>editor.unindent();
@@ -33,8 +42,9 @@ $('smaller').onclick=()=>setFont(font-1);$('larger').onclick=()=>setFont(font+1)
 let saving=false;
 async function save(){if(saving)return false;saving=true;try{let name=$('name').value||'Untitled';const text=editor.value,tabId=workspace?.current.id,ref=workspace?.current.projectRef;const result=ref?await projects.save(ref,name,text):await saveText(text,name);notice(typeof result==='string'?result:result.message);if(result?.name&&(!workspace||workspace.current.id===tabId)&&$('name').value===name&&result.name!==name){$('name').value=result.name;if(!languageManual)setLanguage(languageForDocument(result.name,editor.value));}dirty=editor.value!==text;if(workspace)workspace.saved(tabId,text,result?.name||name,result?.projectRef);else persist();return true}catch(e){notice((workspace?.current.projectRef?e.message+' ':'Save was cancelled or could not complete. ')+'Your draft is kept.');return false}finally{saving=false}}
 $('save').onclick=save;
-$('menuButton').onclick=()=>{$('menu').showModal()};
-$('closeMenu').onclick=()=>{$('menu').close();editor.focus()};
+$('menuButton').onclick=()=>{$('menu').showModal();$('menu').scrollTop=0;iosViewport?.restore()};
+$('closeMenu').onclick=()=>leaveMenu();
+$('menu').addEventListener('cancel',()=>{commitFilename();if(document.activeElement instanceof HTMLElement)document.activeElement.blur();iosViewport?.restore()});
 $('exit').onclick=()=>{if(workspace)requestClose(workspace.current.id);else $('exitDialog').showModal()};
 $('exitCancel').onclick=()=>{$('exitDialog').close();editor.focus()};
 async function closeEditor(saved){
@@ -58,7 +68,7 @@ $('cancel').onclick=()=>{$('confirm').close();pending=null};$('proceed').onclick
 $('new').onclick=()=>{if(saving)return;$('menu').close();if(workspace){if(!workspace.add())notice('Close a tab before opening another (12 tabs maximum).');return}guard(()=>{editor.value='';$('name').value='Untitled';setLanguage('plain');dirty=false;counts();persist();notice('');editor.focus()},'Start a new document?')};
 function opened(text,name,projectRef=null){text=text.replace(/\r\n?/g,'\n');if(workspace){if(!workspace.add(text,name,languageForDocument(name,text),projectRef))notice('Close a tab before opening another (12 tabs maximum).');else notice('Opened '+name);return}editor.value=text;$('name').value=name;setLanguage(languageForDocument(name,text));dirty=false;counts();persist();notice('Opened '+name);editor.focus()}
 async function chooseOpen(){if(Capacitor.getPlatform()==='android'){try{const result=await openAndroid();opened(result.text,result.name)}catch(error){notice(error.message||'Open was cancelled. Your draft is kept.')}}else $('file').click()}
-$('open').onclick=()=>{if(saving)return;$('menu').close();workspace?chooseOpen():guard(chooseOpen,'Open another document?')};$('file').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{if(f.size>10*1024*1024)throw new Error('Please choose a text file smaller than 10 MB.');const text=await f.text();if(text.includes('\u0000'))throw new Error('This does not look like a plain-text file.');opened(text,f.name)}catch(err){notice(err.message||'Could not open this file.')}finally{e.target.value=''}};
+$('open').onclick=()=>{if(saving)return;$('menu').close();workspace?chooseOpen():guard(chooseOpen,'Open another document?')};$('file').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{if(f.size>10*1024*1024)throw new Error('Please choose a text file smaller than 10 MB.');const text=typeof f.arrayBuffer==='function'?new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(await f.arrayBuffer()):await f.text();if(text.includes('\u0000'))throw new Error('This does not look like a plain-text file.');opened(text,f.name)}catch(err){notice(err.message||'Could not open this file.')}finally{e.target.value=''}};
 $('focus').onclick=async()=>{$('menu').close();document.body.classList.add('focus');try{if(document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen()}catch(e){}editor.focus()};
 async function leave(){document.body.classList.remove('focus');if(document.fullscreenElement)try{await document.exitFullscreen()}catch(e){}}
 $('leaveFocus').onclick=leave;document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement)document.body.classList.remove('focus')});document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();save()}if(e.key==='Escape')leave()});window.addEventListener('beforeunload',e=>{if((workspace?workspace.list().some(t=>t.dirty):dirty)&&$('status').textContent.startsWith('Draft not')){e.preventDefault();e.returnValue=''}});
@@ -88,7 +98,7 @@ function requestClose(id){
  else workspace.close(id);
 }
 if(tabbed){
- $('tabs').hidden=false;$('exit').setAttribute('aria-label','Close current tab');
+ $('tabs').hidden=false;$('documentBar').hidden=false;$('exit').setAttribute('aria-label','Close current tab');
  $('exitDialog').querySelector('p').textContent='Save a copy before closing, or discard this tab’s unsaved changes. Other tabs and existing files are kept.';
  workspace=createDocumentTabs({editor,storage:localStorage,
  getMeta:()=>({name:$('name').value,language:$('language').value,manual:languageManual}),
@@ -98,7 +108,7 @@ if(tabbed){
  render:items=>{
   $('tabs').textContent='';
   for(const t of items){const group=document.createElement('div'),button=document.createElement('button'),close=document.createElement('button');
-   group.className='document-tab';group.setAttribute('role','presentation');button.type=close.type='button';button.setAttribute('role','tab');button.setAttribute('aria-selected',String(t.active));button.tabIndex=t.active?0:-1;button.onkeydown=e=>{const keys=['ArrowLeft','ArrowRight','Home','End'];if(!keys.includes(e.key)||saving)return;e.preventDefault();const index=items.findIndex(x=>x.id===t.id);const next=e.key==='Home'?0:e.key==='End'?items.length-1:(index+(e.key==='ArrowRight'?1:-1)+items.length)%items.length;workspace.activate(items[next].id);$('tabs').querySelector('[aria-selected=true]').focus()};button.textContent=t.name+(t.dirty?' •':'');button.setAttribute('aria-label',t.name+(t.dirty?', unsaved changes':''));button.onclick=()=>{if(!saving)workspace.activate(t.id)};
+   group.className='document-tab';group.setAttribute('role','presentation');button.type=close.type='button';button.setAttribute('role','tab');button.setAttribute('aria-selected',String(t.active));button.tabIndex=t.active?0:-1;button.onkeydown=e=>{const keys=['ArrowLeft','ArrowRight','Home','End'];if(!keys.includes(e.key)||saving)return;e.preventDefault();const index=items.findIndex(x=>x.id===t.id);const next=e.key==='Home'?0:e.key==='End'?items.length-1:(index+(e.key==='ArrowRight'?1:-1)+items.length)%items.length;workspace.activate(items[next].id);$('tabs').querySelector('[aria-selected=true]').focus()};button.textContent=(t.name||'Untitled')+(t.dirty?' •':'');button.setAttribute('aria-label',(t.name||'Untitled')+(t.dirty?', unsaved changes':''));button.onclick=()=>{if(!saving)workspace.activate(t.id)};
    close.textContent='×';close.setAttribute('aria-label','Close '+t.name);close.onclick=()=>requestClose(t.id);group.append(button,close);$('tabs').append(group);
   }
  }
@@ -116,9 +126,9 @@ function applyExperience(){
 }
 if(tabbed){
  $('experienceModes').hidden=false;$('projectsButton').hidden=false;$('exportCopy').hidden=false;
- projects=setupProjects({workspace,openDocument:opened,canChange:()=>!saving,notice});
+ projects=setupProjects({workspace,openDocument:opened,canChange:()=>!saving,notice,exclusive:async fn=>{if(saving)throw Error('Finish the current save first.');saving=true;try{return await fn()}finally{saving=false}}});
  $('basicMode').onclick=()=>{advanced=false;applyExperience();persistPreferences()};
  $('advancedMode').onclick=()=>{advanced=true;applyExperience();persistPreferences()};
- $('exportCopy').onclick=async()=>{if(saving)return;saving=true;try{notice(await saveText(editor.value,$('name').value.split('/').pop()||'Untitled'))}catch{notice('Export cancelled or unavailable. Your editor tab is kept.')}finally{saving=false}};
+ $('exportCopy').onclick=async()=>{if(saving)return;leaveMenu({focus:false});saving=true;try{notice(await saveText(editor.value,$('name').value.split('/').pop()||'Untitled'))}catch{notice('Export cancelled or unavailable. Your editor tab is kept.')}finally{saving=false;iosViewport?.restore()}};
  applyExperience();persistPreferences();
 }

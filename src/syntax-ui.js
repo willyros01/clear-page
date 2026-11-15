@@ -13,7 +13,7 @@ export function setupSyntax({editor,getDocument,nativeCheck,chooseCompiler,choos
  $('cStandard').value=['c99','c11','c17','c23'].includes(settings.standard)?settings.standard:'c17';
  $('cIncludes').value=typeof settings.includes==='string'?settings.includes:'';
  $('cDefines').value=typeof settings.defines==='string'?settings.defines:'';
- if(!desktop)$('cSettingsButton').textContent='About C checks';
+ $('cSettingsButton').textContent=desktop?'Syntax / C settings':'About syntax checking';$('cSettingsTitle').textContent='Syntax checking';
  $('chooseCompiler').disabled=$('chooseProject').disabled=!desktop;
  function updateMode(){
   const advanced=desktop&&$('cChecker').value==='clang';

@@ -1,3 +1,4 @@
+import {checkProjectLayout} from './project-layout.js';
 import {checkToolbarLayout} from './toolbar-layout.js';
 import {createProjectStore} from '../src/projects.js';
 import {iosProjectAdapter} from '../src/ios-projects.js';
@@ -40,6 +41,18 @@ import {Filesystem,Directory,Encoding} from '@capacitor/filesystem';
   }else{
 
   const text=()=>view.state.doc.toString();
+  assert(!$('file').hasAttribute('accept')&&!$('projectFiles').hasAttribute('accept'),'iOS file pickers do not exclude SQL or extensionless source UTIs');
+  const originalText=text(),originalName=$('name').value;
+  $('menuButton').click();$('name').focus();$('name').value='Qzzzzzzz.sql';
+  $('name').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true}));$('closeMenu').click();await wait(500);
+  assert(text()===originalText,'Filename entry and menu exit never change document bytes');
+  assert(tabs().some(t=>t.textContent.includes('Qzzzzzzz.sql')),'Entered filename appears only as document metadata/tab');
+  assert(!$('menu').open&&document.activeElement!==$('name'),'Menu exit releases filename focus');
+  assert(!$('documentBar').hidden&&$('documentBar').textContent.includes('Open files'),'Tabs have an Open files label');
+  const bodyBox=document.body.getBoundingClientRect(),visible=window.visualViewport;
+  assert(bodyBox.width<=visible.width+1&&bodyBox.height<=visible.height+1,'iOS shell stays inside visible viewport after menu return');
+  $('name').value=originalName;$('name').onchange();
+
   const key=(key,opts={})=>content.dispatchEvent(new KeyboardEvent('keydown',{key,bubbles:true,cancelable:true,...opts}));
   const open=async(value,name,keep=false)=>{
    if(tabs().length&&!keep)closeCurrent();
@@ -118,6 +131,7 @@ import {Filesystem,Directory,Encoding} from '@capacitor/filesystem';
   await open('int main(void) { return 0; }','program.c.txt');
   assert($('language').value==='c'&&$('name').value==='program.c.txt','Content detection never renames the file');
   $('cSettingsButton').click();
+  assert($('cSettingsTitle').textContent==='Syntax checking'&&['Python','YAML','Shell scripts','SQL','Markdown'].every(name=>$('syntaxOverview').textContent.includes(name)),'General syntax help covers supported checkers');
   assert($('cPlatformNote').textContent.includes('No compiler download'),'iPad C needs no download');
   assert($('chooseCompiler').hidden,'iPad does not offer a desktop executable installer');
   $('closeCSettings').click();
@@ -139,8 +153,8 @@ import {Filesystem,Directory,Encoding} from '@capacitor/filesystem';
   $('projectsButton').click();await until(()=>$('projects').open&&!$('createProject').disabled,'Project dialog ready');
   $('projectName').value='Native verification';await $('createProject').onclick();
   const projectId=localStorage.getItem('ate-current-project-v1');assert(!!projectId&&$('projectHeading').textContent==='Native verification','Native project created and listed: '+$('projectStatus').textContent);
-  $('projectFileName').value='src';await $('newProjectFolder').onclick();assert($('projectStatus').textContent==='Folder created.','Native project folder created: '+$('projectStatus').textContent);
-  $('projectFileName').value='src/main.c';await $('newProjectFile').onclick();assert($('name').value==='src/main.c'&&!$('projects').open,'Project file opened in a bound tab: '+$('projectStatus').textContent);
+  $('projectFileName').value='src';await $('newProjectFolder').onclick();assert($('projectFolder').value==='src','Native project folder created: '+$('projectStatus').textContent);
+  $('projectFileName').value='main.c';await $('newProjectFile').onclick();assert($('name').value==='src/main.c'&&!$('projects').open,'Project file opened in a bound tab: '+$('projectStatus').textContent);
   view.dispatch({changes:{from:0,insert:'// café\r\nint main(void) { return 0; }\r\n'}});assert(await $('save').onclick(),'Project tab saves through real native filesystem');
   const store=createProjectStore(iosProjectAdapter());let original=await store.read(projectId,'src/main.c');assert(original.text===text(),'Project UTF-8 disk bytes match editor text');
   $('name').value='src/copy';$('name').dispatchEvent(new Event('change'));assert(await $('save').onclick(),'Project Save As accepts extensionless name');
@@ -148,7 +162,26 @@ import {Filesystem,Directory,Encoding} from '@capacitor/filesystem';
   await store.remove(projectId,'src/copy');const retained=await Filesystem.readFile({path:'ATEProjects/'+projectId+'/src/copy',directory:Directory.Documents,encoding:Encoding.UTF8});assert(retained.data===original.text,'Removing project membership retains the native file');
   await store.add(projectId,[{path:'src/windows.c',text:'// café\r\nint value;\r\n'}]);assert((await store.read(projectId,'src/windows.c')).text==='// café\r\nint value;\r\n','Native project storage preserves UTF-8 and CRLF bytes');
   const zip=await store.export(projectId),imported=await store.import(zip.bytes);assert(imported.id!==projectId,'ZIP import creates a separate project');assert((await store.read(imported.id,'src/main.c')).text===original.text,'ZIP round trip preserves native project text');
-  $('projectsButton').click();await until(()=>$('projects').open&&!$('createProject').disabled,'Projects reopen');$('projectSelect').value=projectId;await $('projectSelect').onchange();
+  $('projectsButton').click();await until(()=>$('projects').open&&!$('createProject').disabled,'Projects reopen');await $('projectList').querySelector('[data-project-id="'+projectId+'"]').onclick();
+  // Real native filesystem import into the folder chosen before the picker.
+  $('projectFolder').value='';$('projectFolder').onchange();$('projectFileName').value='docs';await $('newProjectFolder').onclick();
+  const plus=path=>$('projectTree').querySelector('[aria-label="Add files to '+path+'"]');
+  plus('docs').click();assert($('projectDestination').textContent==='docs','Folder + selects a visible add destination');
+  const input=$('projectFiles'),click=input.click;input.click=()=>{};$('addProjectFiles').onclick();input.click=click;
+  $('projectFolder').value='';$('projectFolder').onchange();
+  await input.onchange({target:{files:[{name:'README.md',size:8,arrayBuffer:async()=>new TextEncoder().encode('# native').buffer}],value:'picked'}});
+  assert((await store.read(projectId,'docs/README.md')).text==='# native','Native Add files writes the captured subdirectory, not a later dropdown value');
+  const entries=Array.from({length:14},(_,i)=>({path:'note-'+i+'.txt',text:'note'}));entries.push({path:'settings.json',text:'{}'});await store.add(projectId,entries);
+  await $('projectList').querySelector('[data-project-id="'+projectId+'"]').onclick();$('projectComposer').hidden=true;
+  for(const scale of [1,2,3])assert(!!checkProjectLayout([scale]),'Native project root/nested alignment and reachable last row at '+scale*100+'%');
+  // Closing a project is distinct from dismissing its page or closing one tab.
+  view.dispatch({changes:{from:view.state.doc.length,insert:'\n// save on close'}});
+  $('closeProject').onclick();assert($('closeProjectDialog').open,'Dirty project close offers Save/Discard/Cancel');$('cancelProjectClose').click();assert(localStorage.getItem('ate-current-project-v1')===projectId&&text().includes('save on close'),'Cancel project close retains edits and selection');
+  $('closeProject').onclick();await $('saveAndCloseProject').onclick();assert(localStorage.getItem('ate-current-project-v1')===null&&$('projectActions').hidden,'Save and close clears only the active project selection');
+  assert(!JSON.parse(localStorage.getItem('clear-page-workspace-v1')).tabs.some(t=>t.projectRef?.id===projectId),'Closed project tabs are removed from native workspace recovery');
+  const savedCopy=await Filesystem.readFile({path:'ATEProjects/'+projectId+'/src/copy',directory:Directory.Documents,encoding:Encoding.UTF8});assert(savedCopy.data.includes('save on close'),'Save and close persists unsaved native project bytes');
+  await $('projectList').querySelector('[data-project-id="'+projectId+'"]').onclick();assert($('projectHeading').textContent==='Native verification','A closed project reopens from the saved-project list');
+  plus('Project root').click();
   $('projectFileName').value='recovery.c';await $('newProjectFile').onclick();assert($('name').value==='recovery.c','Recovery project tab opened: '+$('projectStatus').textContent);view.dispatch({changes:{from:0,insert:'int main(void) { return 0; }'}});assert(await $('save').onclick(),'Recovery project file saved');
   while(tabs().length>1){const other=tabs().find(t=>t.getAttribute('aria-label')!=='recovery.c');other.click();closeCurrent();}
   await open('print(42)','recovery.py',true);$('language').value='plain';$('language').dispatchEvent(new Event('change'));view.dispatch({changes:{from:view.state.doc.length,insert:'\n# unsaved'}});

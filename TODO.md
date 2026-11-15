@@ -262,3 +262,8 @@ Reported against TestFlight 0.8.1 (22). Status: **Pending**. Development/build w
 - [ ] **Project tree bottom row:** keep root and nested file boxes aligned on both edges and make the last file/Remove row fully reachable without clipping. Include the reported iPad landscape layout, long filenames, scrolling and large text. This joins the pending folder + / destination, Close project and cohesive Projects-page work.
 
 Before any later TestFlight release, add regression and full native iPhone/iPad functional coverage for these reported flows. Physical-device acceptance remains separate from simulator results.
+
+
+## iOS 0.8.2 (23) — implementation and verification in progress
+
+Owner resumed this build on 15 November 2026. Includes project destination/+ controls, guarded Close project, cohesive single-scroll Projects page and aligned root/nested bottom rows; iPhone visual-viewport/menu return repair; a labelled contrasting filename field, Open files label and filename/content separation; general syntax-checker help; and unrestricted iOS file selection followed by strict text-byte validation so SQL/provider UTIs are selectable. Regression coverage includes SQL open/edit/save, metadata isolation, viewport changes, project save/cancel/discard/stale saves and enlarged layouts. Native iPhone/iPad and largest-OS-text gates must pass before TestFlight. Physical Files-provider acceptance remains for owner testing. Previous stopped/pending statuses are superseded by this authorized work; this entry does not claim release.

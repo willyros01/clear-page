@@ -19,12 +19,26 @@ test('iOS tabs preserve independent documents, undo, overrides, close cancellati
  window.Range.prototype.getClientRects=()=>[];window.Range.prototype.getBoundingClientRect=()=>({left:0,right:0,top:0,bottom:0,width:0,height:0});
  localStorage.setItem('clear-page-draft-v1',JSON.stringify({text:'legacy content',name:'legacy.c',language:'c'}));
  const {EditorView}=await import('@codemirror/view');const {undo}=await import('@codemirror/commands');
- await import('../src/app.js');
+ window.scrollTo=()=>{};await import('../src/app.js');
  const view=EditorView.findFromDOM(document.querySelector('.cm-editor')),$=id=>document.getElementById(id);
  const tabs=()=>[...document.querySelectorAll('[role=tab]')];
  const open=async(name,text)=>$('file').onchange({target:{files:[{name,size:text.length,text:async()=>text}],value:name}});
  try{
   assert.equal(document.body.classList.contains('basic-mode'),false,'Existing users retain Advanced mode');assert.equal($('tabs').hidden,false);assert.equal(tabs().length,1);assert.match(tabs()[0].textContent,/legacy.c •/);assert.equal(localStorage.getItem('clear-page-draft-v1'),null);
+  assert.equal($('file').hasAttribute('accept'),false,'iOS Files must allow SQL UTIs and extensionless files');
+  assert.equal($('projectFiles').hasAttribute('accept'),false,'Project import must allow SQL UTIs');
+  $('menuButton').click();$('name').focus();$('name').value='Qzzzzzzz.sql';
+  $('name').dispatchEvent(new window.KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true}));$('closeMenu').click();
+  assert.equal(view.state.doc.toString(),'legacy content','Menu filename entry never inserts document text');
+  assert.match(tabs()[0].textContent,/Qzzzzzzz.sql/);assert.equal($('language').value,'sql');assert.equal($('menu').open,false);
+  assert.notEqual(document.activeElement,$('name'));assert.equal($('documentBar').hidden,false);
+  $('menuButton').click();$('name').value='';$('closeMenu').click();assert.equal(tabs()[0].textContent,'Untitled •');
+  $('name').value='legacy.c';$('name').onchange();
+  await open('queries.sql','SELECT name FROM people;');assert.equal($('language').value,'sql');
+  view.dispatch({changes:{from:view.state.doc.length,insert:'\n-- SQL edit'}});await $('save').onclick();
+  assert.equal(exports.at(-1).path,'exports/queries.sql');
+  assert.equal(exports.at(-1).data,'SELECT name FROM people;\n-- SQL edit');
+  $('exit').click();assert.equal(tabs().length,1);
   view.dispatch({changes:{from:view.state.doc.length,insert:' edited'}});
   await open('script.py','print("hello")');assert.equal(tabs().length,2);assert.equal($('language').value,'python');
   $('language').value='plain';$('language').onchange();

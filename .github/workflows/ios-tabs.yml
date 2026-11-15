@@ -9,7 +9,7 @@ concurrency:
   group: ate-ios-tabs
   cancel-in-progress: true
 env:
-  ATE_BUILD_NUMBER: "22"
+  ATE_BUILD_NUMBER: "23"
 jobs:
   regression:
     runs-on: ubuntu-latest
@@ -99,12 +99,12 @@ jobs:
           xcrun simctl terminate "$DEVICE" io.github.willyros01.clearpage || true
           xcrun simctl uninstall "$DEVICE" io.github.willyros01.clearpage
           xcodebuild test -project ios/App/App.xcodeproj -scheme ATEFunctional -configuration Debug -destination "platform=iOS Simulator,id=$DEVICE" -derivedDataPath "$RUNNER_TEMP/DerivedData" -resultBundlePath "$RUNNER_TEMP/ATEFunctional.xcresult" CODE_SIGNING_ALLOWED=NO -test-timeouts-enabled YES -default-test-execution-time-allowance 600 -maximum-test-execution-time-allowance 900 2>&1 | tee "$RUNNER_TEMP/ui-tests.log" | awk '/Test Case|PASS native|error:|failed|App animations|TEST SUCCEEDED/ { print; fflush() }' || { python3 -c 'import sys,re;print("\n".join([x.rstrip() for x in open(sys.argv[1]) if re.search("error:|XCTAssert|failed|Test Case|PASS native",x)][-35:]))' "$RUNNER_TEMP/ui-tests.log"; tail -70 "$RUNNER_TEMP/ui-tests.log"; exit 1; }
-      - name: Largest accessibility text toolbar and Save verification
+      - name: Largest accessibility text toolbar, Save and project layout verification
         run: |
           set -o pipefail
           DEVICE=$(cat "$RUNNER_TEMP/ipad-device.txt")
           xcrun simctl ui "$DEVICE" content_size accessibility-extra-extra-extra-large
-          xcodebuild test -project ios/App/App.xcodeproj -scheme ATEFunctional -configuration Debug -destination "platform=iOS Simulator,id=$DEVICE" -derivedDataPath "$RUNNER_TEMP/DerivedData" -only-testing:ATEFunctionalTests/ATEFunctionalTests/testToolbarAndSaveVisibility -resultBundlePath "$RUNNER_TEMP/ATELargeText.xcresult" CODE_SIGNING_ALLOWED=NO -test-timeouts-enabled YES -default-test-execution-time-allowance 600 -maximum-test-execution-time-allowance 900 2>&1 | tee "$RUNNER_TEMP/large-text-tests.log" | awk '/Test Case|PASS native|error:|failed|App animations|TEST SUCCEEDED/ { print; fflush() }' || { tail -80 "$RUNNER_TEMP/large-text-tests.log"; exit 1; }
+          xcodebuild test -project ios/App/App.xcodeproj -scheme ATEFunctional -configuration Debug -destination "platform=iOS Simulator,id=$DEVICE" -derivedDataPath "$RUNNER_TEMP/DerivedData" -only-testing:ATEFunctionalTests/ATEFunctionalTests/testToolbarAndSaveVisibility -only-testing:ATEFunctionalTests/ATEFunctionalTests/testProjectLayoutAccessibility -resultBundlePath "$RUNNER_TEMP/ATELargeText.xcresult" CODE_SIGNING_ALLOWED=NO -test-timeouts-enabled YES -default-test-execution-time-allowance 600 -maximum-test-execution-time-allowance 900 2>&1 | tee "$RUNNER_TEMP/large-text-tests.log" | awk '/Test Case|PASS native|error:|failed|App animations|TEST SUCCEEDED/ { print; fflush() }' || { tail -80 "$RUNNER_TEMP/large-text-tests.log"; exit 1; }
       - uses: actions/upload-artifact@v4
         if: always()
         with:

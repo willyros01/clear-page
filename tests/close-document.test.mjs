@@ -17,7 +17,7 @@ test('closing discards the document, undo history and panels without a closing p
  const {EditorView}=await import('@codemirror/view');
  const {undoDepth}=await import('@codemirror/commands');
  const {openSearchPanel}=await import('@codemirror/search');
- await import('../src/app.js');
+ window.scrollTo=()=>{};await import('../src/app.js');
  const view=EditorView.findFromDOM(document.querySelector('.cm-editor'));
  try{
   view.dispatch({changes:{from:0,insert:'Private unsaved document'}});

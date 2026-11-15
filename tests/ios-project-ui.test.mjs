@@ -17,7 +17,7 @@ test('iOS Basic/Advanced preferences preserve work; project UI creates, saves, e
   if(method==='readFile'){if(!files.has(o.path))throw Error('Missing file');return {data:files.get(o.path)}}
   if(method==='readdir'){const result=new Map();for(const path of [...dirs,...files.keys()])if(path.startsWith(o.path+'/')){const name=path.slice(o.path.length+1).split('/')[0];if(name)result.set(name,{name,type:dirs.has(o.path+'/'+name)?'directory':'file'})}return {files:[...result.values()]}}
  }};
- await import('../src/app.js');const {EditorView}=await import('@codemirror/view');const {language}=await import('@codemirror/language');const {undoDepth}=await import('@codemirror/commands');const view=EditorView.findFromDOM(document.querySelector('.cm-editor')),$=id=>document.getElementById(id),settle=()=>new Promise(r=>setTimeout(r,20));
+ window.scrollTo=()=>{};await import('../src/app.js');const {EditorView}=await import('@codemirror/view');const {language}=await import('@codemirror/language');const {undoDepth}=await import('@codemirror/commands');const view=EditorView.findFromDOM(document.querySelector('.cm-editor')),$=id=>document.getElementById(id),settle=()=>new Promise(r=>setTimeout(r,20));
  try{
   assert.ok(document.body.classList.contains('basic-mode'));assert.equal(JSON.parse(localStorage.getItem('clear-page-preferences-v1')).experienceMode,'basic');
   assert.equal(getComputedStyle($('projectsButton')).display,'none');$('autoCheck').checked=false;
@@ -32,5 +32,44 @@ test('iOS Basic/Advanced preferences preserve work; project UI creates, saves, e
   view.dispatch({changes:{from:0,insert:'# dirty\n'}});await $('exportProject').onclick();assert.equal(shares,2);assert.match($('projectStatus').textContent,/Save the unsaved/);
   await $('save').onclick();const remove=[...$('projectTree').querySelectorAll('button')].find(b=>b.getAttribute('aria-label')==='Remove src/run.sh from project');await remove.onclick();assert.ok(files.get(key).includes('# dirty'));const manifest=JSON.parse(files.get('ATEProjects/'+id+'/project.ateproj'));assert.ok(!manifest.files.includes('src/run.sh'));
   assert.equal(view.state.doc.toString(),files.get(key));assert.equal(JSON.parse(localStorage.getItem('clear-page-workspace-v1')).tabs.find(t=>t.name==='src/run.sh').projectRef.id,id);
+
+  // Folder + chooses a visible destination; capture it before the file chooser.
+  $('projectFileName').value='docs';await $('newProjectFolder').onclick();
+  assert.equal($('projectFolder').value,'docs');
+  const plus=path=>[...$('projectTree').querySelectorAll('button')].find(b=>b.getAttribute('aria-label')==='Add files to '+path);
+  plus('docs').click();assert.equal($('projectDestination').textContent,'docs');assert.equal($('projectComposer').hidden,false);
+  $('projectFiles').click=()=>{};
+  const file=(name,text)=>({name,size:new TextEncoder().encode(text).length,arrayBuffer:async()=>new TextEncoder().encode(text).buffer});
+  const importFiles=entries=>$('projectFiles').onchange({target:{files:entries,value:'selected'}});
+  $('addProjectFiles').onclick();$('projectFolder').value='';$('projectFolder').onchange();
+  await importFiles([file('README.md','# docs')]);
+  assert.equal(files.get('ATEProjects/'+id+'/docs/README.md'),'# docs','Import keeps the folder chosen when the picker opened');
+  assert.equal(files.has('ATEProjects/'+id+'/README.md'),false);
+  assert.equal($('projectFolder').value,'docs');
+  $('addProjectFiles').onclick();await importFiles([file('README.md','replacement')]);
+  assert.match($('projectStatus').textContent,/already in the project/);assert.equal(files.get('ATEProjects/'+id+'/docs/README.md'),'# docs','Duplicate import cannot replace a saved file');
+  plus('Project root').click();$('addProjectFiles').onclick();await importFiles([file('settings.json','{}')]);
+  assert.equal(files.get('ATEProjects/'+id+'/settings.json'),'{}');
+  plus('docs').click();$('projectFileName').value='work.txt';await $('newProjectFile').onclick();view.dispatch({changes:{from:0,insert:'work in progress'}});
+  $('projectsButton').click();await settle();$('closeProject').onclick();assert.equal($('closeProjectDialog').open,true);
+  $('cancelProjectClose').click();assert.equal(localStorage.getItem('ate-current-project-v1'),id);assert.equal(view.state.doc.toString(),'work in progress','Cancelling project close preserves the unsaved buffer');
+  $('closeProject').onclick();await $('saveAndCloseProject').onclick();
+  assert.equal(files.get('ATEProjects/'+id+'/docs/work.txt'),'work in progress');assert.equal(localStorage.getItem('ate-current-project-v1'),null);assert.equal($('projectActions').hidden,true);
+  let recovery=JSON.parse(localStorage.getItem('clear-page-workspace-v1'));
+  assert.ok(recovery.tabs.every(t=>t.projectRef?.id!==id),'Closed project tabs are removed from recovery');
+  assert.equal(view.state.doc.toString(),'int main(void) { return 0; }','Ordinary editor tab stays open');assert.equal(undoDepth(view.state),depth,'Ordinary tab undo history is kept');
+  const reopen=projectId=>[...$('projectList').querySelectorAll('button')].find(b=>b.dataset.projectId===projectId).onclick();
+  await reopen(id);assert.equal(localStorage.getItem('ate-current-project-v1'),id);
+  const openPath=path=>[...$('projectTree').querySelectorAll('button')].find(b=>b.getAttribute('aria-label')==='Open project file '+path).onclick();
+  await openPath('docs/work.txt');assert.equal(view.state.doc.toString(),'work in progress');view.dispatch({changes:{from:view.state.doc.length,insert:' discarded'}});
+  $('projectsButton').click();await settle();$('closeProject').onclick();await $('discardAndCloseProject').onclick();
+  assert.equal(files.get('ATEProjects/'+id+'/docs/work.txt'),'work in progress','Discarding project edits cannot alter saved files');
+  await reopen(id);await openPath('docs/work.txt');view.dispatch({changes:{from:0,insert:'local edit '}});files.set('ATEProjects/'+id+'/docs/work.txt','outside edits');
+  $('projectsButton').click();await settle();$('closeProject').onclick();await $('saveAndCloseProject').onclick();
+  assert.equal(localStorage.getItem('ate-current-project-v1'),id);assert.match($('projectStatus').textContent,/changed outside/);assert.match(view.state.doc.toString(),/^local edit/);assert.equal(files.get('ATEProjects/'+id+'/docs/work.txt'),'outside edits','Save-and-close failure keeps the project open and does not overwrite external edits');
+  // Closing one project leaves another project's dirty editor tab untouched.
+  $('projectName').value='Other project';await $('createProject').onclick();const otherId=localStorage.getItem('ate-current-project-v1');$('projectFileName').value='other.txt';await $('newProjectFile').onclick();view.dispatch({changes:{from:0,insert:'other unsaved'}});
+  $('projectsButton').click();await settle();await reopen(id);$('closeProject').onclick();await $('discardAndCloseProject').onclick();
+  recovery=JSON.parse(localStorage.getItem('clear-page-workspace-v1'));assert.ok(recovery.tabs.some(t=>t.projectRef?.id===otherId&&t.text==='other unsaved'&&t.dirty));assert.equal(view.state.doc.toString(),'other unsaved');
  }finally{view.destroy();dom.window.close()}
 });
