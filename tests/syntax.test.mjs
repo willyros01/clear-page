@@ -93,3 +93,23 @@ test('Android terminates a genuinely stuck parser at the watchdog limit',async()
  const workers=[];const runner=createAndroidCheckRunner({timeoutMs:20,bootstrapTimeoutMs:20,workerFactory:()=>{const w={postMessage(){},terminate(){this.stopped=true}};workers.push(w);return w}});
  assert.equal((await runner.run({language:'python'})).status,'skipped');assert.equal(workers[0].stopped,true);runner.dispose();
 });
+
+
+test('worker startup has its own budget while ready parsers keep a strict watchdog',async t=>{
+ t.mock.timers.enable({apis:['setTimeout']});
+ const workers=[];
+ const runner=createCheckRunner({bootstrapTimeoutMs:30000,timeoutMs:8000,workerFactory:()=>{
+  const worker={postMessage(data){this.data=data},terminate(){this.stopped=true}};workers.push(worker);return worker;
+ }});
+ const cold=runner.run({language:'sql',text:'SELECT 1;'});
+ t.mock.timers.tick(12000);assert.equal(workers[0].stopped,undefined,'A cold worker may initialize beyond the parser budget');
+ workers[0].onmessage({data:{ready:true}});
+ workers[0].onmessage({data:{id:workers[0].data.id,result:{status:'checked',diagnostics:[]}}});
+ assert.equal((await cold).status,'checked');
+ const stuck=runner.run({language:'sql',text:'SELECT 1;'});workers[1].onmessage({data:{ready:true}});
+ t.mock.timers.tick(7999);assert.equal(workers[1].stopped,undefined);
+ t.mock.timers.tick(1);assert.equal((await stuck).status,'skipped');assert.equal(workers[1].stopped,true);
+ const missing=runner.run({language:'sql',text:'SELECT 1;'});
+ t.mock.timers.tick(30000);assert.equal((await missing).status,'skipped');assert.equal(workers[2].stopped,true);
+ runner.dispose();
+});

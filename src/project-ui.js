@@ -69,16 +69,22 @@ export function setupProjects({workspace,openDocument,canChange,notice,exclusive
  }
  $('projectsButton').onclick=()=>{if(!canChange()){notice('Finish the current save first.');return}$('menu').close();$('projects').showModal();task(async()=>{if(!current){let id;try{id=localStorage.getItem('ate-current-project-v1')}catch{}if(id)try{current=await store.load(id)}catch(e){status(e.message)}}$('projectComposer').hidden=true;await refresh();})};
  $('closeProjects').onclick=()=>{if(!busy)$('projects').close()};
- $('openProjectPicker').onclick=()=>{if(!busy){$('projectPicker').showModal();task(refresh)}};
+ $('openProjectPicker').onclick=()=>{if(!busy){showProjectPanel('projectPicker');task(refresh)}};
  $('closeProjectPicker').onclick=()=>{if(!busy)$('projectPicker').close()};
- // WebKit can leave a parent modal's accessibility subtree inert after a
- // nested dialog closes. Reactivate the same page without changing its data
- // or either scroll position, then restore a visible navigation focus target.
- for(const id of ['projectPicker','closeProjectDialog','deleteFolderDialog'])$(id).addEventListener('close',()=>requestAnimationFrame(()=>{
-  const page=$('projects');if(!page.open||document.querySelector('dialog[open]:not(#projects)'))return;
-  const body=page.querySelector('.project-body'),actions=$('projectFolderActions'),scroll=body.scrollTop,actionScroll=actions.scrollTop;
-  page.close();page.showModal();body.scrollTop=scroll;actions.scrollTop=actionScroll;$('closeProjects').focus({preventScroll:true});
- }));
+ // Keep one modal in the top layer. Stacking native WebKit modals can
+ // leave the returning page's accessibility children inert after Cancel.
+ let projectReturn=null;
+ function showProjectPanel(id){
+  const page=$('projects'),body=page.querySelector('.project-body'),actions=$('projectFolderActions');
+  projectReturn={scroll:body.scrollTop,actionScroll:actions.scrollTop};
+  page.close();$(id).showModal();
+ }
+ for(const id of ['projectPicker','closeProjectDialog','deleteFolderDialog'])$(id).addEventListener('close',()=>{
+  if(!projectReturn)return;const position=projectReturn;projectReturn=null;
+  const page=$('projects');if(!page.open)page.showModal();
+  page.querySelector('.project-body').scrollTop=position.scroll;$('projectFolderActions').scrollTop=position.actionScroll;
+  $('closeProjects').focus({preventScroll:true});
+ });
  $('createProject').onclick=()=>task(async()=>{current=await store.create($('projectName').value);destination='';collapsed.clear();selected(current.id);$('projectName').value='';$('projectComposer').hidden=true;$('projectCreatePanel').open=false;await refresh();$('projectPicker').close();status('Project created. Select a folder, then Add file or New folder.');});
  $('showProjectAdd').onclick=()=>{if(!busy&&canChange())showComposer()};
  $('showProjectFolder').onclick=()=>{if(!busy&&canChange())showComposer(destination,'folder')};
@@ -98,7 +104,7 @@ export function setupProjects({workspace,openDocument,canChange,notice,exclusive
   if(!current||!destination)throw Error('Select a folder to delete. Project root cannot be deleted.');
   if(affectedTabs(current.id,destination).some(t=>t.dirty))throw Error('Save or close the unsaved files in this folder before deleting it.');
   deletePlan=await store.folderDeletion(current.id,destination);$('deleteFolderTitle').textContent='Delete '+destination+'?';$('deleteFolderMessage').textContent='This deletes the folder and '+deletePlan.files+' file(s), including '+deletePlan.folders+' subfolder(s), from this project’s storage. Outside originals and other projects are kept.';
-  $('deleteFolderContents').textContent='';for(const item of deletePlan.entries){const li=document.createElement('li');li.textContent=item.path+(item.type==='directory'?'/':'');$('deleteFolderContents').append(li)}$('deleteFolderError').textContent='';$('deleteFolderDialog').showModal();
+  $('deleteFolderContents').textContent='';for(const item of deletePlan.entries){const li=document.createElement('li');li.textContent=item.path+(item.type==='directory'?'/':'');$('deleteFolderContents').append(li)}$('deleteFolderError').textContent='';showProjectPanel('deleteFolderDialog');
  });
  $('cancelDeleteFolder').onclick=()=>{deletePlan=null;$('deleteFolderDialog').close()};
  $('deleteFolderDialog').addEventListener('cancel',()=>{deletePlan=null});
@@ -119,7 +125,7 @@ export function setupProjects({workspace,openDocument,canChange,notice,exclusive
   if(document.activeElement instanceof HTMLElement)document.activeElement.blur();
   const dirty=workspace.documents().filter(t=>t.projectRef?.id===current.id&&t.dirty);
   if(!dirty.length)return task(()=>finishClose(current.id));
-  closingId=current.id;$('closeProjectTitle').textContent='Close '+current.name+'?';$('closeProjectMessage').textContent=`${dirty.length} project ${dirty.length===1?'file has':'files have'} unsaved changes. Other editor tabs and saved project files are kept.`;$('closeProjectDialog').showModal();
+  closingId=current.id;$('closeProjectTitle').textContent='Close '+current.name+'?';$('closeProjectMessage').textContent=`${dirty.length} project ${dirty.length===1?'file has':'files have'} unsaved changes. Other editor tabs and saved project files are kept.`;showProjectPanel('closeProjectDialog');
  };
  $('cancelProjectClose').onclick=()=>{$('closeProjectDialog').close();closingId=null};
  $('discardAndCloseProject').onclick=()=>{const id=closingId;$('closeProjectDialog').close();closingId=null;return task(()=>finishClose(id))};

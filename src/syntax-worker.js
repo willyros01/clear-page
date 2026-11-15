@@ -19,3 +19,6 @@ self.onmessage=async({data})=>{
  try{self.postMessage({id:data.id,result:data.request.language==='shell'?( ['bash','sh','dash','ash'].includes(shellDialect(data.request.name,data.request.text))?await checkShell(data.request):{status:'unavailable',diagnostics:[],message:'This shell dialect is recognized, but only POSIX/Bash structural checking is included. The script has not been checked or executed.'}):data.request.language==='c'?await checkC(data.request):data.request.language==='python'?await checkPython(data.request):checkSyntax(data.request)})}
  catch(error){console.error('Bundled checker failed:',error?.name,error?.message);self.postMessage({id:data.id,result:{status:'unavailable',diagnostics:[],message:'The checker could not process this document. Editing and saving still work.'}})}
 };
+
+// Report module initialization separately from the bounded parsing request.
+self.postMessage({ready:true});
