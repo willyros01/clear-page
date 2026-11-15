@@ -1,13 +1,13 @@
 {
-  "workflow": "ATE Apple and Desktop",
-  "branch": "desktop",
+  "workflow": "ATE Android APK",
+  "branch": "android",
   "outcome": "success",
-  "run_id": 43340101425,
-  "run_number": 19,
-  "source_sha": "be59892af32a31411537a06548b9cb762300adf0",
-  "artifact_id": 14000020390,
-  "apk_name": "ate.v0.6.0.apk",
-  "version": "0.6.0",
+  "run_id": 43741927116,
+  "run_number": 24,
+  "source_sha": "004ef3c7b79e4f042fd3d6cb2d25466efa27528b",
+  "artifact_id": 14172587855,
+  "apk_name": "ate.v0.8.3.apk",
+  "version": "0.8.3",
   "signer_sha256": "ef654829950fdf9d59f061c7b0fdc80358373a619fc02fa10480816e0665d6e4",
-  "reported_at": "2026-11-13T00:57:01.408Z"
+  "reported_at": "2026-11-15T17:47:18.845Z"
 }
