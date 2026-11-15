@@ -250,3 +250,15 @@ ATE **0.8.1 (22)** completed in [run 43651324829](https://github.com/willyros01/
 - [ ] Owner physical iPhone/iPad validation at preferred text/display settings.
 
 Project follow-up items above remain Pending: destination subdirectory / + beside each subdirectory, Close project, and a cohesive Projects page (issue #3).
+
+## Owner feedback — iPhone menu, filenames and SQL files
+
+Reported against TestFlight 0.8.1 (22). Status: **Pending**. Development/build work is stopped at the owner's request; these records do not restart a build.
+
+- [ ] **iPhone layout after leaving Menu:** reproduce the screen shifting after filename/settings input and returning to the editor, including Export copy cancellation with the software keyboard visible. The toolbar overlaps the status bar and Save/message content can extend beyond the right edge. Verify menu exit, keyboard show/hide, icon/text buttons, preferred large text/display zoom and orientation; keep the toolbar and editor within the visible screen.
+- [ ] **File name field clarity:** add a persistent visible “File name” label, a contrasting field background and clear border, and place the field with the file controls. The current field (shown with “Qzzzzzzz”) looks like the background and can be mistaken for document text. Preserve the exact filename; ensure an empty filename still has a meaningful visible label/tab fallback.
+- [ ] **General syntax-checking information:** replace the mobile “About C checks” entry with “About syntax checking” covering all supported checkers: JavaScript, TypeScript, JSON, HTML, CSS, YAML, C, Python, Shell scripts, SQL and Markdown. Describe each checker's scope and limits; retain C-specific compiler details only where relevant.
+- [ ] **SQL file selection/editing:** investigate why files ending in .sql are greyed out in the iOS file chooser and cannot be opened for editing. Verify both ordinary Open and project Add files, real iPhone/iPad Files-provider type filtering, UTF-8 validation, exact .sql names, SQL language detection/checking, editing and save/reopen. Do not treat a greyed-out picker item as proof that SQL editing itself is unsupported.
+- [ ] **Project tree bottom row:** keep root and nested file boxes aligned on both edges and make the last file/Remove row fully reachable without clipping. Include the reported iPad landscape layout, long filenames, scrolling and large text. This joins the pending folder + / destination, Close project and cohesive Projects-page work.
+
+Before any later TestFlight release, add regression and full native iPhone/iPad functional coverage for these reported flows. Physical-device acceptance remains separate from simulator results.
