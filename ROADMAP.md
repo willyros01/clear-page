@@ -2,6 +2,9 @@
 
 Work in small, reviewable steps. Keep one shared editor for all platforms.
 
+## 0.8.4 (25) — window fits the screen; all platforms on one source
+Release 0.8.4 (25) from one merged source for web, Mac, Windows, Android, iPhone and iPad. Mac/Windows windows fit the screen. Physical-device acceptance is recorded separately from CI.
+
 ## Coordinated 0.6.0 (19) release
 Owner authorized filename preservation, all supported language detection, offline Python/SQLite parsers and Markdown linting together. 42 Node tests and all platform native gates pass; TestFlight and all public website downloads are verified, including the signed Android APK. Physical-device acceptance remains separate. See TODO.md and RELEASE-0.6.0.md for current gates.
 

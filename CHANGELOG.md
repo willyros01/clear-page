@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.8.4 (25) — window fits the screen; one shared code base
+- Mac and Windows: when the screen (above the taskbar or Dock) is smaller than the normal 1200 x 850 window, ATE opens the window at the screen's size and centres it, so the Syntax line and Save button are never off-screen. Larger screens keep the normal size. Native tests now require the whole window inside the screen and the Syntax line and Save button inside the window.
+- The tested Android 0.8.3 fixes (older WebView support, Android tab scroll restore, single-open syntax dialogs, no re-save while exiting) are merged into the shared code, so web, Mac, Windows, Android, iPhone and iPad build from the same source.
+- Android verification: durable restart marker, background-then-stop process kill, scroll-restore settle wait, guarded Save picker retry, failure screen and log printed into the run log.
+
 ## 0.8.1 (22) — iPhone toolbar accessibility
 - Allow the header to reflow; narrow screens give Menu, Close and Save their own full-width row with three touch targets. Preserve chosen document text size and icon/text preference.
 - Wrap save/recovery messages and constrain page widths so enlarged controls cannot push Save off-screen.
