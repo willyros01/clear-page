@@ -11,7 +11,7 @@ export function checkProjectLayout([scale=1]){
   if(!root||!nested)throw Error('Missing root/nested fixture');const r=root.querySelector('button').getBoundingClientRect(),n=nested.querySelector('button').getBoundingClientRect();
   if(n.left<=r.left+1||Math.abs(n.right-r.right)>1)throw Error('Nested filenames must be visibly indented with a shared right edge');
   for(const element of [dialog,body,tree])if(element.scrollWidth>element.clientWidth+1)throw Error('Project controls widen the screen at '+scale*100+'%');
-  const last=rows.at(-1),target=last.querySelector('.project-file-open');
+  const last=rows[rows.length-1],target=last.querySelector('.project-file-open');
   target.scrollIntoView({block:'end'});
   const b=target.getBoundingClientRect(),v=body.getBoundingClientRect(),d=dialog.getBoundingClientRect(),back=document.getElementById('closeProjects').getBoundingClientRect();
   if(b.height<44||b.width<44||b.bottom>Math.min(v.bottom,d.bottom)+1||b.top<Math.max(v.top,back.bottom)-1)throw Error('The last project row must scroll fully into view: '+JSON.stringify({b:b.toJSON(),v:v.toJSON()}));
