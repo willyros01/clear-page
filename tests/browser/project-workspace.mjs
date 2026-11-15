@@ -31,7 +31,7 @@ try{for(const [engineName,engine] of Object.entries(engines)){
   await editor.fill('Protected filename content');
   for(const viewport of [{width:390,height:844},{width:844,height:390}]){
    await page.setViewportSize(viewport);await page.locator('#menuButton').click();await page.locator('#name').fill('Qzzzzzzz.sql');await page.locator('#name').press('Enter');await page.locator('#closeMenu').click();
-   assert.equal(await editor.innerText(),'Protected filename content');assert.ok(await page.getByRole('tab',{name:'Qzzzzzzz.sql',exact:true}).count());
+   assert.equal(await editor.innerText(),'Protected filename content');assert.ok(await page.getByRole('tab',{name:'Qzzzzzzz.sql, unsaved changes',exact:true}).count());
    await page.waitForTimeout(450);await page.evaluate(()=>{const r=document.getElementById('save').getBoundingClientRect(),v=visualViewport;if(r.left<0||r.right>v.width+1||r.top<v.offsetTop-1)throw Error('Save clipped after menu return')});
   }
   await page.setViewportSize({width:1194,height:834});
