@@ -41,12 +41,12 @@ public class DocumentSaveTest {
         System.out.println("PASS: "+result.getJSONArray("checks").length()+" Android webview checks");
         UiObject2 back=device.findObject(By.text("Back to editor"));
         if(back!=null)back.click();
-        click(device,"Save file");
+        openSavePicker(device,context);
         assertTrue("Save must launch DocumentsUI, not a share chooser",device.wait(Until.hasObject(By.pkg(DOCUMENTS)),15000));
         device.pressBack();
         assertTrue("Editor must resume after cancelling Save",device.wait(Until.hasObject(By.pkg(context.getPackageName())),10000));
         assertTrue("Cancellation notice missing",device.wait(Until.hasObject(By.textContains("Your draft is kept")),10000));
-        click(device,"Save file");
+        openSavePicker(device,context);
         assertTrue(device.wait(Until.hasObject(By.pkg(DOCUMENTS)),15000));
         UiObject2 roots=device.findObject(By.desc("Show roots"));
         if(roots!=null){clickSelector(device,By.desc("Show roots"),"Show roots");device.waitForIdle();clickSelector(device,By.text("Downloads"),"Downloads");device.waitForIdle();}
@@ -65,7 +65,7 @@ public class DocumentSaveTest {
         UiObject2 saved=device.wait(Until.findObject(By.text("ate-storage-check.c")),10000);
         assertNotNull("Saved document missing from file manager",saved);saved.click();
         assertTrue("Native file open did not complete",device.wait(Until.hasObject(By.textContains("Opened ate-storage-check.c")),15000));
-        click(device,"Save file");
+        openSavePicker(device,context);
         assertTrue(device.wait(Until.hasObject(By.pkg(DOCUMENTS)),15000));
         filename=device.wait(Until.findObject(By.clazz("android.widget.EditText")),10000);
         assertNotNull("Extensionless filename field missing",filename);filename.setText("ate-no-extension");
@@ -109,6 +109,17 @@ public class DocumentSaveTest {
             try{device.takeScreenshot(new File(context.getFilesDir(),"ate-large-failure.png"));device.dumpWindowHierarchy(new File(context.getFilesDir(),"ate-large-failure.xml"));}catch(Exception capture){System.out.println("Large-text evidence capture: "+capture);}
             throw failure;
         } finally {device.executeShellCommand("settings put system font_scale 1.0");}
+    }
+    // Right after a relaunch the editor page may still be loading when Save is
+    // first visible. Only tap again if ATE is still in front and no picker opened.
+    private void openSavePicker(UiDevice device,Context context){
+        for(int attempt=0;attempt<4;attempt++){
+            device.wait(Until.hasObject(By.pkg(context.getPackageName())),10000);
+            click(device,"Save file");
+            if(device.wait(Until.hasObject(By.pkg(DOCUMENTS)),5000))return;
+            if(!device.hasObject(By.pkg(context.getPackageName())))return;
+            device.waitForIdle();
+        }
     }
     private void click(UiDevice device,String text){
         long end=System.currentTimeMillis()+15000;

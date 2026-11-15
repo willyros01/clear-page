@@ -6,6 +6,12 @@ capture_failure(){
  timeout 20s adb logcat -d > android-logcat.txt || true
  timeout 20s adb shell screencap -p /sdcard/ate-debug.png && adb pull /sdcard/ate-debug.png android-debug.png || true
  timeout 20s adb shell uiautomator dump /sdcard/ate-ui.xml && adb pull /sdcard/ate-ui.xml android-ui.xml || true
+ # Print what was on screen and the app's last messages into the log itself.
+ for f in android-ui.xml android-large-failure.xml; do
+  [ -f "$f" ] || continue; echo "=== Screen at failure: $f ==="
+  grep -oE '(package|text|content-desc)="[^"]+"' "$f" | sort -u | head -80 || true
+ done
+ [ -f android-logcat.txt ] && { echo '=== App log at failure ==='; grep -E 'Capacitor|DocumentFiles|AndroidRuntime|ActivityTaskManager' android-logcat.txt | tail -60 || true; }
 }
 trap 'status=$?; if [ "$status" -ne 0 ]; then capture_failure; fi' EXIT
 adb install android/app/build/outputs/apk/debug/app-debug.apk
