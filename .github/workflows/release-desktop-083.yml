@@ -1,0 +1,135 @@
+name: ATE Apple and Desktop
+run-name: Release the already tested ATE 0.8.3 Mac, Windows and web artifacts
+on:
+  push:
+    branches: [desktop]
+    paths: ['.github/workflows/release-desktop-083.yml', 'build/recover-desktop-083.mjs']
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: ate-desktop-artifact-release-083
+  cancel-in-progress: false
+env:
+  ATE_BUILD_NUMBER: '24'
+  GITHUB_TOKEN: ${{ github.token }}
+jobs:
+  browser:
+    name: browser
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node build/recover-desktop-083.mjs check
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 43732522398
+          name: ate-web-app
+          path: recovered-web
+      - run: node build/recover-desktop-083.mjs web
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ate-web-app
+          path: recovered-web/*
+  windows:
+    name: windows
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node build/recover-desktop-083.mjs check
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 43732522398
+          name: ate-windows-x64
+          path: recovered-windows
+      - run: node build/recover-desktop-083.mjs windows
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ate-windows-x64
+          path: recovered-windows/*
+  mac-build:
+    name: mac-build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node build/recover-desktop-083.mjs check
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 43732522398
+          name: ate-mac-universal-preview
+          path: recovered-mac
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ate-mac-universal-preview
+          path: recovered-mac/ate-mac-app.zip
+  mac-release:
+    needs: mac-build
+    strategy:
+      fail-fast: false
+      matrix:
+        channel: [testflight, website]
+    runs-on: macos-26
+    timeout-minutes: 40
+    env:
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - uses: actions/download-artifact@v4
+        with:
+          name: ate-mac-universal-preview
+          path: mac-input
+      - run: bash build/mac-release.sh ${{ matrix.channel }}
+        env:
+          MAC_DEVELOPER_ID_SIGNING: ${{ matrix.channel == 'website' && secrets.MAC_DEVELOPER_ID_SIGNING || '' }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ate-mac-${{ matrix.channel }}-release
+          path: |
+            public-desktop/*
+            ${{ runner.temp }}/ate-mac-${{ matrix.channel }}/*.log
+            ${{ runner.temp }}/ate-mac-${{ matrix.channel }}/notary.json
+  report:
+    needs: [browser, windows, mac-release]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node build/recover-desktop-083.mjs report
+      - name: Publish the verified desktop and web result
+        run: |
+          cp desktop-report/ate-desktop-last-run.json "$RUNNER_TEMP/ate-desktop-last-run.json"
+          git fetch origin desktop-releases
+          git checkout -B desktop-releases origin/desktop-releases
+          cp "$RUNNER_TEMP/ate-desktop-last-run.json" ate-desktop-last-run.json
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add ate-desktop-last-run.json
+          git commit -m "Record ATE 0.8.3 desktop/web artifact release $GITHUB_RUN_ID"
+          git push origin HEAD:desktop-releases
