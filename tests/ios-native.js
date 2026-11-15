@@ -98,7 +98,10 @@ import {Filesystem,Directory,Encoding} from '@capacitor/filesystem';
   await wait(300);view.scrollDOM.scrollTop=800;await wait(100);
   const oldScroll=view.scrollDOM.scrollTop;
   assert(oldScroll>100,'Long document can scroll');
-  await open('print(1)','scroll.py',true);tabs()[1].click();await wait(200);
+  await open('print(1)','scroll.py',true);tabs()[1].click();
+  // Slow emulators can take several frames to restore the position; wait for it, then make sure it stays put.
+  for(let i=0;i<50&&Math.abs(view.scrollDOM.scrollTop-oldScroll)>=50;i++)await wait(100);
+  await wait(500);
   assert(Math.abs(view.scrollDOM.scrollTop-oldScroll)<50,'Each tab preserves its scroll position (expected '+oldScroll+', got '+view.scrollDOM.scrollTop+')');
   tabs()[2].click();closeCurrent();closeCurrent();
   }
