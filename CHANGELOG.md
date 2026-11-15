@@ -4,7 +4,7 @@
 - Allow the header to reflow; narrow screens give Menu, Close and Save their own full-width row with three touch targets. Preserve chosen document text size and icon/text preference.
 - Wrap save/recovery messages and constrain page widths so enlarged controls cannot push Save off-screen.
 - Use CSS safe-area padding with native automatic content insets disabled, keeping the toolbar below the status bar and clear of landscape cutouts.
-- Add 100–300% control/icon layout regressions across phone/tablet widths, native WKWebView checks, and actual iPhone/iPad toolbar/Save tests at the largest OS accessibility text setting. Release verification pending.
+- Add 100–300% control/icon layout regressions across phone/tablet widths, native WKWebView checks, and actual iPhone/iPad toolbar/Save tests at the largest OS accessibility text setting. Release verified: 53 Node tests, Chromium/WebKit, both native simulator suites and largest-text checks passed before upload. Apple returned VALID / IN_BETA_TESTING; see RELEASE-0.8.1.md.
 
 ## 0.6.0 (19) — coordinated release
 - Preserve explicit and extensionless filenames; remove automatic .txt appending. Android native Save avoids MIME-derived suffix suggestions. The unsaved rename report was not reproduced; no speculative root cause is claimed.

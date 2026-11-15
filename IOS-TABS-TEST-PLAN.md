@@ -33,3 +33,9 @@ Run 43613292921 at `d23b3ff66fc3555983027a74cf75d01a8c307242` passed every gate:
 - Production XCUITest: full prior functional suite plus toolbar bounds/status-bar clearance, keyboard, actual Save sheet cancellation and orientation. Repeat the focused toolbar test with simulator OS content size accessibility-extra-extra-extra-large. Retain both result bundles and screenshots.
 - Native contentInset is never; CSS safe-area padding owns the full-screen webview insets. Do not disable iPhone text enlargement or reduce the document font to hide layout errors.
 - Release pending; verify on the owner’s physical iPhone at their chosen text/display settings after TestFlight availability.
+
+## Verified 0.8.1 result — 14 November 2026 (Toronto)
+
+ATE **0.8.1 (22)** completed in [run 43651324829](https://github.com/willyros01/clear-page/actions/runs/43651324829) at tested source `bb0d4cbf8c23153393b06c2b24ca5281875619bc`. All 53 Node tests, Chromium/WebKit regression, 270 native WKWebView assertions on each device, three production XCUITest cases per device, and the separate largest-OS-accessibility-text toolbar/Save test on both iPhone and iPad passed before signing/upload. Apple processing is **VALID**, build `2b31ba5a-c8ad-4a90-ba7e-de081a878e48`, and **IN_BETA_TESTING** membership in the existing internal tester group was verified at 18:32 America/Toronto on 14 November 2026. Physical-device acceptance remains pending. See [RELEASE-0.8.1.md](RELEASE-0.8.1.md).
+
+Native UI tests use fully visible targets, explicit Menu tap centers, awaited dialog/native sheet dismissal, independent application sessions for project/tab/toolbar cases, orientation settling, live progress and bounded execution. The largest-text test uses the actual simulator OS accessibility-extra-extra-extra-large setting; control amplification in WKWebView/browser tests is additional coverage. Screenshots and both xcresult bundles are retained by the run.

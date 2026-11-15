@@ -129,3 +129,9 @@ Authorized after owner acceptance of 0.7.0. Implementation is complete locally: 
 ### iOS 0.8.1 (22) — large-text toolbar repair
 
 Owner reported Save clipped at the right edge and status-bar overlap in 0.8.0 (21). Header reflow, wrapped notices and explicit CSS safe-area ownership implemented on ios-tabs. Preserve all 0.8.0 project/Shell functionality and document sizing. New layout amplification tests supplement actual simulator accessibility-size tests. Full browser, iPhone/iPad functional and Apple processing gates required before release; physical iPhone acceptance remains separate.
+
+## iOS 0.8.1 (22) — verified TestFlight release
+
+ATE **0.8.1 (22)** completed in [run 43651324829](https://github.com/willyros01/clear-page/actions/runs/43651324829) at tested source `bb0d4cbf8c23153393b06c2b24ca5281875619bc`. All 53 Node tests, Chromium/WebKit regression, 270 native WKWebView assertions on each device, three production XCUITest cases per device, and the separate largest-OS-accessibility-text toolbar/Save test on both iPhone and iPad passed before signing/upload. Apple processing is **VALID**, build `2b31ba5a-c8ad-4a90-ba7e-de081a878e48`, and **IN_BETA_TESTING** membership in the existing internal tester group was verified at 18:32 America/Toronto on 14 November 2026. Physical-device acceptance remains pending. See [RELEASE-0.8.1.md](RELEASE-0.8.1.md).
+
+The subdirectory Add files/+ controls, Close project and cohesive Projects redesign remain pending in TODO.md and issue #3; they are not included in this toolbar build.

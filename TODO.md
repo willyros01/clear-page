@@ -203,7 +203,7 @@ Tabs are enabled on iOS only. Current Mac/Windows/Android distributions remain 0
 
 Final automated gates: run 43613292921 at source `d23b3ff66fc3555983027a74cf75d01a8c307242` passed 44 Node tests, Chromium/WebKit, 199 native-webview assertions per device, and full XCUITest on both iPhone/iPad. TestFlight is VALID / IN_BETA_TESTING in the existing internal group; Apple build ID `ecae3ae1-3131-411d-90c5-c05caab20d7f`. See IOS-TABS-TEST-PLAN.md for coverage and physical-device limits.
 
-## iOS 0.8.0 (21) — Basic/Advanced, projects and Shell (in progress)
+## iOS 0.8.0 (21) — Basic/Advanced, projects and Shell (released; physical feedback recorded)
 
 Owner accepted 0.7.0 (20) after physical testing and authorized this combined update on 14 November 2026.
 
@@ -213,10 +213,10 @@ Owner accepted 0.7.0 (20) after physical testing and authorized this combined up
 - [x] SHA-256 stale-save protection and safe relative paths; filename extensions never appended.
 - [x] Shell extensions/startup names/interpreter recognition before embedded Python; shell highlighting and offline POSIX/Bash structural parser; other dialects not falsely checked.
 - [x] 53 local Node tests and production build.
-- [ ] Chromium/WebKit production bundle regression.
-- [ ] iPhone/iPad native filesystem/mode/project/ZIP/parser/recovery tests.
-- [ ] Native XCUITest modes, project save/export/remove and all earlier tab/picker regressions.
-- [ ] TestFlight upload and Apple processing after all gates pass.
+- [x] Chromium/WebKit production bundle regression.
+- [x] iPhone/iPad native filesystem/mode/project/ZIP/parser/recovery tests.
+- [x] Native XCUITest modes, project save/export/remove and all earlier tab/picker regressions.
+- [x] TestFlight upload and Apple processing after all gates pass (0.8.0 run 43635811735).
 - [ ] Owner physical-device validation of 0.8.0.
 
 Projects/mode controls are enabled on iOS first. Other published distributions remain unchanged.
@@ -238,3 +238,15 @@ Requested by owner on 14 November 2026. Status: **Pending**; follow-up to the 0.
 - [ ] Redesign the Projects page as a cohesive, readable workflow: clear active-project heading, grouped project actions, folder/file tree, consistent spacing/alignment and accessible touch targets. The owner finds the current layout disjointed.
 - [ ] Integrate the requested subdirectory destination choice and visible **+ beside each subdirectory** into the folder tree.
 - [ ] Verify open/close/reopen, unsaved-work protection, ordinary editor tabs, folder add controls and small-screen/large-text layouts through regression and full native iPhone/iPad functional tests.
+
+## iOS 0.8.1 (22) — Save toolbar repair released
+
+ATE **0.8.1 (22)** completed in [run 43651324829](https://github.com/willyros01/clear-page/actions/runs/43651324829) at tested source `bb0d4cbf8c23153393b06c2b24ca5281875619bc`. All 53 Node tests, Chromium/WebKit regression, 270 native WKWebView assertions on each device, three production XCUITest cases per device, and the separate largest-OS-accessibility-text toolbar/Save test on both iPhone and iPad passed before signing/upload. Apple processing is **VALID**, build `2b31ba5a-c8ad-4a90-ba7e-de081a878e48`, and **IN_BETA_TESTING** membership in the existing internal tester group was verified at 18:32 America/Toronto on 14 November 2026. Physical-device acceptance remains pending. See [RELEASE-0.8.1.md](RELEASE-0.8.1.md).
+
+- [x] Narrow-screen Menu/Close/Save row, enlarged-control reflow, wrapped save messages and CSS safe areas.
+- [x] Retain independent document font and text/icon preferences.
+- [x] All regression/native functional gates, including actual largest OS text setting on both device types.
+- [x] Signed upload, Apple processing and existing internal tester assignment.
+- [ ] Owner physical iPhone/iPad validation at preferred text/display settings.
+
+Project follow-up items above remain Pending: destination subdirectory / + beside each subdirectory, Close project, and a cohesive Projects page (issue #3).

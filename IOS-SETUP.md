@@ -1,5 +1,11 @@
 # Another Text Editor (ATE) — iOS
 
+## Latest verified iPhone/iPad release — 0.8.1 (22)
+
+ATE **0.8.1 (22)** completed in [run 43651324829](https://github.com/willyros01/clear-page/actions/runs/43651324829) at tested source `bb0d4cbf8c23153393b06c2b24ca5281875619bc`. All 53 Node tests, Chromium/WebKit regression, 270 native WKWebView assertions on each device, three production XCUITest cases per device, and the separate largest-OS-accessibility-text toolbar/Save test on both iPhone and iPad passed before signing/upload. Apple processing is **VALID**, build `2b31ba5a-c8ad-4a90-ba7e-de081a878e48`, and **IN_BETA_TESTING** membership in the existing internal tester group was verified at 18:32 America/Toronto on 14 November 2026. Physical-device acceptance remains pending. See [RELEASE-0.8.1.md](RELEASE-0.8.1.md).
+
+Active iOS feature branch: `ios-tabs`. The setup/release records below describe earlier checkpoints.
+
 Branch: ios. Main and the hosted web editor are unchanged.
 
 - App name: Another Text Editor (ATE); device label: ATE
@@ -112,6 +118,6 @@ Completed 11 November 2026 (America/Toronto). Apple processing **VALID**, build 
 
 Next physical acceptance: update in TestFlight, check a malformed C/JS file, tap an issue to jump to it, correct the error, repeat with airplane mode, confirm font/appearance/Vim and ordinary file save/close/recovery. The iPad C checker is basic structure only; headers, types, macros and compiler-standard conformance are not checked. Desktop optional compiler installation remains a separate pending task.
 
-## Current release — 0.5.2 (17)
+## Historical release — 0.5.2 (17)
 
 Run 43168469203 passed browser/parser and actual iPad webview gates before archive/sign/upload. Apple processed build `81ffd03e-0758-480d-acb0-372cf2e4b712` as VALID and assignment to the existing internal group was verified. Menu/configuration text is 12pt, headings max 14pt; document text remains independent. The production archive verifies worker/Wasm assets and excludes the driver. Universal Mac TestFlight 0.5.2 (17) is also VALID and assigned to the existing group, build `b8cbbf95-9e20-4324-9a9a-2ca2843538dd`. See RELEASE-0.5.2.md for actual sources and remaining physical acceptance.
