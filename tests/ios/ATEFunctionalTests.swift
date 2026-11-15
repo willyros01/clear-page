@@ -92,8 +92,17 @@ final class ATEFunctionalTests: XCTestCase {
         if !fullyVisible() { dismissKeyboard() }
         for _ in 0..<8 {
             if fullyVisible() { break }
-            if button.frame.minY < contents.frame.minY { contents.swipeDown() } else { contents.swipeUp() }
+            if app.otherElements["UIContinuousPathIntroductionView"].firstMatch.exists {
+                dismissKeyboard()
+            } else if button.frame.minY < contents.frame.minY {
+                contents.swipeDown()
+            } else {
+                contents.swipeUp()
+            }
         }
+        // A keyboard tutorial can appear during a gesture on a fresh simulator.
+        // Recheck after dismissing it; still require the entire target on screen.
+        if !fullyVisible() { dismissKeyboard() }
         XCTAssertTrue(fullyVisible(), app.debugDescription)
 
         return button
