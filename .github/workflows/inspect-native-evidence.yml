@@ -7,7 +7,7 @@ on:
       artifact_id:
         description: Native evidence artifact ID
         required: false
-        default: "14136101276"
+        default: "14149028741"
 permissions:
   contents: read
   actions: read
@@ -17,7 +17,7 @@ jobs:
     timeout-minutes: 10
     env:
       GH_TOKEN: ${{ github.token }}
-      ARTIFACT_ID: ${{ github.event.inputs.artifact_id || '14136101276' }}
+      ARTIFACT_ID: ${{ github.event.inputs.artifact_id || '14149028741' }}
     steps:
       - uses: actions/setup-python@v5
         with:
