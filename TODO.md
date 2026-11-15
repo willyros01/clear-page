@@ -223,21 +223,21 @@ Projects/mode controls are enabled on iOS first. Other published distributions r
 
 ## Project follow-up — subdirectory Add files control
 
-Requested by owner on 14 November 2026. Status: **Pending**; not included in the 0.8.1 (22) toolbar repair.
+Requested by owner on 14 November 2026. Status: **Implemented and released in 0.8.2 (23)**.
 
-- [ ] When adding files to a project, clearly offer the destination subdirectory, including the project root.
-- [ ] Preferred interaction: a visible **+ beside each subdirectory** to add files directly into that folder; preselect and clearly display the destination.
-- [ ] Preserve exact filenames and existing collision/safe-path protections; cancelling must keep the project and open editor unchanged.
-- [ ] Verify root and nested-folder placement, cancellation and duplicate filenames in regression and native iPhone/iPad functional tests before release.
+- [x] When adding files to a project, clearly offer the destination subdirectory, including the project root.
+- [x] Preferred interaction: a visible **+ beside each subdirectory** to add files directly into that folder; preselect and clearly display the destination.
+- [x] Preserve exact filenames and existing collision/safe-path protections; cancelling must keep the project and open editor unchanged.
+- [x] Verify root and nested-folder placement, cancellation and duplicate filenames in regression and native iPhone/iPad functional tests before release.
 
 ## Project follow-up — Close project and cohesive page layout
 
-Requested by owner on 14 November 2026. Status: **Pending**; follow-up to the 0.8.1 (22) Save-button repair.
+Requested by owner on 14 November 2026. Status: **Implemented and released in 0.8.2 (23)**.
 
-- [ ] Add an explicit **Close project** action, distinct from dismissing the Projects page or closing an editor tab. Close the active project workspace without deleting its stored files; protect unsaved project work before closing.
-- [ ] Redesign the Projects page as a cohesive, readable workflow: clear active-project heading, grouped project actions, folder/file tree, consistent spacing/alignment and accessible touch targets. The owner finds the current layout disjointed.
-- [ ] Integrate the requested subdirectory destination choice and visible **+ beside each subdirectory** into the folder tree.
-- [ ] Verify open/close/reopen, unsaved-work protection, ordinary editor tabs, folder add controls and small-screen/large-text layouts through regression and full native iPhone/iPad functional tests.
+- [x] Add an explicit **Close project** action, distinct from dismissing the Projects page or closing an editor tab. Close the active project workspace without deleting its stored files; protect unsaved project work before closing.
+- [x] Redesign the Projects page as a cohesive, readable workflow: clear active-project heading, grouped project actions, folder/file tree, consistent spacing/alignment and accessible touch targets. The owner finds the current layout disjointed.
+- [x] Integrate the requested subdirectory destination choice and visible **+ beside each subdirectory** into the folder tree.
+- [x] Verify open/close/reopen, unsaved-work protection, ordinary editor tabs, folder add controls and small-screen/large-text layouts through regression and full native iPhone/iPad functional tests.
 
 ## iOS 0.8.1 (22) — Save toolbar repair released
 
@@ -249,21 +249,34 @@ ATE **0.8.1 (22)** completed in [run 43651324829](https://github.com/willyros01/
 - [x] Signed upload, Apple processing and existing internal tester assignment.
 - [ ] Owner physical iPhone/iPad validation at preferred text/display settings.
 
-Project follow-up items above remain Pending: destination subdirectory / + beside each subdirectory, Close project, and a cohesive Projects page (issue #3).
+The project follow-up items above were subsequently implemented and released in 0.8.2 (23); see the verified result below.
 
 ## Owner feedback — iPhone menu, filenames and SQL files
 
-Reported against TestFlight 0.8.1 (22). Status: **Pending**. Development/build work is stopped at the owner's request; these records do not restart a build.
+Reported against TestFlight 0.8.1 (22). Status: **Implemented and released in 0.8.2 (23)**. The owner resumed and authorized all fixes in this build.
 
-- [ ] **iPhone layout after leaving Menu:** reproduce the screen shifting after filename/settings input and returning to the editor, including Export copy cancellation with the software keyboard visible. The toolbar overlaps the status bar and Save/message content can extend beyond the right edge. Verify menu exit, keyboard show/hide, icon/text buttons, preferred large text/display zoom and orientation; keep the toolbar and editor within the visible screen.
-- [ ] **File name field clarity:** add a persistent visible “File name” label, a contrasting field background and clear border, and place the field with the file controls. The current field (shown with “Qzzzzzzz”) looks like the background and can be mistaken for document text. Preserve the exact filename; ensure an empty filename still has a meaningful visible label/tab fallback.
-- [ ] **General syntax-checking information:** replace the mobile “About C checks” entry with “About syntax checking” covering all supported checkers: JavaScript, TypeScript, JSON, HTML, CSS, YAML, C, Python, Shell scripts, SQL and Markdown. Describe each checker's scope and limits; retain C-specific compiler details only where relevant.
-- [ ] **SQL file selection/editing:** investigate why files ending in .sql are greyed out in the iOS file chooser and cannot be opened for editing. Verify both ordinary Open and project Add files, real iPhone/iPad Files-provider type filtering, UTF-8 validation, exact .sql names, SQL language detection/checking, editing and save/reopen. Do not treat a greyed-out picker item as proof that SQL editing itself is unsupported.
-- [ ] **Project tree bottom row:** keep root and nested file boxes aligned on both edges and make the last file/Remove row fully reachable without clipping. Include the reported iPad landscape layout, long filenames, scrolling and large text. This joins the pending folder + / destination, Close project and cohesive Projects-page work.
+- [x] **iPhone layout after leaving Menu:** reproduce the screen shifting after filename/settings input and returning to the editor, including Export copy cancellation with the software keyboard visible. The toolbar overlaps the status bar and Save/message content can extend beyond the right edge. Verify menu exit, keyboard show/hide, icon/text buttons, preferred large text/display zoom and orientation; keep the toolbar and editor within the visible screen.
+- [x] **File name field clarity:** add a persistent visible “File name” label, a contrasting field background and clear border, and place the field with the file controls. The current field (shown with “Qzzzzzzz”) looks like the background and can be mistaken for document text. Preserve the exact filename; ensure an empty filename still has a meaningful visible label/tab fallback.
+- [x] **General syntax-checking information:** replace the mobile “About C checks” entry with “About syntax checking” covering all supported checkers: JavaScript, TypeScript, JSON, HTML, CSS, YAML, C, Python, Shell scripts, SQL and Markdown. Describe each checker's scope and limits; retain C-specific compiler details only where relevant.
+- [x] **SQL file selection/editing:** removed restrictive iOS provider-type filtering from ordinary Open and project Add files. Automated checks passed for UTF-8 validation, exact .sql names, SQL detection/checking, editing and save payloads. Native Files picker/cancellation passed. Physical SQL selection and successful Save to Files/reopening in each provider remain owner acceptance items below.
+- [x] **Project tree bottom row:** keep root and nested file boxes aligned on both edges and make the last file/Remove row fully reachable without clipping. Include the reported iPad landscape layout, long filenames, scrolling and large text. This joins the pending folder + / destination, Close project and cohesive Projects-page work.
 
-Before any later TestFlight release, add regression and full native iPhone/iPad functional coverage for these reported flows. Physical-device acceptance remains separate from simulator results.
+Regression and full native iPhone/iPad functional coverage passed before release. Physical-device and individual Files-provider acceptance remain separate from simulator results.
 
 
-## iOS 0.8.2 (23) — implementation and verification in progress
+## iOS 0.8.2 (23) — implementation completed
 
-Owner resumed this build on 15 November 2026. Includes project destination/+ controls, guarded Close project, cohesive single-scroll Projects page and aligned root/nested bottom rows; iPhone visual-viewport/menu return repair; a labelled contrasting filename field, Open files label and filename/content separation; general syntax-checker help; and unrestricted iOS file selection followed by strict text-byte validation so SQL/provider UTIs are selectable. Regression coverage includes SQL open/edit/save, metadata isolation, viewport changes, project save/cancel/discard/stale saves and enlarged layouts. Native iPhone/iPad and largest-OS-text gates must pass before TestFlight. Physical Files-provider acceptance remains for owner testing. Previous stopped/pending statuses are superseded by this authorized work; this entry does not claim release.
+Owner resumed this build on 15 November 2026. Includes project destination/+ controls, guarded Close project, cohesive single-scroll Projects page and aligned root/nested bottom rows; iPhone visual-viewport/menu return repair; a labelled contrasting filename field, Open files label and filename/content separation; general syntax-checker help; and unrestricted iOS file selection followed by strict text-byte validation so SQL/provider UTIs are selectable. Regression coverage includes SQL open/edit/save, metadata isolation, viewport changes, project save/cancel/discard/stale saves and enlarged layouts. Native iPhone/iPad and largest-OS-text gates passed before TestFlight. Physical Files-provider acceptance remains for owner testing. Previous stopped/pending statuses are superseded by this authorized work; the verified release result below records completion.
+
+
+## Verified iOS 0.8.2 (23) result — 15 November 2026
+
+ATE **0.8.2 (23)** is released to the existing internal TestFlight group. [Run 43684792345](https://github.com/willyros01/clear-page/actions/runs/43684792345) passed at tested source `93645a4cf237e7e615efeb3a19d052c8b3410919`. All 54 Node tests, Chromium/WebKit production regression, 291 native WKWebView assertions per device, all six production XCUITest cases per device, and both separate largest-OS-accessibility-text cases per device passed before archive/sign/upload. Apple processing is **VALID**, build `5e53acda-97ff-4272-8f44-f3768f9dfc9d`; existing-group **IN_BETA_TESTING** was verified at 01:59 America/Toronto on 15 November 2026 (06:59 UTC). Physical iPhone/iPad and individual Files-provider acceptance remain pending.
+
+- [x] iPhone menu/keyboard/export-return alignment and responsive Save controls, including magnified narrow visual viewports.
+- [x] Contrasting File name card, explicit label/hint, Open files label, filename/content isolation and Untitled fallback.
+- [x] General syntax-checker reference and unrestricted SQL/extensionless file selection followed by strict text validation.
+- [x] Folder/root + controls with captured destination, cohesive project page, aligned root/nested rows and reachable final Remove button.
+- [x] Close project with Cancel/Save/Discard, stale-save protection and ordinary/other-project tab preservation.
+- [x] All automated gates, signed upload, Apple processing and internal tester assignment.
+- [ ] Owner physical-device acceptance, especially preferred iPhone text/display settings and SQL selection from each Files provider.
