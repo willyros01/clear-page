@@ -71,6 +71,7 @@ export function setupProjects({workspace,openDocument,canChange,notice,exclusive
  $('closeProjects').onclick=()=>{if(!busy)$('projects').close()};
  $('openProjectPicker').onclick=()=>{if(!busy){$('projectPicker').showModal();task(refresh)}};
  $('closeProjectPicker').onclick=()=>{if(!busy)$('projectPicker').close()};
+ for(const id of ['projectPicker','closeProjectDialog','deleteFolderDialog'])$(id).addEventListener('close',()=>{requestAnimationFrame(()=>{if($('projects').open)$('closeProjects').focus({preventScroll:true})})});
  $('createProject').onclick=()=>task(async()=>{current=await store.create($('projectName').value);destination='';collapsed.clear();selected(current.id);$('projectName').value='';$('projectComposer').hidden=true;$('projectCreatePanel').open=false;await refresh();$('projectPicker').close();status('Project created. Select a folder, then Add file or New folder.');});
  $('showProjectAdd').onclick=()=>{if(!busy&&canChange())showComposer()};
  $('showProjectFolder').onclick=()=>{if(!busy&&canChange())showComposer(destination,'folder')};

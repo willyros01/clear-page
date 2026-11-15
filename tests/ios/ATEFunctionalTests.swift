@@ -78,7 +78,8 @@ final class ATEFunctionalTests: XCTestCase {
         XCTAssertTrue(waitForGone(app.staticTexts["Editor menu"], timeout: 10), app.debugDescription)
     }
     func visibleProjectButton(_ label: String) -> XCUIElement {
-        let button = app.webViews.buttons[label].firstMatch
+        // aria-pressed folder selections are exposed as native switches.
+        let button = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", label)).firstMatch
         XCTAssertTrue(button.waitForExistence(timeout: 15), app.debugDescription)
         let picker = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@", "Open project, web dialog")).firstMatch
         let panel = picker.exists ? picker : app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@", "Projects,")).firstMatch
