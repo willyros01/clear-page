@@ -17,6 +17,11 @@ export function checkProjectLayout([scale=1]){
   if(b.height<44||b.width<44||b.bottom>Math.min(v.bottom,d.bottom)+1||b.top<Math.max(v.top,back.bottom)-1)throw Error('The last project row must scroll fully into view: '+JSON.stringify({b:b.toJSON(),v:v.toJSON()}));
   const hit=document.elementFromPoint(b.left+b.width/2,b.top+b.height/2);if(!target.contains(hit))throw Error('The last file target is covered');
   if(back.top<d.top||back.bottom>d.bottom||back.left<d.left||back.right>d.right)throw Error('Back to editor must stay inside the fixed project header');
+  const actions=document.getElementById('projectFolderActions');
+  for(const button of actions.querySelectorAll('button:not([hidden])')){
+   button.scrollIntoView({block:'end'});const b=button.getBoundingClientRect(),a=actions.getBoundingClientRect();
+   if(b.height<44||b.width<44||b.top<a.top-1||b.bottom>a.bottom+1||!button.contains(document.elementFromPoint(b.left+b.width/2,b.top+b.height/2)))throw Error('Selected-folder action must be fully reachable: '+button.textContent);
+  }
   return `Indented file hierarchy and reachable last row at ${innerWidth}px / ${scale*100}% controls`;
  }finally{style.remove();body.scrollTop=oldScroll;if(!wasOpen)dialog.close()}
 }

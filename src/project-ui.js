@@ -14,7 +14,7 @@ export function setupProjects({workspace,openDocument,canChange,notice,exclusive
   finally{busy=false;for(const e of document.querySelectorAll('#projects button,#projects input,#projects select,#projectPicker button,#projectPicker input,#deleteFolderDialog button'))e.disabled=false;syncSelection();}
  }
  function syncSelection(){
-  $('selectedProjectFolder').textContent=destination||'Project root';$('deleteProjectFolder').disabled=busy||!current||!destination;
+  $('selectedProjectFolder').textContent=destination||'Project root';$('deleteProjectFolder').hidden=!destination;$('deleteProjectFolder').disabled=busy||!current||!destination;
   for(const row of $('projectTree').querySelectorAll('[data-folder]')){const chosen=row.dataset.folder===destination;row.classList.toggle('selected',chosen);row.querySelector('.project-folder-select').setAttribute('aria-pressed',String(chosen));row.querySelector('.folder-selected-mark').hidden=!chosen;}
  }
  function chooseFolder(path){if(busy||!current)return;destination=current.folders.includes(path)?path:'';$('projectFolder').value=destination;syncSelection();}
