@@ -1,5 +1,8 @@
 # Changelog
 
+## Next build — Help: Projects and ZIP files
+- Help has a "Projects and ZIP files" topic in its list: creating a project, adding files and folders, saving, and step-by-step how to make a ZIP of a project and where it goes on iPhone/iPad, Android, Mac, Windows and the web; importing a ZIP; closing a project. Replaces the short Projects paragraph (not listed in the topics).
+
 ## 0.8.6 (27) — Vim mode in the bottom line
 - With Vim editing on, the mode (NORMAL, INSERT…) shows in the slim bottom line instead of its own strip; on touch devices with the keyboard up it shows as a small tag in the top row. The Vim strip appears only for a command (:w, /search) or a Vim message.
 - Menu heading stays "Editor menu" (VoiceOver and native tests) with the version shown beside it — already in iPhone/iPad 0.8.5, now on every platform.
