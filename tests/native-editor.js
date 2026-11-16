@@ -7,6 +7,7 @@
  const nativeCRequests=()=>window.__TAURI_INTERNALS__.invoke('c_verification_calls');
  try{
   for(let i=0;i<100&&!document.querySelector('.cm-content');i++)await wait(100);
+  if($('termsDialog').open){$('termsCheck').checked=true;$('termsCheck').dispatchEvent(new Event('change'));$('acceptTerms').click();assert(!$('termsDialog').open,'Mandatory terms accepted through the real controls');}
   const content=document.querySelector('.cm-content');
   assert(!!content,'Editor initialized');
   const fit=JSON.parse(await window.__TAURI_INTERNALS__.invoke('window_fit_report'));
@@ -30,10 +31,11 @@
    for(let i=0;i<50&&text()!==value;i++)await wait(50);
    assert(text()===value,'File import preserves text and indentation');
   };
+  const storeShot=async label=>{await wait(500);await window.__TAURI_INTERNALS__.invoke('store_capture',{label})};
   const mode=value=>{$('editingMode').value=value;$('editingMode').dispatchEvent(new Event('change'));content.focus()};
   mode('standard');
   await open('function hello() {\n    const answer = 42;\n    return answer;\n}');
-  await wait(150);
+  await wait(150);await storeShot('01-editor');
   const scroller=content.closest('.cm-scroller');
   for(const id of ['menu','cSettings','compilerInstall']){
    const dialog=$(id);dialog.showModal();
@@ -91,7 +93,7 @@
   $('checkSyntax').click();
   await until(()=>$('syntaxSummary').textContent.includes('no syntax errors'));
   assert(!document.querySelector('.cm-lintRange-error'),'Native fixed code clears old errors');
-  $('closeSyntax').click();
+  await storeShot('02-syntax');$('closeSyntax').click();
   for(const [name,invalid,valid] of [
    ['offline.py','def greet(name)\n    return name','def greet(name):\n    return name'],
    ['offline.sql','SELECT x FROM WHERE x=1;','SELECT name FROM people;'],
@@ -159,7 +161,7 @@
   assert((await io('read','src/query.sql')).text.includes('SELECT 1;'),'Native cancellation keeps project bytes');
   await $('deleteProjectFolder').onclick();await $('confirmDeleteFolder').onclick();await until(()=>$('projects').open);
   assert((await io('read','src/query.sql')).text===null,'Native confirmed deletion removes directory bytes');assert((await io('read','keep.sql')).text==='SELECT 2;','Native folder deletion preserves sibling bytes');
-  $('closeProject').click();await until(()=>$('projectActions').hidden);$('closeProjects').click();
+  await storeShot('03-projects');$('closeProject').click();await until(()=>$('projectActions').hidden);$('closeProjects').click();
   assert(document.querySelectorAll('#tabs [role=tab]').length>0,'Closing a project keeps the ordinary workspace');
   await window.__TAURI_INTERNALS__.invoke('editor_verification_result',{passed:true,report:checks.map(x=>'PASS: '+x).join('\n')});
  }catch(error){

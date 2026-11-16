@@ -1,6 +1,7 @@
 // Match the worker compatibility layer for Android 11 / older Fire WebViews.
 import 'core-js/actual/object/has-own.js';
 import 'core-js/actual/string/replace-all.js';
+import {setupLegal} from './legal.js';
 import {setupIOSViewport} from './ios-viewport.js';
 import {setupProjects} from './project-ui.js';
 import {createDocumentTabs} from './document-tabs.js';
@@ -14,6 +15,7 @@ import {languages} from './editor.js';
 import {setupSyntax} from './syntax-ui.js';
 import {checkC,chooseCCompiler,chooseCProject,compilerSetupInfo,installCCompiler,cancelCompilerSetup,appSandboxed} from './desktop.js';
 const $=id=>document.getElementById(id);
+const legal=setupLegal({document,storage:localStorage,openLink:desktop?(url)=>window.__TAURI_INTERNALS__.invoke('open_public_link',{url}):null});
 const ios=Capacitor.getPlatform()==='ios',tabbed=true;
 const iosViewport=native?setupIOSViewport():null;
 // iOS file-provider UTIs can classify .sql and extensionless source as non-text.
@@ -43,13 +45,13 @@ $('language').onchange=()=>{languageManual=true;editor.setLanguage(advanced?$('l
 $('indent').onclick=()=>editor.indent();$('unindent').onclick=()=>editor.unindent();
 $('smaller').onclick=()=>setFont(font-1);$('larger').onclick=()=>setFont(font+1);$('fontSize').oninput=()=>{const value=$('fontSize').valueAsNumber;if(Number.isFinite(value)&&value>=10&&value<=54){font=value;$('editor').style.fontSize=font+'pt';$('smaller').disabled=font<=10;$('larger').disabled=font>=54;persistPreferences();persist()}};$('fontSize').onchange=()=>setFont($('fontSize').valueAsNumber);$('buttonStyle').onchange=()=>{applyButtonStyle();persistPreferences()};$('theme').onclick=()=>{document.body.classList.toggle('dark');themeLabel();persistPreferences();persist()};
 let saving=false;
-async function save(){if(saving)return false;saving=true;try{let name=$('name').value||'Untitled';const text=editor.value,tabId=workspace?.current.id,ref=workspace?.current.projectRef;const result=ref?await projects.save(ref,name,text):await saveText(text,name);notice(typeof result==='string'?result:result.message);if(result?.name&&(!workspace||workspace.current.id===tabId)&&$('name').value===name&&result.name!==name){$('name').value=result.name;if(!languageManual)setLanguage(languageForDocument(result.name,editor.value));}dirty=editor.value!==text;if(workspace)workspace.saved(tabId,text,result?.name||name,result?.projectRef);else persist();return true}catch(e){notice((workspace?.current.projectRef?e.message+' ':'Save was cancelled or could not complete. ')+'Your draft is kept.');return false}finally{saving=false}}
+async function save(){if(legal.required())return false;if(saving)return false;saving=true;try{let name=$('name').value||'Untitled';const text=editor.value,tabId=workspace?.current.id,ref=workspace?.current.projectRef;const result=ref?await projects.save(ref,name,text):await saveText(text,name);notice(typeof result==='string'?result:result.message);if(result?.name&&(!workspace||workspace.current.id===tabId)&&$('name').value===name&&result.name!==name){$('name').value=result.name;if(!languageManual)setLanguage(languageForDocument(result.name,editor.value));}dirty=editor.value!==text;if(workspace)workspace.saved(tabId,text,result?.name||name,result?.projectRef);else persist();return true}catch(e){notice((workspace?.current.projectRef?e.message+' ':'Save was cancelled or could not complete. ')+'Your draft is kept.');return false}finally{saving=false}}
 $('save').onclick=save;
 $('menuButton').onclick=()=>{$('menu').showModal();$('menu').scrollTop=0;iosViewport?.restore()};
 $('closeMenu').onclick=()=>leaveMenu();
 $('menu').addEventListener('cancel',()=>{commitFilename();if(document.activeElement instanceof HTMLElement)document.activeElement.blur();iosViewport?.restore()});
 let closingTabId=null;
-function requestExit(){if(saving){notice('Wait for the current save to finish.');return}projects?.dismiss();closingTabId=null;$('exitTitle').textContent='Exit ATE?';$('exitDialog').querySelector('p').textContent='Save open files before exiting, or discard unsaved changes. Saved project and device files are kept.';$('saveExit').textContent='Save and exit';$('discardExit').textContent='Exit without saving';$('exitDialog').showModal()}
+function requestExit(){if(legal.required()){legal.show();return}if(saving){notice('Wait for the current save to finish.');return}projects?.dismiss();closingTabId=null;$('exitTitle').textContent='Exit ATE?';$('exitDialog').querySelector('p').textContent='Save open files before exiting, or discard unsaved changes. Saved project and device files are kept.';$('saveExit').textContent='Save and exit';$('discardExit').textContent='Exit without saving';$('exitDialog').showModal()}
 if(!ios){$('exit').querySelector('.control-label').textContent='Exit';$('exit').setAttribute('aria-label','Exit')}
 $('exit').onclick=()=>ios?requestClose(workspace.current.id):requestExit();
 $('exitCancel').onclick=()=>{closingTabId=null;$('exitDialog').close();editor.focus()};
@@ -66,7 +68,7 @@ async function closeEditor(saved){
  try{await closePlatform()}catch(e){notice('The document is closed. You can close the window now.')}
 }
 handleDesktopExit(()=>{if(!$('exitDialog').open)requestExit()});
-handleBack(()=>{const dialogs=[...document.querySelectorAll('dialog[open]')];if(dialogs.length){dialogs[dialogs.length-1].close();editor.focus()}else requestExit()});
+handleBack(()=>{if(legal.required()){legal.show();return}const dialogs=[...document.querySelectorAll('dialog[open]')];if(dialogs.length){dialogs[dialogs.length-1].close();editor.focus()}else requestExit()});
 $('discardExit').onclick=()=>closeEditor(false);
 $('saveExit').onclick=async()=>{
  if(saving)return;
@@ -85,7 +87,7 @@ async function chooseOpen(){if(Capacitor.getPlatform()==='android'){try{const re
 $('open').onclick=()=>{if(saving)return;$('menu').close();workspace?chooseOpen():guard(chooseOpen,'Open another document?')};$('file').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{if(f.size>10*1024*1024)throw new Error('Please choose a text file smaller than 10 MB.');const text=typeof f.arrayBuffer==='function'?new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(await f.arrayBuffer()):await f.text();if(text.includes('\u0000'))throw new Error('This does not look like a plain-text file.');opened(text,f.name)}catch(err){notice(err.message||'Could not open this file.')}finally{e.target.value=''}};
 $('focus').onclick=async()=>{$('menu').close();document.body.classList.add('focus');try{if(document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen()}catch(e){}editor.focus()};
 async function leave(){document.body.classList.remove('focus');if(document.fullscreenElement)try{await document.exitFullscreen()}catch(e){}}
-$('leaveFocus').onclick=leave;document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement)document.body.classList.remove('focus')});document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();save()}if(e.key==='Escape')leave()});window.addEventListener('beforeunload',e=>{if((workspace?workspace.list().some(t=>t.dirty):dirty)&&$('status').textContent.startsWith('Draft not')){e.preventDefault();e.returnValue=''}});
+$('leaveFocus').onclick=leave;document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement)document.body.classList.remove('focus')});document.addEventListener('keydown',e=>{if(legal.required())return;if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();save()}if(e.key==='Escape')leave()});window.addEventListener('beforeunload',e=>{if((workspace?workspace.list().some(t=>t.dirty):dirty)&&$('status').textContent.startsWith('Draft not')){e.preventDefault();e.returnValue=''}});
 
 function applyButtonStyle(){document.body.classList.toggle('icons',$('buttonStyle').value==='icons')}
 function setupIcons(){

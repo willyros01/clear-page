@@ -15,7 +15,7 @@ test('iOS workspace recovery re-detects automatic modes but preserves explicit o
   {id:1,text:'int main(void) { return 0; }',name:'Untitled',language:'plain',manual:false,dirty:true},
   {id:2,text:'print(42)',name:'script.py',language:'plain',manual:true,dirty:false}
  ]}));
- window.scrollTo=()=>{};await import('../src/app.js');
+ window.scrollTo=()=>{};await import('../src/app.js');document.getElementById('termsCheck').checked=true;document.getElementById('termsCheck').dispatchEvent(new window.Event('change'));document.getElementById('acceptTerms').click();
  const {EditorView}=await import('@codemirror/view');const view=EditorView.findFromDOM(document.querySelector('.cm-editor'));
  try{
   assert.equal(document.getElementById('language').value,'c');

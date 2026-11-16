@@ -1,0 +1,1 @@
+export async function acceptTerms(page){await page.locator('.cm-content').waitFor();const dialog=page.locator('#termsDialog');if(await dialog.isVisible()){await page.locator('#termsCheck').check();await page.locator('#acceptTerms').click();await dialog.waitFor({state:'hidden'})}}

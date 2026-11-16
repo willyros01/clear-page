@@ -1,3 +1,4 @@
+import {acceptTerms} from './legal-helper.mjs';
 import {createServer} from 'node:http';
 import {readFile,mkdir} from 'node:fs/promises';
 import assert from 'node:assert/strict';
@@ -26,7 +27,7 @@ try{for(const [engineName,engine] of Object.entries(engines)){
     if(method==='readdir'){const entries=new Map();for(const path of [...dirs,...files.keys()])if(path.startsWith(o.path+'/')){const name=path.slice(o.path.length+1).split('/')[0];if(name)entries.set(name,{name,type:dirs.has(o.path+'/'+name)?'directory':'file'})}return {files:[...entries.values()]}}
    }};
   });
-  await page.goto(`http://127.0.0.1:${server.address().port}`);await page.waitForSelector('.cm-content');
+  await page.goto(`http://127.0.0.1:${server.address().port}`);await acceptTerms(page);await page.waitForSelector('.cm-content');
   const editor=page.locator('.cm-content'),projects=async()=>{await page.locator('#menuButton').click();await page.locator('#projectsButton').click();await page.waitForFunction(()=>document.getElementById('projects').open&&!document.getElementById('createProject').disabled)};
   assert.equal(await page.locator('#file').getAttribute('accept'),null);
   assert.equal(await page.locator('#projectFiles').getAttribute('accept'),null);

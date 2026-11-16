@@ -19,7 +19,7 @@ test('iOS Basic/Advanced preferences preserve work; project UI creates, saves, e
   if(method==='readFile'){if(!files.has(o.path))throw Error('Missing file');return {data:files.get(o.path)}}
   if(method==='readdir'){const result=new Map();for(const path of [...dirs,...files.keys()])if(path.startsWith(o.path+'/')){const name=path.slice(o.path.length+1).split('/')[0];if(name)result.set(name,{name,type:dirs.has(o.path+'/'+name)?'directory':'file'})}return {files:[...result.values()]}}
  }};
- window.scrollTo=()=>{};await import('../src/app.js');const {EditorView}=await import('@codemirror/view');const {language}=await import('@codemirror/language');const {undoDepth}=await import('@codemirror/commands');const view=EditorView.findFromDOM(document.querySelector('.cm-editor')),$=id=>document.getElementById(id),settle=()=>new Promise(r=>setTimeout(r,20));
+ window.scrollTo=()=>{};await import('../src/app.js');document.getElementById('termsCheck').checked=true;document.getElementById('termsCheck').dispatchEvent(new window.Event('change'));document.getElementById('acceptTerms').click();const {EditorView}=await import('@codemirror/view');const {language}=await import('@codemirror/language');const {undoDepth}=await import('@codemirror/commands');const view=EditorView.findFromDOM(document.querySelector('.cm-editor')),$=id=>document.getElementById(id),settle=()=>new Promise(r=>setTimeout(r,20));
  try{
   assert.ok(document.body.classList.contains('basic-mode'));assert.equal(JSON.parse(localStorage.getItem('clear-page-preferences-v1')).experienceMode,'basic');
   assert.equal(getComputedStyle($('projectsButton')).display,'none');$('autoCheck').checked=false;

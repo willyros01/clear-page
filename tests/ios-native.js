@@ -17,6 +17,7 @@ import {Filesystem,Directory,Encoding} from '@capacitor/filesystem';
  try{
   if(android)try{const prior=await Filesystem.readFile({path:'ate-ipad-syntax-verification.json',directory:Directory.Data,encoding:Encoding.UTF8});if(JSON.parse(prior.data).passed)return}catch{}
   await until(()=>!!document.querySelector('.cm-content'),'iPad editor initialized');
+  if($('termsDialog').open){$('termsCheck').checked=true;$('termsCheck').dispatchEvent(new Event('change'));$('acceptTerms').click();assert(!$('termsDialog').open,'Mandatory terms accepted through the real controls');}
   const content=document.querySelector('.cm-content');
   const view=EditorView.findFromDOM(document.querySelector('.cm-editor'));
   for(const scale of [1,2,3])for(const icons of [false,true])assert(!!checkToolbarLayout([scale,icons]),`Native toolbar/save reflow at ${scale*100}% ${icons?'icons':'text'}`);

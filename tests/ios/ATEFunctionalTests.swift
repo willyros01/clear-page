@@ -6,6 +6,15 @@ final class ATEFunctionalTests: XCTestCase {
         continueAfterFailure = false
         app.terminate()
         app.launch()
+        let accept = app.buttons["Accept and continue"]
+        if accept.waitForExistence(timeout: 5) {
+            let agree = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "I have read and agree to the Terms of Use")).firstMatch
+            for _ in 0..<12 { if agree.isHittable { break }; app.webViews.firstMatch.swipeUp() }
+            XCTAssertTrue(agree.waitForExistence(timeout: 10), app.debugDescription)
+            agree.tap()
+            if !accept.isHittable { app.swipeUp() }
+            accept.tap()
+        }
         XCTAssertTrue(app.buttons["Menu"].waitForExistence(timeout: 30), app.debugDescription)
     }
     override func tearDownWithError() throws {
@@ -425,4 +434,36 @@ final class ATEFunctionalTests: XCTestCase {
         assertCText()
         print("PASS native UI: rotation and background/resume preserve C tab")
     }
+    func storeShot(_ name: String) {
+        dismissKeyboard()
+        let shot = XCTAttachment(screenshot: app.screenshot())
+        shot.name = "store-" + name
+        shot.lifetime = .keepAlways
+        add(shot)
+    }
+    func testZStoreScreenshots() {
+        XCUIDevice.shared.orientation = .portrait
+        menu(); setMode("Advanced"); app.buttons["New"].tap()
+        rename("welcome.md")
+        editor().tap(); editor().typeText("# A clear space to write\n\nNotes, code and local projects.\nYour work stays on your device.")
+        storeShot("01-editor")
+        menu(); app.buttons["Projects"].tap(); projectButton("Open project")
+        let project = app.textFields["New project name"]
+        XCTAssertTrue(project.waitForExistence(timeout: 15)); project.tap(); project.typeText("My writing project")
+        projectButton("Create new project"); projectButton("New folder")
+        let name = app.textFields["New file or folder name"]
+        name.tap(); name.typeText("src"); projectButton("Create folder")
+        projectButton("Add file"); name.tap(); name.typeText("example.sql"); projectButton("Create file")
+        editor().tap(); editor().typeText("SELECT 1;"); app.buttons["Save file"].tap()
+        menu(); app.buttons["Projects"].tap(); storeShot("02-projects")
+        app.buttons["Back to editor"].tap()
+        editor().tap(); editor().typeText("\nSELECT FROM;")
+        menu(); app.buttons["Check syntax"].tap()
+        XCTAssertTrue(app.staticTexts["Syntax check"].waitForExistence(timeout: 15))
+        storeShot("03-syntax")
+        app.buttons["Back to editor"].tap()
+        menu(); storeShot("04-menu")
+        finishMenu()
+    }
+
 }

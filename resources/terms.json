@@ -1,0 +1,43 @@
+{
+  "version": "1",
+  "effectiveDate": "16 November 2026",
+  "title": "ATE Terms of Use",
+  "sections": [
+    [
+      "Who provides ATE",
+      "Another Text Editor (ATE) is provided by Wilfredo Rosales, an individual developer. ATE is free, with no account, subscription, advertising or in-app purchases."
+    ],
+    [
+      "Provided as is",
+      "ATE is provided \"as is\" and \"as available\", without warranties or conditions of merchantability, fitness for a particular purpose, accuracy or non-infringement, to the extent permitted by law. We do not promise uninterrupted or error-free operation or that data will never be lost."
+    ],
+    [
+      "Check your work",
+      "You are responsible for reviewing edits, replacements, syntax results and exported files before relying on them. Syntax checks have language-specific limits and do not prove that code is correct, secure or suitable for use. ATE does not build or run your programs."
+    ],
+    [
+      "Your files and backups",
+      "Keep independent saved copies of important files. Local recovery is a convenience, not a backup or cloud synchronization. Clearing storage, uninstalling, device failure or discarding unsaved work can remove local data. Confirm your selected Save or sharing destination. Folder deletion removes the confirmed folder and its contents."
+    ],
+    [
+      "Limitation of liability",
+      "To the fullest extent permitted by law, the developer accepts no liability for loss or damage arising from use of, or inability to use, ATE, including lost data, unintended edits, incorrect results, lost profits or direct, indirect, incidental, special or consequential damages."
+    ],
+    [
+      "Your legal rights",
+      "Some jurisdictions do not permit certain warranty or liability exclusions. These terms apply only as far as the law permits and do not remove rights that cannot legally be waived."
+    ],
+    [
+      "Apple and third parties",
+      "These usage terms supplement Apple's Standard Licensed Application End User License Agreement for Apple distributions; they do not replace it or restrict its usage rules. ATE and its support are provided by the developer, not Apple. Third-party software license notices are bundled with ATE. File providers and sharing destinations you choose have their own terms and privacy policies."
+    ],
+    [
+      "Changes and governing law",
+      "If these terms change, ATE will ask you to accept the new version before continuing. Ontario law and applicable Canadian federal law govern, subject to mandatory protections where you live."
+    ],
+    [
+      "Contact",
+      "Questions or support: willyros01@gmail.com. Privacy and support information are available using the links below."
+    ]
+  ]
+}

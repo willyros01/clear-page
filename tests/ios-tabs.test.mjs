@@ -19,7 +19,7 @@ test('iOS tabs preserve independent documents, undo, overrides, close cancellati
  window.Range.prototype.getClientRects=()=>[];window.Range.prototype.getBoundingClientRect=()=>({left:0,right:0,top:0,bottom:0,width:0,height:0});
  localStorage.setItem('clear-page-draft-v1',JSON.stringify({text:'legacy content',name:'legacy.c',language:'c'}));
  const {EditorView}=await import('@codemirror/view');const {undo}=await import('@codemirror/commands');
- window.scrollTo=()=>{};await import('../src/app.js');
+ window.scrollTo=()=>{};await import('../src/app.js');document.getElementById('termsCheck').checked=true;document.getElementById('termsCheck').dispatchEvent(new window.Event('change'));document.getElementById('acceptTerms').click();
  const view=EditorView.findFromDOM(document.querySelector('.cm-editor')),$=id=>document.getElementById(id);
  const tabs=()=>[...document.querySelectorAll('[role=tab]')];
  const open=async(name,text)=>$('file').onchange({target:{files:[{name,size:text.length,text:async()=>text}],value:name}});

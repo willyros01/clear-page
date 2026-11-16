@@ -17,7 +17,7 @@ test('desktop Save cancellation/error preserves text and recovery; Save and Exit
  let destination=null,fail=false,exits=0;const requests=[];
  mockIPC((cmd,payload)=>{requests.push({cmd,payload});if(cmd==='save_document'){if(fail)throw Error('disk full');return typeof destination==='function'?destination(payload):destination}if(cmd==='exit_editor')exits++},{shouldMockEvents:true});
  localStorage.setItem('clear-page-draft-v1',JSON.stringify({name:'Recovered.C',text:'int main(void) { return 0; }',language:'plain',languageManual:false}));
- window.scrollTo=()=>{};await import('../src/app.js');
+ window.scrollTo=()=>{};await import('../src/app.js');document.getElementById('termsCheck').checked=true;document.getElementById('termsCheck').dispatchEvent(new window.Event('change'));document.getElementById('acceptTerms').click();
  const {EditorView}=await import('@codemirror/view');
  const view=EditorView.findFromDOM(document.querySelector('.cm-editor'));
  const settle=()=>new Promise(r=>setTimeout(r,30));

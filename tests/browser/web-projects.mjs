@@ -1,3 +1,4 @@
+import {acceptTerms} from './legal-helper.mjs';
 import {createServer} from 'node:http';
 import {readFile,mkdir} from 'node:fs/promises';
 import assert from 'node:assert/strict';
@@ -12,7 +13,7 @@ try{for(const [engineName,engine] of Object.entries(engines)){
  try{
   const page=await browser.newPage({viewport:{width:1194,height:834},acceptDownloads:true});const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.addInitScript(()=>{Object.hasOwn=undefined;String.prototype.replaceAll=undefined});
-  await page.goto('http://127.0.0.1:'+server.address().port);await page.waitForSelector('.cm-content');
+  await page.goto('http://127.0.0.1:'+server.address().port);await acceptTerms(page);await page.waitForSelector('.cm-content');
   const $=id=>page.locator('#'+id),editor=page.locator('.cm-content');
   await $('menuButton').click();assert.equal(await $('basicMode').getAttribute('aria-pressed'),'true');await $('advancedMode').click();await $('closeMenu').click();
   await editor.fill('Keep ordinary note');
@@ -44,7 +45,7 @@ try{for(const [engineName,engine] of Object.entries(engines)){
   const phone=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
   const phoneErrors=[];phone.on('pageerror',e=>phoneErrors.push(e.message));
   await phone.addInitScript(()=>{const modal=HTMLDialogElement.prototype.showModal;HTMLDialogElement.prototype.showModal=function(){if(this.open)throw new DOMException('Legacy WebView cannot reopen an open modal','InvalidStateError');return modal.call(this)};window.androidBridge={postMessage(){}};window.Capacitor={PluginHeaders:[{name:'App',methods:[{name:'addListener',rtype:'callback'}]}],nativeCallback:()=> 'test-listener'};Object.hasOwn=undefined});
-  await phone.goto('http://127.0.0.1:'+server.address().port);await phone.waitForSelector('.cm-content');
+  await phone.goto('http://127.0.0.1:'+server.address().port);await acceptTerms(phone);await phone.waitForSelector('.cm-content');
   await phone.locator('#menuButton').click();await phone.locator('#advancedMode').click();await phone.locator('#closeMenu').click();
   const long=Array.from({length:200},(_,i)=>'// source line '+i).join('\n');
   await phone.locator('#file').setInputFiles({name:'long.c',mimeType:'text/plain',buffer:Buffer.from(long)});await phone.waitForTimeout(300);

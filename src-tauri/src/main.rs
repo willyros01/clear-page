@@ -9,6 +9,26 @@ use projects::{project_io,save_project_zip};
 mod compiler_setup;
 use compiler_setup::{compiler_setup_info,install_c_compiler,cancel_compiler_setup};
 
+// Open only the fixed public help/legal destinations, never a user-supplied command.
+#[tauri::command]
+fn open_public_link(url: String) -> Result<(), String> {
+    let allowed = [
+        "https://www.cuberoot-systems.com/ate/privacy/",
+        "https://www.cuberoot-systems.com/ate/support/",
+        "https://www.cuberoot-systems.com/ate/quick-start/",
+        "https://www.cuberoot-systems.com/ate/guide/",
+        "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/",
+    ];
+    if !allowed.contains(&url.as_str()) { return Err("Unsupported help link".into()); }
+    #[cfg(target_os = "macos")]
+    let result = std::process::Command::new("/usr/bin/open").arg(&url).spawn();
+    #[cfg(target_os = "windows")]
+    let result = std::process::Command::new("rundll32.exe").args(["url.dll,FileProtocolHandler", &url]).spawn();
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    let result = std::process::Command::new("xdg-open").arg(&url).spawn();
+    result.map(|_| ()).map_err(|_| "Could not open browser".into())
+}
+
 #[tauri::command]
 async fn check_c(app: tauri::AppHandle, text: String, standard: String, includes: Vec<String>, defines: Vec<String>) -> Result<c_check::CResult, String> {
     #[cfg(feature = "editor-verification")]
@@ -119,6 +139,19 @@ fn window_fit_report(window: tauri::WebviewWindow) -> String {
         a.position.x, a.position.y, a.size.width, a.size.height)
 }
 
+#[cfg(feature = "editor-verification")]
+#[tauri::command]
+async fn store_capture(label: String) -> Result<(), String> {
+    if !["01-editor", "02-syntax", "03-projects"].contains(&label.as_str()) { return Err("Invalid capture label".into()); }
+    let Some(root) = std::env::var_os("ATE_STORE_CAPTURE_DIR") else { return Ok(()) };
+    tauri::async_runtime::spawn_blocking(move || {
+        let root = std::path::PathBuf::from(root);
+        std::fs::write(root.join("ready"), &label).map_err(|e| e.to_string())?;
+        for _ in 0..120 { if root.join(format!("{}.done", label)).exists() { return Ok(()); } std::thread::sleep(std::time::Duration::from_millis(500)); }
+        Err("Native screenshot capture timed out".to_string())
+    }).await.map_err(|e| e.to_string())?
+}
+
 fn main() {
     let builder = tauri::Builder::default()
         .manage(compiler_setup::SetupState::default())
@@ -129,14 +162,14 @@ fn main() {
     #[cfg(feature = "editor-verification")]
     let builder = builder
         .manage(CVerificationCalls(std::sync::atomic::AtomicUsize::new(0)))
-        .invoke_handler(tauri::generate_handler![project_io, save_project_zip, save_document, exit_editor, check_c, choose_c_compiler, choose_c_project, compiler_setup_info, install_c_compiler, cancel_compiler_setup, app_sandboxed, editor_verification_result, c_verification_calls, window_fit_report])
+        .invoke_handler(tauri::generate_handler![open_public_link, project_io, save_project_zip, save_document, exit_editor, check_c, choose_c_compiler, choose_c_project, compiler_setup_info, install_c_compiler, cancel_compiler_setup, app_sandboxed, editor_verification_result, store_capture, c_verification_calls, window_fit_report])
         .on_page_load(|webview, payload| {
             if matches!(payload.event(), tauri::webview::PageLoadEvent::Finished) {
                 let _ = webview.eval(include_str!("../../tests/native-editor.js"));
             }
         });
     #[cfg(not(feature = "editor-verification"))]
-    let builder = builder.invoke_handler(tauri::generate_handler![project_io, save_project_zip, save_document, exit_editor, check_c, choose_c_compiler, choose_c_project, compiler_setup_info, install_c_compiler, cancel_compiler_setup, app_sandboxed]);
+    let builder = builder.invoke_handler(tauri::generate_handler![open_public_link, project_io, save_project_zip, save_document, exit_editor, check_c, choose_c_compiler, choose_c_project, compiler_setup_info, install_c_compiler, cancel_compiler_setup, app_sandboxed]);
     let app = builder
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {

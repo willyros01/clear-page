@@ -1,3 +1,4 @@
+import {acceptTerms} from './legal-helper.mjs';
 import {createServer} from 'node:http';
 import {readFile,mkdir} from 'node:fs/promises';
 import assert from 'node:assert/strict';
@@ -28,7 +29,7 @@ try{
    const page=await browser.newPage({viewport:{width:1200,height:850}});
    page.on('console',message=>{if(message.type()==='error')console.error(name+': '+message.text())});
    const errors=[];page.on('pageerror',e=>errors.push(e.message));
-   await page.goto(url);
+   await page.goto(url);await acceptTerms(page);
    await page.waitForSelector('.cm-content');
    const editor=page.locator('.cm-content');
    await page.locator('#menuButton').click();await page.locator('#advancedMode').click();await page.locator('#closeMenu').click();

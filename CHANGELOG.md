@@ -242,3 +242,8 @@ Android 11 verification found a main-bundle startup dependency on Object.hasOwn.
 ## Verified desktop/web 0.8.3 (24) publication — 15 November 2026
 
 Mac TestFlight is VALID / IN_BETA_TESTING (Apple build `baa2893b-a90b-4785-9785-091735c21119`). Signed/notarized/stapled universal Mac and the exact tested Windows installer are live on Cuberoot with public hashes verified; the web app and all public assets passed live browser/hash checks. Native desktop source `f52d12ec97793e34c3b2471509b0d0094d6ae9b7` was preserved through artifact release 43734007478 rather than rebuilt. Android failures are handled by the independent `android-083.yml` workflow on `android`, with no further desktop cancellation/rebuild. The earlier requirement to hold all platform publication for Android was superseded by the owner's direction to publish the successful Mac/Windows builds. APK verification remains in progress; physical-device acceptance is not claimed. See [RELEASE-0.8.3-PLATFORMS.md](RELEASE-0.8.3-PLATFORMS.md).
+
+
+## 0.8.7 (28) - App Store preparation special build
+
+Owner authorized preparation on 16 November 2026 for iPhone, iPad and native universal Mac. Adds Fairpot-style mandatory first-use supplementary Terms, versioned local consent, Help/legal/support links, copy-ready listing and native screenshot capture. Existing 0.8.6 layout and editing behavior retained. New legal gates and full existing regression/native suites must pass before TestFlight; no App Review submission or public App Store availability claimed. See store/RELEASE-REQUIREMENTS.md.
