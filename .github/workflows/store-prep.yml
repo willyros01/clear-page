@@ -7,7 +7,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: ate-store-preparation-consent-v3
+  group: ate-store-preparation-consent-v4
   cancel-in-progress: false
 env:
   ATE_BUILD_NUMBER: "28"
@@ -29,6 +29,16 @@ jobs:
           const r=await fetch(base,{headers});if(!r.ok)throw Error('Queued retry lookup failed');const run=await r.json();
           if(run.head_sha!=='d85783e32689c9338ec2377ec34ac3cc817d9156'||run.path!=='.github/workflows/store-prep.yml')throw Error('Unexpected queued retry');
           if(['pending','queued','waiting'].includes(run.status)){const c=await fetch(base+'/cancel',{method:'POST',headers});if(![202,409].includes(c.status))throw Error('Queued retry cancellation HTTP '+c.status);console.log('Stopped only obsolete queued retry 43812434868; successful Mac and active iPhone retained.')}else console.log('Obsolete retry is no longer queued; left untouched.');
+          JS
+      - name: Stop the obsolete test-fixture retry before repeating native builds
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node --input-type=module <<'JS'
+          const base='https://api.github.com/repos/willyros01/clear-page/actions/runs/43816049754',headers={Authorization:'Bearer '+process.env.GH_TOKEN,Accept:'application/vnd.github+json'};
+          const r=await fetch(base,{headers});if(!r.ok)throw Error('Old fixture retry lookup failed');const run=await r.json();if(run.head_sha!=='dc6ce81767dcca1a571d2b1630d49c67244ceacb'||run.path!=='.github/workflows/store-prep.yml')throw Error('Unexpected old retry');
+          if(run.status!=='completed'){const c=await fetch(base+'/cancel',{method:'POST',headers});if(![202,409].includes(c.status))throw Error('Cancel obsolete test retry HTTP '+c.status)}
+          console.log('Only obsolete fixture retry stopped. Original successful native Mac and completed iPhone core evidence retained.');
           JS
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -151,7 +161,7 @@ jobs:
             ${{ runner.temp }}/ATELargeText.xcresult
             ${{ runner.temp }}/large-text-tests.log
   testflight:
-    needs: [regression, simulator, mac-verify, iphone-verified]
+    needs: [regression, simulator, mac-verify, iphone-verified, iphone-largest]
     runs-on: macos-26
     timeout-minutes: 60
     env:
@@ -225,7 +235,7 @@ jobs:
           name: ate-store-account-survey
           path: store/account-evidence/survey.json
   mac-testflight:
-    needs: [regression, simulator, mac-verify, iphone-verified]
+    needs: [regression, simulator, mac-verify, iphone-verified, iphone-largest]
     runs-on: macos-26
     timeout-minutes: 45
     env:
@@ -266,7 +276,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Require the preserved full native iPhone gates
+      - uses: actions/download-artifact@v4
+        with:
+          name: ios-tabs-iPhone-evidence-attempt-1
+          run-id: 43810798310
+          github-token: ${{ github.token }}
+          path: iphone-evidence
+      - name: Require the preserved native iPhone core and screenshot gates
         env:
           GH_TOKEN: ${{ github.token }}
         run: node store/reuse-iphone.mjs
@@ -281,3 +297,43 @@ jobs:
           name: ate-store-iPhone-screenshots
           path: store-native-iphone/**
           if-no-files-found: error
+
+  iphone-largest:
+    needs: regression
+    runs-on: macos-26
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: node scripts/prepare-ios.mjs
+      - name: Prepare native UI tests
+        run: |
+          if ! ruby -e "require 'xcodeproj'"; then gem install --user-install xcodeproj --no-document; fi
+          ruby tests/ios/add-ui-tests.rb
+      - name: Boot largest-text iPhone
+        run: |
+          DEVICE=$(xcrun simctl list devices available -j | python3 -c 'import json,sys;d=json.load(sys.stdin);print(next(x["udid"] for a in d["devices"].values() for x in a if x["name"]=="iPhone 17 Pro"))')
+          echo "$DEVICE" > "$RUNNER_TEMP/iphone-device.txt"
+          xcrun simctl boot "$DEVICE"
+          xcrun simctl bootstatus "$DEVICE" -b
+          xcrun simctl ui "$DEVICE" content_size accessibility-extra-extra-extra-large
+      - name: Verify actual first-use consent and ordinary-file Save at largest OS text
+        run: |
+          set -o pipefail
+          DEVICE=$(cat "$RUNNER_TEMP/iphone-device.txt")
+          xcodebuild test -project ios/App/App.xcodeproj -scheme ATEFunctional -configuration Debug -destination "platform=iOS Simulator,id=$DEVICE" -derivedDataPath "$RUNNER_TEMP/DerivedData" -only-testing:ATEFunctionalTests/ATEFunctionalTests/testFirstUseTermsAndPersistence -only-testing:ATEFunctionalTests/ATEFunctionalTests/testToolbarAndSaveVisibility -resultBundlePath "$RUNNER_TEMP/ATERepairedLargeText.xcresult" CODE_SIGNING_ALLOWED=NO -test-timeouts-enabled YES -default-test-execution-time-allowance 300 -maximum-test-execution-time-allowance 600 2>&1 | tee "$RUNNER_TEMP/repaired-iphone-tests.log" | awk '/Test Case|PASS native|error:|failed|TEST SUCCEEDED/ {print;fflush()}' || { tail -150 "$RUNNER_TEMP/repaired-iphone-tests.log";exit 1; }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ate-iphone-repaired-largest-text-evidence
+          path: |
+            ${{ runner.temp }}/repaired-iphone-tests.log
+            ${{ runner.temp }}/ATERepairedLargeText.xcresult

@@ -282,6 +282,8 @@ final class ATEFunctionalTests: XCTestCase {
         RunLoop.current.run(until: Date().addingTimeInterval(1))
     }
     func testToolbarAndSaveVisibility() {
+        // This test checks ordinary-file sharing, regardless of previous project/photo tests.
+        menu(); app.buttons["New"].tap()
         rotateToLandscape(false)
         assertToolbarVisible()
         editor().tap(); editor().typeText("Large text save check")
