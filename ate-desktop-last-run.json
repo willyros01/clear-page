@@ -2,11 +2,13 @@
   "app": "ATE",
   "workflow": "ATE Apple and Desktop",
   "branch": "desktop",
-  "version": "0.8.6",
-  "run_id": 43789094751,
-  "source_sha": "51d4b3c4b76a590c6eba7cd77a2bfe9fe642fdf4",
-  "web_artifact_id": 14191687490,
-  "windows_artifact_id": 14191089303,
-  "mac_artifact_id": 14191144813,
-  "created_at": "2026-11-16T02:10:42.556Z"
+  "version": "0.8.7",
+  "build": 28,
+  "run_id": 43874608420,
+  "source_sha": "aa690766ebd7ed0d7938f102e06374b8749b3369",
+  "web_artifact_id": 14228814090,
+  "windows_artifact_id": 14230172144,
+  "mac_artifact_id": null,
+  "created_at": "2026-11-16T13:43:07.877Z",
+  "verification": "Browser and Windows jobs passed; Mac/Android handled independently. Publisher re-verifies source, platform jobs, artifact ownership and content hashes."
 }
