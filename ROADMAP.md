@@ -2,6 +2,9 @@
 
 Work in small, reviewable steps. Keep one shared editor for all platforms.
 
+## 0.8.6 (27) — Vim mode in the bottom line
+Owner approved option B from real-screen mock-ups on 15 November 2026; all platforms from one source.
+
 ## 0.8.5 (26) — editing space and Mac App Store C checking
 Owner-approved layout from real-screen mock-ups; Clang hidden only inside the Mac App Store sandbox. Physical-device acceptance recorded separately from CI.
 

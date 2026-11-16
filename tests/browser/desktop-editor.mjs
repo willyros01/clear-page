@@ -64,7 +64,10 @@ try{
    await menu();await page.locator('#theme').click();await done();
    assert.ok(await page.locator('body').evaluate(e=>e.classList.contains('dark')));
    await open('const first = 1;\nconst second = 2;\nconst third = 3;');
-   await setMode('vim');await page.keyboard.press('Escape');await page.keyboard.type('ggdd');
+   await setMode('vim');await page.keyboard.press('Escape');
+   await page.waitForFunction(()=>document.getElementById('vimMode').textContent==='NORMAL'&&document.querySelector('.cm-vim-panel').getBoundingClientRect().height===0);
+   await page.keyboard.type('i');await page.waitForFunction(()=>document.getElementById('vimMode').textContent==='INSERT');await page.keyboard.press('Escape');
+   await page.keyboard.type('ggdd');
    assert.equal(await text(),'const second = 2;\nconst third = 3;');
    await page.keyboard.type('u');assert.match(await text(),/^const first/);
    await page.keyboard.type('i');await page.keyboard.type('// ');await page.keyboard.press('Escape');assert.match(await text(),/^\/\/ const first/);

@@ -56,7 +56,10 @@
   key('Tab');assert(/\n        /.test(text()),'Native Tab indents');
   key('Tab',{shiftKey:true});assert(/\n    $/.test(text()),'Native Shift Tab unindents');
   await open('const first = 1;\nconst second = 2;\nconst third = 3;');
-  mode('vim');key('Escape');keys('ggdd');
+  mode('vim');key('Escape');await wait(100);
+  assert($('vimMode').textContent==='NORMAL'&&!$('vimMode').hidden,'Native Vim mode shows in the bottom line');
+  assert(document.querySelector('.cm-vim-panel').getBoundingClientRect().height===0,'Native Vim mode strip takes no editing space');
+  keys('ggdd');
   assert(text()==='const second = 2;\nconst third = 3;','Native Vim gg and dd work');
   keys('u');assert(/^const first/.test(text()),'Native Vim undo restores text');
   keys(':%s/const/let/g');await wait(100);

@@ -149,3 +149,9 @@ if(tabbed){
 
 // Touch devices: hide the bottom line while the on-screen keyboard takes the screen.
 if(window.visualViewport&&matchMedia('(pointer:coarse)').matches){const vv=window.visualViewport;let base=0,wide=innerWidth>innerHeight;const keyboard=()=>{const now=innerWidth>innerHeight;if(now!==wide){wide=now;base=0}base=Math.max(base,vv.height);document.documentElement.classList.toggle('keyboard-up',vv.height<base*0.75)};vv.addEventListener('resize',keyboard);addEventListener('resize',keyboard);keyboard()}
+
+// Vim: show the mode (NORMAL, INSERT…) in the bottom line instead of a separate strip;
+// the strip still appears while a Vim command (:w, /search) or message is shown.
+{const show=t=>{for(const id of ['vimMode','vimModeTop']){const e=$(id);if(e.textContent!==t)e.textContent=t;e.hidden=!t}};
+ const sync=()=>{const p=$('editor').querySelector('.cm-vim-panel');if(!p){show('');return}const text=p.textContent.trim(),plain=!p.querySelector('input')&&/^--[^-].*?--/.test(text);if(p.classList.contains('vim-status-only')!==plain)p.classList.toggle('vim-status-only',plain);show(plain?text.replace(/^--(.*?)--/,'$1').trim():'')};
+ new MutationObserver(sync).observe($('editor'),{childList:true,subtree:true,characterData:true});sync()}
