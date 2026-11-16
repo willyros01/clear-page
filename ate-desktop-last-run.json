@@ -4,11 +4,12 @@
   "branch": "desktop",
   "version": "0.8.7",
   "build": 28,
-  "run_id": 43874608420,
-  "source_sha": "aa690766ebd7ed0d7938f102e06374b8749b3369",
-  "web_artifact_id": 14228814090,
-  "windows_artifact_id": 14230172144,
-  "mac_artifact_id": null,
-  "created_at": "2026-11-16T13:43:07.877Z",
-  "verification": "Browser and Windows jobs passed; Mac/Android handled independently. Publisher re-verifies source, platform jobs, artifact ownership and content hashes."
+  "run_id": 43880399393,
+  "source_sha": "e7629bedc816f699553290322b6791de548488ac",
+  "web_artifact_id": null,
+  "windows_artifact_id": null,
+  "mac_artifact_id": 14231444564,
+  "native_verification_run_id": 43810798310,
+  "application_source_sha": "23f352a4ceb3ad99a5f112a564253f0f0dd9ea9e",
+  "created_at": "2026-11-16T13:57:07.901Z"
 }
