@@ -7,7 +7,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: ate-store-preparation-ipad-provider-isolated
+  group: ate-store-preparation-independent-ipad-cases
   cancel-in-progress: false
 env:
   ATE_BUILD_NUMBER: "28"
@@ -57,6 +57,9 @@ jobs:
           path: editor-evidence/*
   simulator:
     needs: regression
+    permissions:
+      contents: read
+      actions: read
     runs-on: macos-26
     timeout-minutes: 60
     strategy:
@@ -79,50 +82,26 @@ jobs:
           echo "$DEVICE" > "$RUNNER_TEMP/ipad-device.txt"
           xcrun simctl boot "$DEVICE"
           xcrun simctl bootstatus "$DEVICE" -b
-      - name: Build native sample-data screenshot shell
+      - name: Require previously captured native iPad photo provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          ATE_IOS_VERIFICATION=1 npm run build
-          node scripts/prepare-ios.mjs
-          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug -destination 'generic/platform=iOS Simulator' -derivedDataPath "$RUNNER_TEMP/DerivedData" CODE_SIGNING_ALLOWED=NO build > "$RUNNER_TEMP/ipad-build.log" 2>&1 || { tail -80 "$RUNNER_TEMP/ipad-build.log";exit 1; }
-      - name: Capture genuine native iPad UI with generated sample files
-        continue-on-error: true
-        run: |
-          set -euo pipefail
-          DEVICE=$(cat "$RUNNER_TEMP/ipad-device.txt")
-          xcrun simctl install "$DEVICE" "$RUNNER_TEMP/DerivedData/Build/Products/Debug-iphonesimulator/App.app"
-          DATA=$(xcrun simctl get_app_container "$DEVICE" io.github.willyros01.clearpage data)
-          mkdir -p "$DATA/Documents" "$RUNNER_TEMP/store-ipad-native"
-          capture_error() {
-            RESULT=$?
-            if [ "$RESULT" -ne 0 ];then
-              xcrun simctl io "$DEVICE" screenshot "$RUNNER_TEMP/store-ipad-native/capture-error.png" || true
-              cp "$DATA"/Documents/ate-store-*.json "$RUNNER_TEMP/store-ipad-native/" || true
-            fi
-          }
-          trap capture_error EXIT
-          echo '{}' > "$DATA/Documents/ate-store-photos-only.json"
-          xcrun simctl launch "$DEVICE" io.github.willyros01.clearpage
-          for attempt in {1..300}; do
-            if [ -f "$DATA/Documents/ate-store-photo-error.json" ]; then cat "$DATA/Documents/ate-store-photo-error.json";exit 1;fi
-            if [ -f "$DATA/Documents/ate-store-photos-done.json" ]; then break;fi
-            if [ -f "$DATA/Documents/ate-store-ready.json" ]; then
-              LABEL=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["label"])' "$DATA/Documents/ate-store-ready.json")
-              case "$LABEL" in 01-editor|02-projects|03-syntax|04-menu) ;; *) echo 'Unexpected capture label';exit 1;;esac
-              if [ ! -f "$DATA/Documents/ate-store-ack-$LABEL" ]; then
-                xcrun simctl io "$DEVICE" screenshot "$RUNNER_TEMP/store-ipad-native/store-$LABEL.png"
-                echo done > "$DATA/Documents/ate-store-ack-$LABEL"
-              fi
-            fi
-            sleep 1
-          done
-          test -f "$DATA/Documents/ate-store-photos-done.json"
-          cp "$DATA/Documents/ate-store-photos-done.json" "$RUNNER_TEMP/store-ipad-native/provenance.json"
-          for LABEL in 01-editor 02-projects 03-syntax 04-menu;do test -s "$RUNNER_TEMP/store-ipad-native/store-$LABEL.png";done
+          node --input-type=module <<'JS'
+          const base='https://api.github.com/repos/willyros01/clear-page',headers={Authorization:'Bearer '+process.env.GH_TOKEN,Accept:'application/vnd.github+json'};
+          const r=await fetch(base+'/actions/runs/43825172029',{headers});if(!r.ok)throw Error('Photo source lookup failed');const source=await r.json();if(source.head_sha!=='31265c2f910f67bd841a2b96709266399e5fd0dc'||source.path!=='.github/workflows/store-prep.yml')throw Error('Wrong photo source');
+          const q=await fetch(base+'/actions/runs/43825172029/jobs?per_page=100',{headers});if(!q.ok)throw Error('Photo step lookup failed');const job=(await q.json()).jobs.find(x=>x.name==='simulator (iPad)');if(!job?.steps.some(x=>x.name==='Capture genuine native iPad UI with generated sample files'&&x.conclusion==='success'))throw Error('Native photo capture did not complete');console.log('PASS: preserve four successful genuine iPad captures; only native test automation changed.');
+          JS
+      - uses: actions/download-artifact@v4
+        with:
+          name: ate-store-iPad-screenshots
+          run-id: 43825172029
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/store-ipad-native
       - uses: actions/upload-artifact@v4
         with:
           name: ate-store-iPad-screenshots
           path: ${{ runner.temp }}/store-ipad-native/*
-          if-no-files-found: warn
+          if-no-files-found: error
       - name: Restore clean production assets for native functional tests
         run: |
           npm run build
@@ -131,6 +110,7 @@ jobs:
           if ! ruby -e "require 'xcodeproj'";then gem install --user-install xcodeproj --no-document;fi
           ruby tests/ios/add-ui-tests.rb
       - name: Build native test targets once
+        id: native-build
         run: |
           DEVICE=$(cat "$RUNNER_TEMP/ipad-device.txt")
           xcodebuild build-for-testing -project ios/App/App.xcodeproj -scheme ATEFunctional -configuration Debug -destination "platform=iOS Simulator,id=$DEVICE" -derivedDataPath "$RUNNER_TEMP/DerivedData" CODE_SIGNING_ALLOWED=NO > "$RUNNER_TEMP/ipad-ui-build.log" 2>&1 || { tail -100 "$RUNNER_TEMP/ipad-ui-build.log";exit 1; }
@@ -138,21 +118,26 @@ jobs:
         run: |
           set -o pipefail
           DEVICE=$(cat "$RUNNER_TEMP/ipad-device.txt")
+          FAILURES=0
           for CASE in testProjectDestinationsAndClose testTabsNativePickersAndRelaunch;do
             xcrun simctl terminate "$DEVICE" io.github.willyros01.clearpage || true
             xcrun simctl uninstall "$DEVICE" io.github.willyros01.clearpage || true
-            xcodebuild test-without-building -project ios/App/App.xcodeproj -scheme ATEFunctional -configuration Debug -destination "platform=iOS Simulator,id=$DEVICE" -derivedDataPath "$RUNNER_TEMP/DerivedData" -only-testing:"ATEFunctionalTests/ATEFunctionalTests/$CASE" -resultBundlePath "$RUNNER_TEMP/ATERepair-$CASE.xcresult" CODE_SIGNING_ALLOWED=NO -test-timeouts-enabled YES -default-test-execution-time-allowance 300 -maximum-test-execution-time-allowance 600 2>&1 | tee "$RUNNER_TEMP/repair-$CASE.log" | awk '/Test Case|PASS native|error:|failed|TEST SUCCEEDED/{print;fflush()}' || { xcrun simctl io "$DEVICE" screenshot "$RUNNER_TEMP/failed-$CASE.png";tail -150 "$RUNNER_TEMP/repair-$CASE.log";exit 1; }
+            xcodebuild test-without-building -project ios/App/App.xcodeproj -scheme ATEFunctional -configuration Debug -destination "platform=iOS Simulator,id=$DEVICE" -derivedDataPath "$RUNNER_TEMP/DerivedData" -only-testing:"ATEFunctionalTests/ATEFunctionalTests/$CASE" -resultBundlePath "$RUNNER_TEMP/ATERepair-$CASE.xcresult" CODE_SIGNING_ALLOWED=NO -test-timeouts-enabled YES -default-test-execution-time-allowance 300 -maximum-test-execution-time-allowance 600 2>&1 | tee "$RUNNER_TEMP/repair-$CASE.log" | awk '/Test Case|PASS native|error:|failed|TEST SUCCEEDED/{print;fflush()}' || { xcrun simctl io "$DEVICE" screenshot "$RUNNER_TEMP/failed-$CASE.png";tail -150 "$RUNNER_TEMP/repair-$CASE.log";FAILURES=1; }
           done
+          exit "$FAILURES"
       - name: Verify largest OS text projects and ordinary-file Save with fresh fixtures
+        if: always() && steps.native-build.outcome == 'success'
         run: |
           set -o pipefail
           DEVICE=$(cat "$RUNNER_TEMP/ipad-device.txt")
           xcrun simctl ui "$DEVICE" content_size accessibility-extra-extra-extra-large
+          FAILURES=0
           for CASE in testProjectLayoutAccessibility testToolbarAndSaveVisibility;do
             xcrun simctl terminate "$DEVICE" io.github.willyros01.clearpage || true
             xcrun simctl uninstall "$DEVICE" io.github.willyros01.clearpage || true
-            xcodebuild test-without-building -project ios/App/App.xcodeproj -scheme ATEFunctional -configuration Debug -destination "platform=iOS Simulator,id=$DEVICE" -derivedDataPath "$RUNNER_TEMP/DerivedData" -only-testing:"ATEFunctionalTests/ATEFunctionalTests/$CASE" -resultBundlePath "$RUNNER_TEMP/ATELarge-$CASE.xcresult" CODE_SIGNING_ALLOWED=NO -test-timeouts-enabled YES -default-test-execution-time-allowance 300 -maximum-test-execution-time-allowance 600 2>&1 | tee "$RUNNER_TEMP/large-$CASE.log" | awk '/Test Case|PASS native|error:|failed|TEST SUCCEEDED/{print;fflush()}' || { xcrun simctl io "$DEVICE" screenshot "$RUNNER_TEMP/failed-large-$CASE.png";tail -150 "$RUNNER_TEMP/large-$CASE.log";exit 1; }
+            xcodebuild test-without-building -project ios/App/App.xcodeproj -scheme ATEFunctional -configuration Debug -destination "platform=iOS Simulator,id=$DEVICE" -derivedDataPath "$RUNNER_TEMP/DerivedData" -only-testing:"ATEFunctionalTests/ATEFunctionalTests/$CASE" -resultBundlePath "$RUNNER_TEMP/ATELarge-$CASE.xcresult" CODE_SIGNING_ALLOWED=NO -test-timeouts-enabled YES -default-test-execution-time-allowance 300 -maximum-test-execution-time-allowance 600 2>&1 | tee "$RUNNER_TEMP/large-$CASE.log" | awk '/Test Case|PASS native|error:|failed|TEST SUCCEEDED/{print;fflush()}' || { xcrun simctl io "$DEVICE" screenshot "$RUNNER_TEMP/failed-large-$CASE.png";tail -150 "$RUNNER_TEMP/large-$CASE.log";FAILURES=1; }
           done
+          exit "$FAILURES"
       - name: Require complete genuine native screenshot set before Apple upload
         run: |
           python3 - <<'PY_CHECK'

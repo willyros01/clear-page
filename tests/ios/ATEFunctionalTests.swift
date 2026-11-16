@@ -327,7 +327,13 @@ final class ATEFunctionalTests: XCTestCase {
     }
     func testProjectDestinationsAndClose() {
         editor().tap(); editor().typeText("Protected ordinary note")
-        projectWorkspace(); projectButton("Select folder Project root"); projectButton("New folder")
+        // Create this case's own project; do not rely on another test's disk state.
+        projectWorkspace(); projectButton("Open project")
+        let projectName = app.textFields["New project name"]
+        XCTAssertTrue(projectName.waitForExistence(timeout: 15), app.debugDescription)
+        projectName.tap(); projectName.typeText("Destination project")
+        projectButton("Create new project")
+        projectButton("Select folder Project root"); projectButton("New folder")
         let filename = app.textFields["New file or folder name"]
         XCTAssertTrue(filename.waitForExistence(timeout: 15), app.debugDescription)
         filename.tap(); filename.typeText("src"); projectButton("Create folder")
@@ -344,14 +350,14 @@ final class ATEFunctionalTests: XCTestCase {
         XCTAssertTrue(app.buttons["Keep project open"].waitForExistence(timeout: 10), app.debugDescription)
         app.buttons["Keep project open"].tap()
         projectButton("Close project"); app.buttons["Save and close project"].tap()
-        let closed = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "Closed Native project.")).firstMatch
+        let closed = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "Closed Destination project.")).firstMatch
         XCTAssertTrue(closed.waitForExistence(timeout: 15), app.debugDescription)
         app.buttons["Back to editor"].tap(); assertWord("Protected")
-        projectWorkspace(); projectButton("Open project"); projectButton("Open project Native project"); projectButton("Open project file src/draft.txt"); assertWord("Project")
+        projectWorkspace(); projectButton("Open project"); projectButton("Open project Destination project"); projectButton("Open project file src/draft.txt"); assertWord("Project")
         editor().tap(); editor().typeText(" discard this")
         projectWorkspace(); projectButton("Close project"); app.buttons["Close without saving"].tap()
         XCTAssertTrue(closed.waitForExistence(timeout: 15), app.debugDescription)
-        projectButton("Open project"); projectButton("Open project Native project"); projectButton("Open project file src/draft.txt"); assertWord("Project")
+        projectButton("Open project"); projectButton("Open project Destination project"); projectButton("Open project file src/draft.txt"); assertWord("Project")
         XCTAssertFalse(editor().staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "discard")).firstMatch.exists, app.debugDescription)
         projectWorkspace(); projectButton("Close project"); XCTAssertTrue(closed.waitForExistence(timeout: 15), app.debugDescription)
         app.buttons["Back to editor"].tap(); assertWord("Protected")
