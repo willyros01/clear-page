@@ -2,6 +2,8 @@
 
 Last updated: 12 November 2026 (UTC).
 
+Feature backlog: [ATE features to-do list](FEATURES-TODO.md), recorded 15 November 2026, with six planned features in the agreed priority order.
+
 ## Coordinated 0.6.0 (19) update — released; physical acceptance pending
 
 Owner authorized the combined update after being unable to reproduce the unsaved .txt report. No cause for that report is claimed. All distributions will use release.json: version 0.6.0, build 19.
