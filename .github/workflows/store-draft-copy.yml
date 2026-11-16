@@ -18,6 +18,7 @@ jobs:
       ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
       ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
       ATE_DRAFT_STAGE: copy
+      ATE_ONLY: age
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
