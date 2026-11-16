@@ -7,11 +7,19 @@ final class ATEFunctionalTests: XCTestCase {
         app.terminate()
         app.launch()
         let accept = app.buttons["Accept and continue"]
-        let terms = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@", "ATE Terms of Use,")).firstMatch
+        let terms = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@", "ATE Terms of Use")).firstMatch
         let menuButton = app.buttons["Menu"]
-        let ready = Date().addingTimeInterval(30)
-        while !terms.exists && !menuButton.exists && Date() < ready { RunLoop.current.run(until: Date().addingTimeInterval(0.2)) }
-        if terms.exists {
+        let ready = Date().addingTimeInterval(60)
+        var agreementRequired = false
+        // Retain a positive Terms observation. A cold WebKit AX snapshot can
+        // briefly disappear between queries; Menu behind a modal is not ready.
+        while Date() < ready {
+            if terms.exists { agreementRequired = true; break }
+            if menuButton.exists && menuButton.isHittable { break }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.2))
+        }
+        if agreementRequired {
+            XCTAssertTrue(app.webViews.firstMatch.waitForExistence(timeout: 30), app.debugDescription)
             // Off-screen WebKit buttons may not be in the native AX snapshot.
             // Detect the visible modal, then scroll to its actual agreement box.
             let agree = app.switches["I have read and agree to the Terms of Use"]
@@ -30,7 +38,9 @@ final class ATEFunctionalTests: XCTestCase {
             accept.tap()
             XCTAssertTrue(waitForGone(accept, timeout: 10), app.debugDescription)
         }
-        XCTAssertTrue(app.buttons["Menu"].waitForExistence(timeout: 30), app.debugDescription)
+        XCTAssertTrue(menuButton.waitForExistence(timeout: 30), app.debugDescription)
+        let usableMenu = XCTNSPredicateExpectation(predicate: NSPredicate(format: "hittable == true"), object: menuButton)
+        XCTAssertEqual(XCTWaiter.wait(for: [usableMenu], timeout: 15), .completed, app.debugDescription)
     }
     override func tearDownWithError() throws {
         let attachment = XCTAttachment(screenshot: app.screenshot())

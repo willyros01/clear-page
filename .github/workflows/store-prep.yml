@@ -7,7 +7,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: ate-store-preparation-independent-ipad-cases
+  group: ate-store-preparation-last-destination-case
   cancel-in-progress: false
 env:
   ATE_BUILD_NUMBER: "28"
@@ -114,28 +114,15 @@ jobs:
         run: |
           DEVICE=$(cat "$RUNNER_TEMP/ipad-device.txt")
           xcodebuild build-for-testing -project ios/App/App.xcodeproj -scheme ATEFunctional -configuration Debug -destination "platform=iOS Simulator,id=$DEVICE" -derivedDataPath "$RUNNER_TEMP/DerivedData" CODE_SIGNING_ALLOWED=NO > "$RUNNER_TEMP/ipad-ui-build.log" 2>&1 || { tail -100 "$RUNNER_TEMP/ipad-ui-build.log";exit 1; }
-      - name: Verify repaired native file-picker and tab cases in isolated installations
+      - name: Verify remaining native project destination and Close case
         run: |
           set -o pipefail
           DEVICE=$(cat "$RUNNER_TEMP/ipad-device.txt")
           FAILURES=0
-          for CASE in testProjectDestinationsAndClose testTabsNativePickersAndRelaunch;do
+          for CASE in testProjectDestinationsAndClose;do
             xcrun simctl terminate "$DEVICE" io.github.willyros01.clearpage || true
             xcrun simctl uninstall "$DEVICE" io.github.willyros01.clearpage || true
             xcodebuild test-without-building -project ios/App/App.xcodeproj -scheme ATEFunctional -configuration Debug -destination "platform=iOS Simulator,id=$DEVICE" -derivedDataPath "$RUNNER_TEMP/DerivedData" -only-testing:"ATEFunctionalTests/ATEFunctionalTests/$CASE" -resultBundlePath "$RUNNER_TEMP/ATERepair-$CASE.xcresult" CODE_SIGNING_ALLOWED=NO -test-timeouts-enabled YES -default-test-execution-time-allowance 300 -maximum-test-execution-time-allowance 600 2>&1 | tee "$RUNNER_TEMP/repair-$CASE.log" | awk '/Test Case|PASS native|error:|failed|TEST SUCCEEDED/{print;fflush()}' || { xcrun simctl io "$DEVICE" screenshot "$RUNNER_TEMP/failed-$CASE.png";tail -150 "$RUNNER_TEMP/repair-$CASE.log";FAILURES=1; }
-          done
-          exit "$FAILURES"
-      - name: Verify largest OS text projects and ordinary-file Save with fresh fixtures
-        if: always() && steps.native-build.outcome == 'success'
-        run: |
-          set -o pipefail
-          DEVICE=$(cat "$RUNNER_TEMP/ipad-device.txt")
-          xcrun simctl ui "$DEVICE" content_size accessibility-extra-extra-extra-large
-          FAILURES=0
-          for CASE in testProjectLayoutAccessibility testToolbarAndSaveVisibility;do
-            xcrun simctl terminate "$DEVICE" io.github.willyros01.clearpage || true
-            xcrun simctl uninstall "$DEVICE" io.github.willyros01.clearpage || true
-            xcodebuild test-without-building -project ios/App/App.xcodeproj -scheme ATEFunctional -configuration Debug -destination "platform=iOS Simulator,id=$DEVICE" -derivedDataPath "$RUNNER_TEMP/DerivedData" -only-testing:"ATEFunctionalTests/ATEFunctionalTests/$CASE" -resultBundlePath "$RUNNER_TEMP/ATELarge-$CASE.xcresult" CODE_SIGNING_ALLOWED=NO -test-timeouts-enabled YES -default-test-execution-time-allowance 300 -maximum-test-execution-time-allowance 600 2>&1 | tee "$RUNNER_TEMP/large-$CASE.log" | awk '/Test Case|PASS native|error:|failed|TEST SUCCEEDED/{print;fflush()}' || { xcrun simctl io "$DEVICE" screenshot "$RUNNER_TEMP/failed-large-$CASE.png";tail -150 "$RUNNER_TEMP/large-$CASE.log";FAILURES=1; }
           done
           exit "$FAILURES"
       - name: Require complete genuine native screenshot set before Apple upload
@@ -346,6 +333,12 @@ jobs:
           run-id: 43816569242
           github-token: ${{ github.token }}
           path: ipad-evidence
+      - uses: actions/download-artifact@v4
+        with:
+          name: ate-ipad-repaired-native-evidence
+          run-id: 43866159579
+          github-token: ${{ github.token }}
+          path: ipad-repaired-evidence
       - name: Verify retained iPad native engines and completed functional cases
         env:
           GH_TOKEN: ${{ github.token }}
