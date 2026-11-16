@@ -2,6 +2,15 @@
 
 Last updated: 12 November 2026 (UTC).
 
+## Next build (0.8.8) — approved by Willy, not built yet
+
+Willy, 16 Nov 2026: "include on the todo list for next build. no building now." Build only when he says so; then every platform (Mac, Windows, Android, iPhone/iPad) together, tested on the simulators first.
+
+| # | Item | Status |
+| --- | --- | --- |
+| 1 | Help: clear "Projects and ZIP files" topic, listed in the Help topics, with numbered steps to make a project ZIP and where it goes on each device. | Implemented on branch help-projects (commit 0b32f6e); 63 tests pass; walked through on a phone-sized screen (My program.zip made). |
+| 2 | Rename Menu → "Export copy" to "Export this file", so it is not mistaken for the project ZIP (it saves only the open file). Update Help wording to match. | Pending |
+
 Feature backlog: [ATE features to-do list](FEATURES-TODO.md), recorded 15 November 2026, with six planned features in the agreed priority order.
 
 ## Coordinated 0.6.0 (19) update — released; physical acceptance pending
