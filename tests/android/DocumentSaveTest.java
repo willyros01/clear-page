@@ -91,6 +91,7 @@ public class DocumentSaveTest {
             click(device,"Menu");click(device,"Projects");
             assertTrue("Project tree heading missing",device.wait(Until.hasObject(By.text("Files and folders")),15000));
             click(device,"Open project");click(device,"Back to project");
+            assertTrue("Project picker did not return to the project tree",device.wait(Until.hasObject(By.text("Files and folders")),15000));
             click(device,"Add file");clickSelector(device,By.text(Pattern.compile("Choose files.*")),"Choose project files");
             if(!device.wait(Until.hasObject(By.pkg(DOCUMENTS)),5000)){
                 UiObject2 files=device.findObject(By.text("Files"));if(files!=null)files.click();
@@ -127,7 +128,7 @@ public class DocumentSaveTest {
             UiObject2 button=device.wait(Until.findObject(By.text(text)),500);
             if(button==null)button=device.wait(Until.findObject(By.desc(text)),500);
             if(button==null)continue;
-            try{button.click();device.waitForIdle();return;}catch(StaleObjectException changed){device.waitForIdle();}
+            try{if(!button.isEnabled()){android.os.SystemClock.sleep(100);continue;}button.click();device.waitForIdle();return;}catch(StaleObjectException changed){device.waitForIdle();}
         }
         fail(text+" missing or unstable");
     }
@@ -136,7 +137,7 @@ public class DocumentSaveTest {
         while(System.currentTimeMillis()<end){
             UiObject2 button=device.wait(Until.findObject(selector),1000);
             if(button==null)continue;
-            try{button.click();device.waitForIdle();return;}catch(StaleObjectException changed){device.waitForIdle();}
+            try{if(!button.isEnabled()){android.os.SystemClock.sleep(100);continue;}button.click();device.waitForIdle();return;}catch(StaleObjectException changed){device.waitForIdle();}
         }
         fail(label+" missing or unstable");
     }

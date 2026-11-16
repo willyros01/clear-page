@@ -7,9 +7,9 @@ permissions:
   contents: read
 concurrency:
   group: ate-android-083
-  cancel-in-progress: true
+  cancel-in-progress: false
 env:
-  ATE_BUILD_NUMBER: '27'
+  ATE_BUILD_NUMBER: '28'
 jobs:
   browser:
     runs-on: ubuntu-latest
@@ -134,11 +134,9 @@ jobs:
         with:
           name: ate-android-native-evidence
           path: |-
-            android-logcat.txt
-            android-debug.png
-            android-ui.xml
-            android-webview-report.json
-            android-instrumentation.txt
-            android-native.png
-            android-saved.c
+            android-*.txt
+            android-*.png
+            android-*.xml
+            android-*.json
+            android-saved*
             android/app/build/outputs/androidTest-results/**
