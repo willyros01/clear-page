@@ -1,0 +1,113 @@
+name: Prepare ATE App Store draft listings
+on:
+  push:
+    branches: [main]
+    paths: ['store/apply-draft.mjs', 'store/prepare-assets.py', '.github/workflows/store-draft.yml']
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: ate-app-store-drafts
+  cancel-in-progress: false
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      ATE_DRAFT_STAGE: assets
+      ATE_ONLY: assets
+      GH_TOKEN: ${{ github.token }}
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Require unchanged verified app source and completed native screenshots
+        run: |
+          node --input-type=module <<'JS'
+          const base='https://api.github.com/repos/willyros01/clear-page',headers={Authorization:'Bearer '+process.env.GH_TOKEN,Accept:'application/vnd.github+json'};
+          const source=await fetch(base+'/actions/runs/43866159579',{headers});if(!source.ok)throw Error('Source lookup failed');const run=await source.json();if(run.head_sha!=='4407aac3774148fee391b049b3118e68af5a9edd'||run.path!=='.github/workflows/store-prep.yml')throw Error('Unexpected source build');
+          const response=await fetch(base+'/actions/runs/43866159579/jobs?per_page=100',{headers});if(!response.ok)throw Error('Verification lookup failed');const jobs=(await response.json()).jobs;
+          for(const name of ['regression','mac-verify','iphone-verified','iphone-largest','ipad-verified'])if(!jobs.some(x=>x.name===name&&x.conclusion==='success'))throw Error('Special build '+name+' is not verified; refuse screenshot preparation.');
+          console.log('PASS: unchanged app source and native core gates verified; build attachment remains gated on full iPad tests and Apple processing.');
+          JS
+      - uses: actions/download-artifact@v4
+        with:
+          name: ate-store-iPhone-screenshots
+          run-id: 43866159579
+          github-token: ${{ github.token }}
+          path: store/native-assets/iPhone
+      - uses: actions/download-artifact@v4
+        with:
+          name: ate-store-iPad-screenshots
+          run-id: 43866159579
+          github-token: ${{ github.token }}
+          path: store/native-assets/iPad
+      - uses: actions/download-artifact@v4
+        with:
+          name: ate-store-Mac-screenshots-and-evidence
+          run-id: 43810798310
+          github-token: ${{ github.token }}
+          path: store/native-assets/Mac
+      - run: python3 -m pip install --quiet pillow
+      - name: Prepare exact native screenshot assets
+        run: python3 store/prepare-assets.py
+      - name: Populate existing draft screenshots without attaching or submitting builds
+        run: node store/apply-draft.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ate-app-store-prepared-listings-and-assets
+          path: |
+            store/screenshots/**
+            store/screenshot-provenance.json
+            store/prepared-assets.json
+            store/draft-evidence/result.json
+          if-no-files-found: warn
+
+  attach-verified-builds:
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    env:
+      GH_TOKEN: ${{ github.token }}
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+      ATE_ONLY: builds
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Wait for every native gate and verified TestFlight processing
+        run: |
+          node --input-type=module <<'JS'
+          const base='https://api.github.com/repos/willyros01/clear-page',headers={Authorization:'Bearer '+process.env.GH_TOKEN,Accept:'application/vnd.github+json'};
+          const required=['regression','mac-verify','iphone-verified','iphone-largest','ipad-verified','simulator (iPad)','testflight','mac-testflight'];
+          let passed=false;
+          for(let n=0;n<180;n++){
+            const r=await fetch(base+'/actions/runs/43866159579/jobs?per_page=100',{headers});if(!r.ok)throw Error('Gate lookup failed');const jobs=(await r.json()).jobs;
+            for(const name of required){const j=jobs.find(x=>x.name===name);if(j&&['failure','cancelled','skipped','timed_out'].includes(j.conclusion))throw Error('Required gate '+name+' '+j.conclusion+'; no build attached');}
+            if(required.every(name=>jobs.some(x=>x.name===name&&x.conclusion==='success'))){passed=true;break;}
+            if(n%3===0)console.log('Waiting for required native/Apple gates: '+required.filter(name=>!jobs.some(x=>x.name===name&&x.conclusion==='success')).join(', '));
+            await new Promise(resolve=>setTimeout(resolve,20000));
+          }
+          if(!passed)throw Error('Native/Apple processing remains incomplete; no draft build attachment');console.log('PASS: all native gates and both processed internal TestFlight uploads passed.');
+          JS
+      - uses: actions/download-artifact@v4
+        with:
+          name: ate-app-store-prepared-listings-and-assets
+          path: store
+      - name: Attach exact processed platform builds without submitting for review
+        run: node store/apply-draft.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ate-store-verified-build-attachments
+          path: store/draft-evidence/result.json
+          if-no-files-found: warn

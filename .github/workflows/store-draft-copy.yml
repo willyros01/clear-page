@@ -1,8 +1,5 @@
 name: Prepare ATE App Store text and policies
 on:
-  push:
-    branches: [main]
-    paths: ['store/apply-draft.mjs', 'store/listing.json', '.github/workflows/store-draft-copy.yml']
   workflow_dispatch: {}
 permissions:
   contents: read
