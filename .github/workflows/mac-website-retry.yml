@@ -1,12 +1,7 @@
 name: ATE Apple and Desktop
-run-name: ATE Mac website signing from verified desktop artifact
+run-name: ATE 0.8.7 Mac website signing from verified universal app
 on:
-  workflow_dispatch:
-    inputs:
-      source_run:
-        description: Successful desktop build run with unchanged app sources
-        default: '43088542493'
-        required: true
+  workflow_dispatch: {}
   push:
     branches: [desktop]
     paths: ['.github/workflows/mac-website-retry.yml']
@@ -16,14 +11,15 @@ permissions:
 concurrency:
   group: ate-mac-website-retry
   cancel-in-progress: false
+env:
+  ATE_BUILD_NUMBER: '28'
 jobs:
   mac-release:
     name: mac-release (website)
-    runs-on: macos-26
+    runs-on: macos-15
     timeout-minutes: 35
     env:
-      SOURCE_RUN: ${{ inputs.source_run || '43088542493' }}
-      GITHUB_TOKEN: ${{ github.token }}
+      GH_TOKEN: ${{ github.token }}
       ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
       ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
       ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
@@ -33,27 +29,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Require successful native tests and identical application sources
-        run: |
-          node --input-type=module <<'JS'
-          const base='https://api.github.com/repos/willyros01/clear-page/';
-          const headers={Authorization:'Bearer '+process.env.GITHUB_TOKEN,Accept:'application/vnd.github+json'};
-          async function get(path){const r=await fetch(base+path,{headers});if(!r.ok)throw Error('Provenance lookup HTTP '+r.status);return r.json()}
-          if(!/^\d+$/.test(process.env.SOURCE_RUN))throw Error('Invalid source run');
-          const run=await get('actions/runs/'+process.env.SOURCE_RUN);
-          if(run.head_branch!=='desktop')throw Error('Source is not the desktop branch');
-          const {jobs}=await get('actions/runs/'+process.env.SOURCE_RUN+'/jobs?per_page=100');
-          if(!jobs.some(j=>j.conclusion==='success'&&j.name.includes('desktop (macos')&&j.steps.some(s=>s.name==='Verify editing inside native Mac webview'&&s.conclusion==='success')))throw Error('Successful native Mac checks required');
-          const diff=await get('compare/'+run.head_sha+'...'+process.env.GITHUB_SHA);
-          if(diff.total_commits>50||diff.files.length>=300)throw Error('Comparison too large');
-          for(const file of diff.files)if(!/^(build\/mac-release\.sh|[^/]+\.md|\.github\/workflows\/.*|tests\/.*)$/.test(file.filename))throw Error('Application changed since verified source: '+file.filename);
-          console.log('PASS: reuse exact verified universal app from '+run.head_sha+'; only signing, workflow, tests and documentation changes are allowed.');
-          JS
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - name: Require original successful native Mac tests and unchanged application source
+        run: node store/reuse-mac.mjs
       - uses: actions/download-artifact@v4
         with:
           github-token: ${{ github.token }}
-          run-id: ${{ env.SOURCE_RUN }}
-          name: ate-mac-universal-preview
+          run-id: 43810798310
+          name: ate-store-mac-input
           path: mac-input
       - name: Sign, notarize and staple the verified app
         run: bash build/mac-release.sh website
@@ -68,33 +53,37 @@ jobs:
             ${{ runner.temp }}/ate-mac-website/*.log
             ${{ runner.temp }}/ate-mac-website/notary.json
   report:
-    if: always()
     needs: mac-release
     runs-on: ubuntu-latest
     env:
       GITHUB_TOKEN: ${{ github.token }}
-      SOURCE_RUN: ${{ inputs.source_run || '43088542493' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Preserve publication of the verified Windows source build
+      - name: Preserve the already verified Windows and web publication
         run: |
           node --input-type=module <<'JS'
           let ready=false;
-          for(let attempt=0;attempt<10;attempt++){
-            const r=await fetch('https://www.cuberoot-systems.com/downloads/ate-desktop-build.json?check='+Date.now(),{cache:'no-store'});
-            if(r.ok&&(await r.json()).windows?.run_id>=Number(process.env.SOURCE_RUN)){ready=true;break}
-            await new Promise(resolve=>setTimeout(resolve,30000));
+          for(let n=0;n<20;n++){
+            const stamp='?check='+Date.now(),options={cache:'no-store',signal:AbortSignal.timeout(30000)};
+            const [a,b]=await Promise.all([fetch('https://www.cuberoot-systems.com/downloads/ate-desktop-build.json'+stamp,options),fetch('https://www.cuberoot-systems.com/ate/app/ate-web-build.json'+stamp,options)]);
+            if(a.ok&&b.ok){const desktop=await a.json(),web=await b.json();if(desktop.windows?.run_id>=43874608420&&desktop.windows?.version==='0.8.7'&&web.run_id>=43874608420&&web.version==='0.8.7'){ready=true;break}}
+            await new Promise(r=>setTimeout(r,30000));
           }
-          if(!ready)throw Error('Source Windows publication still pending; preserve its report');
+          if(!ready)throw Error('Windows/web publication remains pending; retain their existing release pointer.');
           JS
-      - run: node build/desktop-report.mjs
+      - name: Record this verified Mac artifact only
+        run: |
+          node --input-type=module <<'JS'
+          import fs from 'node:fs';const base='https://api.github.com/repos/willyros01/clear-page/actions/runs/'+process.env.GITHUB_RUN_ID,headers={Authorization:'Bearer '+process.env.GITHUB_TOKEN,Accept:'application/vnd.github+json'};
+          const r=await fetch(base+'/artifacts?per_page=100',{headers});if(!r.ok)throw Error('Artifact lookup failed');const artifact=(await r.json()).artifacts.find(x=>x.name==='ate-mac-website-release'&&!x.expired);if(!artifact)throw Error('Signed Mac artifact missing');
+          fs.writeFileSync(process.env.RUNNER_TEMP+'/ate-mac-report.json',JSON.stringify({app:'ATE',workflow:'ATE Apple and Desktop',branch:'desktop',version:'0.8.7',build:28,run_id:Number(process.env.GITHUB_RUN_ID),source_sha:process.env.GITHUB_SHA,web_artifact_id:null,windows_artifact_id:null,mac_artifact_id:artifact.id,native_verification_run_id:43810798310,application_source_sha:'23f352a4ceb3ad99a5f112a564253f0f0dd9ea9e',created_at:new Date().toISOString()},null,2)+'\n');
+          JS
       - name: Publish verified signing result
         run: |
-          set -euo pipefail
-          cp desktop-report/ate-desktop-last-run.json "$RUNNER_TEMP/report.json"
+          cp "$RUNNER_TEMP/ate-mac-report.json" "$RUNNER_TEMP/report.json"
           git fetch origin desktop-releases
           git checkout -B desktop-releases origin/desktop-releases
           cp "$RUNNER_TEMP/report.json" ate-desktop-last-run.json
