@@ -11,6 +11,7 @@ Willy, 16 Nov 2026: "include on the todo list for next build. no building now." 
 | 1 | Help: clear "Projects and ZIP files" topic, listed in the Help topics, with numbered steps to make a project ZIP and where it goes on each device. | Implemented on branch help-projects (commit 0b32f6e); 63 tests pass; walked through on a phone-sized screen (My program.zip made). |
 | 2 | Rename Menu → "Export copy" to "Export this file", so it is not mistaken for the project ZIP (it saves only the open file). Update Help wording to match. | Pending |
 | 3 | Put an "Export project ZIP" button on the Projects screen itself, next to Open project and Close project (Willy could not find it behind Open project). Greyed out (disabled) when no project is open. Update Help steps to match. | Pending |
+| 4 | iPhone/iPad: offer ATE for text and code files, so Files app → touch and hold a file → Share → ATE opens it straight in ATE (declare the document types; handle the opened file). iPadOS allows no default app for text files, so this is the closest. Test on the iPad simulator by opening a file from the Files app. Mention in Help. | Pending |
 
 Feature backlog: [ATE features to-do list](FEATURES-TODO.md), recorded 15 November 2026, with six planned features in the agreed priority order.
 
