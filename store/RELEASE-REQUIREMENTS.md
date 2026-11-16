@@ -9,9 +9,9 @@ Special build: 0.8.7 (28). Platforms: iOS (iPhone + iPad) and native universal m
 - Completed: Cuberoot Quick Start, full guide, Terms, Privacy and Support pages and guide PDFs published.
 - Completed in App Store Connect: existing iOS/macOS draft versions set to 0.8.7, English-Canada copy, categories, privacy/support URLs, review contact, free pricing, manual release and current age questionnaire.
 - Verified: app ID 6833284199; bundle io.github.willyros01.clearpage; primary locale en-CA; SKU clear-page-ios.
-- Native iPhone and universal Mac checks passed. iPad native engine checks passed (293 checks), along with native file-picker/share/tab recovery and both largest-text cases. One project destination/Close case remains in fresh verification.
+- Completed: native iPhone, iPad and universal Mac regression and functional gates passed. iPad includes 293 engine checks, native file-picker/share/tab recovery, both largest-text cases, and project destination/Close verification. The final project scenario passed with its corrected ten-minute XCTest allowance.
 - Completed: actual native iPhone, 13-inch iPad and Mac screenshot captures, visually reviewed.
-- Pending: remaining isolated iPad tests, TestFlight upload/Apple processing, build attachment and Apple screenshot delivery.
+- Completed: iOS and Mac 0.8.7 (28) uploaded, processed VALID by Apple and assigned to internal TestFlight testing. Both exact builds are attached to their respective draft versions; all ten screenshots processed COMPLETE. Owner physical-device acceptance remains.
 - No App Review submission or public release has been requested.
 
 ## Prepared content
@@ -35,7 +35,7 @@ Special build: 0.8.7 (28). Platforms: iOS (iPhone + iPad) and native universal m
 ## Apple settings and checks before submission
 
 - Completed: existing app identity, editable iOS/macOS drafts, primary locale and SKU verified. Account agreements remain a final account check.
-- [ ] Use the validated 0.8.7 (28) build for each platform only after full automated gates and Apple processing VALID; confirm internal TestFlight assignment and owner testing.
+- Completed: validated 0.8.7 (28) iOS and Mac builds passed all required automated gates and Apple processing VALID, were assigned to internal TestFlight and attached to drafts. Owner testing remains required.
 - Completed: categories, copy-ready metadata, privacy/support/marketing URLs, copyright, Free pricing and manual release saved in the iOS/macOS drafts.
 - [ ] Confirm intended territories and public distribution against the current availability record before submission.
 - Completed: current 24-field age-rating questionnaire saved based on actual local editing features; do not blindly copy another app's answers. No public content service, advertisements, chat, gambling, medical features or unrestricted web browser is included.
@@ -45,11 +45,11 @@ Special build: 0.8.7 (28). Platforms: iOS (iPhone + iPad) and native universal m
 - [ ] Complete accessibility declarations only for independently verified features. Adjustable document text and light/dark appearance exist; VoiceOver, Voice Control, reduced motion and other claims require actual acceptance, not inference.
 - Completed: private App Review phone/contact maintained in both draft review records; the phone is excluded from this package and public code.
 - [ ] Confirm DSA trader status and current agreement/tax/compliance requirements in the account before submission.
-- [ ] Attach correct processed builds and accepted screenshots, run final App Store validation, review the complete package with the owner, then submit. Preparation does not mean submission or approval.
+- Completed: correct processed platform builds and accepted screenshots attached. Pending: final App Store validation and owner review, then a separate submission instruction. Preparation does not mean submission or approval.
 
 ## Required tests
 
-Terms: new install, mandatory checkbox, Escape/Back protection, no accidental Save before consent, acceptance persistence, revised terms re-prompt, storage failure, Help reopening, privacy/support links, existing draft preservation. Run full existing parser/editor/tab/project/file-picker/regression suites, real iPhone/iPad XCUITest and largest OS text, plus native universal Mac/sandbox checks. Physical-device acceptance remains separate. Special Apple build is isolated from existing public Windows/Android/Mac installers; do not cancel or rebuild those to prepare this submission.
+Terms: new install, mandatory checkbox, Escape/Back protection, no accidental Save before consent, acceptance persistence, revised terms re-prompt, storage failure, Help reopening, privacy/support links, existing draft preservation. Run full existing parser/editor/tab/project/file-picker/regression suites, real iPhone/iPad XCUITest and largest OS text, plus native universal Mac/sandbox checks. Physical-device acceptance remains separate. All platforms are coordinated to 0.8.7 (28), including web, Windows, Android and website universal Mac. Preserve each successful platform artifact independently; signing or publishing another platform must not cancel successful builds.
 
 ## Owner TestFlight acceptance
 
@@ -73,4 +73,3 @@ Fairpot: terms.html, store/listing.json and store/apply.mjs on main (first-use c
 - https://developer.apple.com/help/app-store-connect/reference/app-information/app-information/
 - https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
 
-Apple screenshot specifications can change; use the accepted dimensions/display types reported by the live App Store Connect account at upload time. No request has been submitted for App Review by this document.
