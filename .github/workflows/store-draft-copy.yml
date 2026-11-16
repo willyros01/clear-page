@@ -1,6 +1,9 @@
 name: Prepare ATE App Store text and policies
 on:
   workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths: ['store/listing.json', 'store/finalize.mjs', '.github/workflows/store-draft-copy.yml']
 permissions:
   contents: read
 concurrency:
@@ -9,13 +12,13 @@ concurrency:
 jobs:
   prepare:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 20
     env:
       ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
       ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
       ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
       ATE_DRAFT_STAGE: copy
-      ATE_ONLY: age
+      ATE_ONLY: copy
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -31,9 +34,14 @@ jobs:
           JS
       - name: Prepare existing ATE drafts without attaching or submitting builds
         run: node store/apply-draft.mjs
+      - name: Complete API readiness checks and verify saved automatic release
+        if: always()
+        run: node store/finalize.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: ate-store-text-preparation-result
-          path: store/draft-evidence/result.json
+          path: |
+            store/draft-evidence/result.json
+            store/final-evidence/readiness.json
           if-no-files-found: error
