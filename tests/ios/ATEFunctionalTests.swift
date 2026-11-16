@@ -148,14 +148,21 @@ final class ATEFunctionalTests: XCTestCase {
         control.tap()
     }
     func cancelDocumentPicker() {
-        // An unrestricted input keeps SQL/extensionless UTIs selectable. iOS
-        // first offers its source menu, then the actual Files document picker.
         let choose = app.buttons.matching(NSPredicate(format: "label IN %@", ["Choose File", "Choose Files"])).firstMatch
         if choose.waitForExistence(timeout: 5) { choose.tap() }
         let cancel = app.buttons["Cancel"].firstMatch
-        XCTAssertTrue(cancel.waitForExistence(timeout: 15), app.debugDescription)
-        cancel.tap()
-        XCTAssertTrue(waitForGone(cancel, timeout: 10), app.debugDescription)
+        let popup = app.otherElements["PopoverDismissRegion"].firstMatch
+        if cancel.waitForExistence(timeout: 5) {
+            cancel.tap()
+            XCTAssertTrue(waitForGone(cancel, timeout: 10), app.debugDescription)
+        } else {
+            // iPadOS 26's 13-inch multi-file browser has an X and supports
+            // outside dismissal; its remote controls are absent from app AX.
+            XCTAssertTrue(min(app.frame.width, app.frame.height) > 600 && popup.waitForExistence(timeout: 10), app.debugDescription)
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.1)).tap()
+            XCTAssertTrue(waitForGone(popup, timeout: 10), app.debugDescription)
+        }
+        if popup.exists { XCTAssertTrue(waitForGone(popup, timeout: 10), app.debugDescription) }
     }
     func dismissShareSheet() {
         // The iOS 26 share sheet does not always expose a "Close" button
@@ -410,6 +417,7 @@ final class ATEFunctionalTests: XCTestCase {
         exerciseModesAndProjects()
     }
     func testTabsNativePickersAndRelaunch() {
+        menu(); app.buttons["New"].tap()
         rename("native.c")
         let first = editor()
         first.tap(); first.typeText("int main(void) { return 0; }")
@@ -451,38 +459,6 @@ final class ATEFunctionalTests: XCTestCase {
         assertCText()
         print("PASS native UI: rotation and background/resume preserve C tab")
     }
-    func storeShot(_ name: String) {
-        dismissKeyboard()
-        let shot = XCTAttachment(screenshot: app.screenshot())
-        shot.name = "store-" + name
-        shot.lifetime = .keepAlways
-        add(shot)
-    }
-    func testZStoreScreenshots() {
-        XCUIDevice.shared.orientation = .portrait
-        menu(); setMode("Advanced"); app.buttons["New"].tap()
-        rename("welcome.md")
-        editor().tap(); editor().typeText("# A clear space to write\n\nNotes, code and local projects.\nYour work stays on your device.")
-        storeShot("01-editor")
-        menu(); app.buttons["Projects"].tap(); projectButton("Open project")
-        let project = app.textFields["New project name"]
-        XCTAssertTrue(project.waitForExistence(timeout: 15)); project.tap(); project.typeText("My writing project")
-        projectButton("Create new project"); projectButton("New folder")
-        let name = app.textFields["New file or folder name"]
-        name.tap(); name.typeText("src"); projectButton("Create folder")
-        projectButton("Add file"); name.tap(); name.typeText("example.sql"); projectButton("Create file")
-        editor().tap(); editor().typeText("SELECT 1;"); app.buttons["Save file"].tap()
-        menu(); app.buttons["Projects"].tap(); storeShot("02-projects")
-        app.buttons["Back to editor"].tap()
-        editor().tap(); editor().typeText("\nSELECT FROM;")
-        menu(); app.buttons["Check syntax"].tap()
-        XCTAssertTrue(app.staticTexts["Syntax check"].waitForExistence(timeout: 15))
-        storeShot("03-syntax")
-        app.buttons["Back to editor"].tap()
-        menu(); storeShot("04-menu")
-        finishMenu()
-    }
-
     func testFirstUseTermsAndPersistence() {
         XCTAssertTrue(app.buttons["Menu"].isHittable)
         app.terminate(); app.launch()

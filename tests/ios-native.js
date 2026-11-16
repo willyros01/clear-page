@@ -1,3 +1,4 @@
+import {captureStoreShots} from './store-photos.js';
 import {Capacitor} from '@capacitor/core';
 import {checkProjectLayout} from './project-layout.js';
 import {checkToolbarLayout} from './toolbar-layout.js';
@@ -9,6 +10,11 @@ import {undo} from '@codemirror/commands';
 import {Filesystem,Directory,Encoding} from '@capacitor/filesystem';
 (async()=>{
  const android=Capacitor.getPlatform()==='android';
+ if(!android){
+  let photos=false;try{await Filesystem.stat({path:'ate-store-photos-only.json',directory:Directory.Documents});photos=true}catch{}
+  if(photos){try{await captureStoreShots()}catch(e){await Filesystem.writeFile({path:'ate-store-photo-error.json',directory:Directory.Documents,encoding:Encoding.UTF8,data:JSON.stringify({error:e.message})})}return}
+ }
+
  const marker='ATE_IPAD_SYNTAX_VERIFICATION_ONLY',checks=[],$=id=>document.getElementById(id);
  const wait=ms=>new Promise(r=>setTimeout(r,ms));
  const assert=(value,message)=>{if(!value)throw Error(message);checks.push(message);if(android&&checks.length%10===0)console.info('ATE_NATIVE_PROGRESS',checks.length,message)};
