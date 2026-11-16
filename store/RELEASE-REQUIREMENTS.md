@@ -7,17 +7,24 @@ Special build: 0.8.7 (28). Platforms: iOS (iPhone + iPad) and native universal m
 - Completed: large-print Features To-Do PDF; six future enhancements remain on the backlog.
 - Completed: first-use no-fault Terms acceptance and Help links implemented in special build source.
 - Completed: Cuberoot Quick Start, full guide, Terms, Privacy and Support pages and guide PDFs published.
-- Completed in App Store Connect: existing iOS/macOS draft versions set to 0.8.7, English-Canada copy, categories, privacy/support URLs, review contact, free pricing, manual release and current age questionnaire.
+- Completed in App Store Connect: existing iOS/macOS draft versions set to 0.8.7, English-Canada copy, categories, privacy/support URLs, review contact, free pricing, automatic release after approval and current age questionnaire.
 - Verified: app ID 6833284199; bundle io.github.willyros01.clearpage; primary locale en-CA; SKU clear-page-ios.
 - Completed: native iPhone, iPad and universal Mac regression and functional gates passed. iPad includes 293 engine checks, native file-picker/share/tab recovery, both largest-text cases, and project destination/Close verification. The final project scenario passed with its corrected ten-minute XCTest allowance.
 - Completed: actual native iPhone, 13-inch iPad and Mac screenshot captures, visually reviewed.
 - Completed: iOS and Mac 0.8.7 (28) uploaded, processed VALID by Apple and assigned to internal TestFlight testing. Both exact builds are attached to their respective draft versions; all ten screenshots processed COMPLETE. Owner physical-device acceptance remains.
 - No App Review submission or public release has been requested.
 
+## API completion - 16 November 2026
+
+- Completed: descriptions, promotional text and subtitle updated on both Apple drafts to highlight simple notepad use, full text editing with optional vi/Vim-style keys, the built-in offline syntax checker and local projects.
+- Completed: both iOS and Mac release settings read back AFTER_APPROVAL. Release will be automatic only after submission and Apple approval; no submission has been made.
+- Completed: API readback verifies build 28 remains VALID, in internal TestFlight and attached to both drafts; all ten screenshots are COMPLETE; Free pricing, policy links, review details and age answers are saved.
+- Completed: remaining API readiness checks passed in run 43936400560, with no unresolved API operations. Physical acceptance, App Privacy publication and account-holder confirmations remain.
+
 ## Prepared content
 
 - Copy-ready description, subtitle, keywords, promotional text, review instructions and URLs: listing.json.
-- Free, public searchable distribution and manual release after approval follow the current Scorecard reference. English-Canada draft follows Fairpot's listing. Primary Productivity, secondary Developer Tools reflect ATE rather than copying unrelated Golf/Finance categories.
+- Free, public searchable distribution follows The Scorecard reference. Automatic release after approval follows the owner instruction of 16 November 2026. English-Canada draft follows Fairpot. Primary Productivity and secondary Developer Tools reflect ATE.
 - Copyright 2026 Wilfredo Rosales. Review contact Wilfredo Rosales, willyros01@gmail.com. Reuse the existing privately maintained review phone; never commit it.
 - Public privacy/support/terms and updated Quick Start/full guides on Cuberoot.
 - Supplementary no-fault Terms acceptance in the app; Apple's Standard EULA remains the store license. This is a limitation-of-warranty/liability statement to the extent permitted by law, not an assurance that all legal liability is excluded.
@@ -36,13 +43,13 @@ Special build: 0.8.7 (28). Platforms: iOS (iPhone + iPad) and native universal m
 
 - Completed: existing app identity, editable iOS/macOS drafts, primary locale and SKU verified. Account agreements remain a final account check.
 - Completed: validated 0.8.7 (28) iOS and Mac builds passed all required automated gates and Apple processing VALID, were assigned to internal TestFlight and attached to drafts. Owner testing remains required.
-- Completed: categories, copy-ready metadata, privacy/support/marketing URLs, copyright, Free pricing and manual release saved in the iOS/macOS drafts.
-- [ ] Confirm intended territories and public distribution against the current availability record before submission.
+- Completed: categories, copy-ready metadata, privacy/support/marketing URLs, copyright, Free pricing and automatic release after approval saved in the iOS/macOS drafts.
+- Completed: API readback confirms 175 selected countries/regions and automatic availability in new territories, matching The Scorecard reference. ATE remains an unreleased app; selection is not a guarantee of final regional clearance.
 - Completed: current 24-field age-rating questionnaire saved based on actual local editing features; do not blindly copy another app's answers. No public content service, advertisements, chat, gambling, medical features or unrestricted web browser is included.
-- [ ] Complete App Privacy with Data Not Collected only after verifying all integrated SDKs and developer collection behavior. Local processing and user-selected third-party sharing are described in the policy; website click tracking is separate.
-- [ ] Confirm export compliance from bundled cryptography and actual functionality. ATE uses system HTTPS and local SHA-256 revision hashes, not an encrypted messaging service; preserve applicable exempt-encryption declaration only when accurate.
-- [ ] Verify privacy manifests, required-reason APIs, sandbox entitlements, signatures and packaged offline assets. Mac Store edition hides external Clang; no code execution or compiler download is advertised for that edition.
-- [ ] Complete accessibility declarations only for independently verified features. Adjustable document text and light/dark appearance exist; VoiceOver, Voice Control, reduced motion and other claims require actual acceptance, not inference.
+- Technical audit completed; proposed App Privacy answer is Data Not Collected across iOS and native Mac. Publishing the questionnaire remains an App Store Connect website step. User-selected sharing and file providers are described in the policy; website tracking is separate. Apple API 4.6 has no App Privacy questionnaire endpoint.
+- Completed: audited system HTTPS and local SHA-256 revision hashing. Both attached Apple builds report usesNonExemptEncryption=false; no separate non-exempt encryption declaration is required for the audited functionality.
+- Completed technical review: root privacy manifest declares file timestamps with reason C617.1, no collected data and no tracking. Reviewed bundled Capacitor manifests and direct dependencies. Actual iOS archive logs verify the privacy resource, packaged offline assets and signature. Mac export config enables sandbox and user-selected read/write access; Apple processed the exact signed iOS and Mac builds VALID. Mac Store edition hides external Clang; compiler installation is Windows-only. See TECHNICAL-REVIEW.md for evidence and limits.
+- Completed accessibility audit: no existing nutrition-label declarations. Adjustable document text and light/dark appearance are described accurately in the listing. No new badges are claimed: Apple Larger Text requires enlargement throughout common tasks, not only document text; other labels also require complete per-device acceptance. This optional declaration work does not require a new build for submission.
 - Completed: private App Review phone/contact maintained in both draft review records; the phone is excluded from this package and public code.
 - [ ] Confirm DSA trader status and current agreement/tax/compliance requirements in the account before submission.
 - Completed: correct processed platform builds and accepted screenshots attached. Pending: final App Store validation and owner review, then a separate submission instruction. Preparation does not mean submission or approval.
