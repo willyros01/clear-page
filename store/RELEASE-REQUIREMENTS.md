@@ -9,7 +9,7 @@ Special build: 0.8.7 (28). Platforms: iOS (iPhone + iPad) and native universal m
 - Completed: Cuberoot Quick Start, full guide, Terms, Privacy and Support pages and guide PDFs published.
 - Completed in App Store Connect: existing iOS/macOS draft versions set to 0.8.7, English-Canada copy, categories, privacy/support URLs, review contact, free pricing, manual release and current age questionnaire.
 - Verified: app ID 6833284199; bundle io.github.willyros01.clearpage; primary locale en-CA; SKU clear-page-ios.
-- Native iPhone and universal Mac checks passed. iPad native engine checks passed (293 checks); final native picker/tab and largest-text repair cases are running.
+- Native iPhone and universal Mac checks passed. iPad native engine checks passed (293 checks), along with native file-picker/share/tab recovery and both largest-text cases. One project destination/Close case remains in fresh verification.
 - Completed: actual native iPhone, 13-inch iPad and Mac screenshot captures, visually reviewed.
 - Pending: remaining isolated iPad tests, TestFlight upload/Apple processing, build attachment and Apple screenshot delivery.
 - No App Review submission or public release has been requested.
@@ -28,7 +28,7 @@ Special build: 0.8.7 (28). Platforms: iOS (iPhone + iPad) and native universal m
 - Completed native 13-inch iPad captures: editor, Projects, syntax results, menu controls.
 - Completed native Mac captures: editor and syntax results; 16:10 canvas at accepted dimensions. Never use iPad screenshots for the native Mac listing.
 - Completed: all native screenshots visually reviewed and exported as RGB without alpha at accepted dimensions: iPhone 1206x2622; iPad 2064x2752; Mac 1280x800.
-- [ ] Deliver screenshot sets to Apple and confirm every uploaded image finishes processing. Four iPhone, four iPad and two Mac images are prepared.
+- Completed: all ten native screenshots uploaded and processed COMPLETE by Apple: four iPhone, four iPad and two Mac images. Draft screenshot preparation run 43867302801 passed; no app was submitted.
 - Completed: original 1024x1024 RGB marketing icon prepared. Existing iOS and Mac icon sets remain in their native builds.
 - Optional: App preview video is not required. A short review walkthrough can be recorded if Apple requests it.
 
@@ -50,6 +50,16 @@ Special build: 0.8.7 (28). Platforms: iOS (iPhone + iPad) and native universal m
 ## Required tests
 
 Terms: new install, mandatory checkbox, Escape/Back protection, no accidental Save before consent, acceptance persistence, revised terms re-prompt, storage failure, Help reopening, privacy/support links, existing draft preservation. Run full existing parser/editor/tab/project/file-picker/regression suites, real iPhone/iPad XCUITest and largest OS text, plus native universal Mac/sandbox checks. Physical-device acceptance remains separate. Special Apple build is isolated from existing public Windows/Android/Mac installers; do not cancel or rebuild those to prepare this submission.
+
+## Owner TestFlight acceptance
+
+- First launch: read Terms, tick the agreement and continue. Restart; acceptance should remain. Help must reopen Terms and open Privacy, Support and both guides.
+- Write a note, cancel Save and confirm the note remains. Complete Save to Files on iPhone/iPad or the native Mac Save dialog. Confirm the exact filename and extension; ATE must not add .txt to an extensionless name.
+- At your largest iPhone/iPad text setting, open and close Menu, show and hide the keyboard, then rotate the screen. Menu, Close, Save and the filename must remain readable and reachable. Renaming must change the tab name rather than document content.
+- Advanced > Projects: create and reopen a project, create src, then Add file to src using Create file or Choose files. Open a .sql file from the tree and edit it. Confirm folder selection and file hierarchy are clear.
+- Test folder deletion with Keep folder and then confirmed deletion of disposable sample files. Test Close project with Keep open, Save and close, and Close without saving. Keep independent copies of any real files during acceptance.
+- Enter SELECT FROM; in a .sql sample and check syntax. Correct to SELECT 1; and check again. Repeat one sample in each language you normally use. These checks do not execute code or replace a compiler.
+- On Mac, test opening, saving, Help links and closing the app on both Intel and Apple silicon hardware when available. A universal architecture check does not replace physical testing on each processor family.
 
 ## Reference apps reviewed
 
