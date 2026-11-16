@@ -7,16 +7,21 @@ final class ATEFunctionalTests: XCTestCase {
         app.terminate()
         app.launch()
         let accept = app.buttons["Accept and continue"]
-        if accept.waitForExistence(timeout: 10) {
+        let terms = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH %@", "ATE Terms of Use,")).firstMatch
+        let menuButton = app.buttons["Menu"]
+        let ready = Date().addingTimeInterval(30)
+        while !terms.exists && !menuButton.exists && Date() < ready { RunLoop.current.run(until: Date().addingTimeInterval(0.2)) }
+        if terms.exists {
+            // Off-screen WebKit buttons may not be in the native AX snapshot.
+            // Detect the visible modal, then scroll to its actual agreement box.
             let agree = app.switches["I have read and agree to the Terms of Use"]
-            XCTAssertTrue(agree.waitForExistence(timeout: 10), app.debugDescription)
-            for _ in 0..<12 {
-                if agree.isHittable && app.frame.contains(agree.frame) { break }
+            for _ in 0..<15 {
+                if agree.exists && agree.isHittable && app.frame.contains(agree.frame) { break }
                 app.webViews.firstMatch.swipeUp()
             }
+            XCTAssertTrue(agree.waitForExistence(timeout: 10), app.debugDescription)
             XCTAssertTrue(agree.isHittable && app.frame.contains(agree.frame), app.debugDescription)
-            // WKWebView exposes the whole label as a Switch. Its centre can fall
-            // outside the checkbox hit region; tap the actual box at the left.
+            XCTAssertFalse(accept.isEnabled, "The terms require an explicit agreement")
             agree.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0)).withOffset(CGVector(dx: 14, dy: 16)).tap()
             let enabled = XCTNSPredicateExpectation(predicate: NSPredicate(format: "enabled == true"), object: accept)
             XCTAssertEqual(XCTWaiter.wait(for: [enabled], timeout: 5), .completed, app.debugDescription)
@@ -474,6 +479,22 @@ final class ATEFunctionalTests: XCTestCase {
         app.buttons["Back to editor"].tap()
         menu(); storeShot("04-menu")
         finishMenu()
+    }
+
+    func testFirstUseTermsAndPersistence() {
+        XCTAssertTrue(app.buttons["Menu"].isHittable)
+        app.terminate(); app.launch()
+        XCTAssertTrue(app.buttons["Menu"].waitForExistence(timeout: 30), "Accepted terms survive a native restart")
+        menu(); app.buttons["Help"].tap()
+        let show = app.buttons["Terms of Use"]
+        for _ in 0..<10 { if show.isHittable { break }; app.webViews.firstMatch.swipeUp() }
+        XCTAssertTrue(show.isHittable, app.debugDescription); show.tap()
+        XCTAssertTrue(app.staticTexts["ATE Terms of Use"].waitForExistence(timeout: 10))
+        let back = app.buttons["Back to editor"]
+        for _ in 0..<15 { if back.exists && back.isHittable && app.frame.contains(back.frame) { break }; app.webViews.firstMatch.swipeUp() }
+        XCTAssertTrue(back.isHittable, app.debugDescription); back.tap()
+        XCTAssertTrue(app.buttons["Menu"].waitForExistence(timeout: 10))
+        print("PASS native UI: explicit terms consent, native restart persistence and Help reopening")
     }
 
 }

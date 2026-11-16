@@ -7,7 +7,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: ate-store-preparation-consent-v2
+  group: ate-store-preparation-consent-v3
   cancel-in-progress: false
 env:
   ATE_BUILD_NUMBER: "28"
@@ -107,20 +107,20 @@ jobs:
         run: |
           if ! ruby -e "require 'xcodeproj'"; then gem install --user-install xcodeproj --no-document; fi
           ruby tests/ios/add-ui-tests.rb
-      - name: Focused project layout and nested-dialog accessibility regression
+      - name: Focused first-use terms and consent persistence regression
         run: |
           set -o pipefail
           DEVICE=$(cat "$RUNNER_TEMP/ipad-device.txt")
           xcrun simctl terminate "$DEVICE" io.github.willyros01.clearpage || true
           xcrun simctl uninstall "$DEVICE" io.github.willyros01.clearpage
-          xcodebuild test -project ios/App/App.xcodeproj -scheme ATEFunctional -configuration Debug -destination "platform=iOS Simulator,id=$DEVICE" -derivedDataPath "$RUNNER_TEMP/DerivedData" -only-testing:ATEFunctionalTests/ATEFunctionalTests/testProjectLayoutAccessibility -resultBundlePath "$RUNNER_TEMP/ATEProjectFocus.xcresult" CODE_SIGNING_ALLOWED=NO -test-timeouts-enabled YES -default-test-execution-time-allowance 600 -maximum-test-execution-time-allowance 900 2>&1 | tee "$RUNNER_TEMP/project-focus-tests.log" | awk '/Test Case|PASS native|error:|failed|TEST SUCCEEDED/ { print; fflush() }' || { tail -180 "$RUNNER_TEMP/project-focus-tests.log"; exit 1; }
+          xcodebuild test -project ios/App/App.xcodeproj -scheme ATEFunctional -configuration Debug -destination "platform=iOS Simulator,id=$DEVICE" -derivedDataPath "$RUNNER_TEMP/DerivedData" -only-testing:ATEFunctionalTests/ATEFunctionalTests/testFirstUseTermsAndPersistence -resultBundlePath "$RUNNER_TEMP/ATEProjectFocus.xcresult" CODE_SIGNING_ALLOWED=NO -test-timeouts-enabled YES -default-test-execution-time-allowance 600 -maximum-test-execution-time-allowance 900 2>&1 | tee "$RUNNER_TEMP/project-focus-tests.log" | awk '/Test Case|PASS native|error:|failed|TEST SUCCEEDED/ { print; fflush() }' || { tail -180 "$RUNNER_TEMP/project-focus-tests.log"; exit 1; }
       - name: Native functional tests including Files and Share cancellation
         run: |
           set -o pipefail
           DEVICE=$(cat "$RUNNER_TEMP/ipad-device.txt")
           xcrun simctl terminate "$DEVICE" io.github.willyros01.clearpage || true
           xcrun simctl uninstall "$DEVICE" io.github.willyros01.clearpage
-          xcodebuild test -project ios/App/App.xcodeproj -scheme ATEFunctional -configuration Debug -destination "platform=iOS Simulator,id=$DEVICE" -derivedDataPath "$RUNNER_TEMP/DerivedData" -skip-testing:ATEFunctionalTests/ATEFunctionalTests/testProjectLayoutAccessibility -resultBundlePath "$RUNNER_TEMP/ATEFunctional.xcresult" CODE_SIGNING_ALLOWED=NO -test-timeouts-enabled YES -default-test-execution-time-allowance 600 -maximum-test-execution-time-allowance 900 2>&1 | tee "$RUNNER_TEMP/ui-tests.log" | awk '/Test Case|PASS native|error:|failed|App animations|TEST SUCCEEDED/ { print; fflush() }' || { python3 -c 'import sys,re;print("\n".join([x.rstrip() for x in open(sys.argv[1]) if re.search("error:|XCTAssert|failed|Test Case|PASS native",x)][-35:]))' "$RUNNER_TEMP/ui-tests.log"; echo "=== Screen state at each failure ==="; grep -B 40 -A 150 'error: -\[' "$RUNNER_TEMP/ui-tests.log" | head -1200 || true; tail -70 "$RUNNER_TEMP/ui-tests.log"; exit 1; }
+          xcodebuild test -project ios/App/App.xcodeproj -scheme ATEFunctional -configuration Debug -destination "platform=iOS Simulator,id=$DEVICE" -derivedDataPath "$RUNNER_TEMP/DerivedData" -resultBundlePath "$RUNNER_TEMP/ATEFunctional.xcresult" CODE_SIGNING_ALLOWED=NO -test-timeouts-enabled YES -default-test-execution-time-allowance 600 -maximum-test-execution-time-allowance 900 2>&1 | tee "$RUNNER_TEMP/ui-tests.log" | awk '/Test Case|PASS native|error:|failed|App animations|TEST SUCCEEDED/ { print; fflush() }' || { python3 -c 'import sys,re;print("\n".join([x.rstrip() for x in open(sys.argv[1]) if re.search("error:|XCTAssert|failed|Test Case|PASS native",x)][-35:]))' "$RUNNER_TEMP/ui-tests.log"; echo "=== Screen state at each failure ==="; grep -B 40 -A 150 'error: -\[' "$RUNNER_TEMP/ui-tests.log" | head -1200 || true; tail -70 "$RUNNER_TEMP/ui-tests.log"; exit 1; }
       - name: Export native App Store screenshot attachments
         run: |
           mkdir -p "$RUNNER_TEMP/store-native"
