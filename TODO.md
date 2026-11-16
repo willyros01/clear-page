@@ -4,7 +4,7 @@ Last updated: 12 November 2026 (UTC).
 
 ## Next build (0.8.8) — approved by Willy, not built yet
 
-Willy, 16 Nov 2026: "include on the todo list for next build. no building now." Build only when he says so; then every platform (Mac, Windows, Android, iPhone/iPad) together, tested on the simulators first.
+Willy, 16 Nov 2026: "include on the todo list for next build. no building now." Build only when he says so; then every platform (web app on cuberoot-systems.com/ate/app, Mac, Windows, Android, iPhone/iPad) together, tested on the simulators first.
 
 | # | Item | Status |
 | --- | --- | --- |
