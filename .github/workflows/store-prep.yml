@@ -7,7 +7,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: ate-store-preparation-ipad-provider-repair
+  group: ate-store-preparation-ipad-provider-isolated
   cancel-in-progress: false
 env:
   ATE_BUILD_NUMBER: "28"
@@ -85,12 +85,21 @@ jobs:
           node scripts/prepare-ios.mjs
           xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug -destination 'generic/platform=iOS Simulator' -derivedDataPath "$RUNNER_TEMP/DerivedData" CODE_SIGNING_ALLOWED=NO build > "$RUNNER_TEMP/ipad-build.log" 2>&1 || { tail -80 "$RUNNER_TEMP/ipad-build.log";exit 1; }
       - name: Capture genuine native iPad UI with generated sample files
+        continue-on-error: true
         run: |
           set -euo pipefail
           DEVICE=$(cat "$RUNNER_TEMP/ipad-device.txt")
           xcrun simctl install "$DEVICE" "$RUNNER_TEMP/DerivedData/Build/Products/Debug-iphonesimulator/App.app"
           DATA=$(xcrun simctl get_app_container "$DEVICE" io.github.willyros01.clearpage data)
           mkdir -p "$DATA/Documents" "$RUNNER_TEMP/store-ipad-native"
+          capture_error() {
+            RESULT=$?
+            if [ "$RESULT" -ne 0 ];then
+              xcrun simctl io "$DEVICE" screenshot "$RUNNER_TEMP/store-ipad-native/capture-error.png" || true
+              cp "$DATA"/Documents/ate-store-*.json "$RUNNER_TEMP/store-ipad-native/" || true
+            fi
+          }
+          trap capture_error EXIT
           echo '{}' > "$DATA/Documents/ate-store-photos-only.json"
           xcrun simctl launch "$DEVICE" io.github.willyros01.clearpage
           for attempt in {1..300}; do
@@ -113,7 +122,7 @@ jobs:
         with:
           name: ate-store-iPad-screenshots
           path: ${{ runner.temp }}/store-ipad-native/*
-          if-no-files-found: error
+          if-no-files-found: warn
       - name: Restore clean production assets for native functional tests
         run: |
           npm run build
@@ -144,6 +153,15 @@ jobs:
             xcrun simctl uninstall "$DEVICE" io.github.willyros01.clearpage || true
             xcodebuild test-without-building -project ios/App/App.xcodeproj -scheme ATEFunctional -configuration Debug -destination "platform=iOS Simulator,id=$DEVICE" -derivedDataPath "$RUNNER_TEMP/DerivedData" -only-testing:"ATEFunctionalTests/ATEFunctionalTests/$CASE" -resultBundlePath "$RUNNER_TEMP/ATELarge-$CASE.xcresult" CODE_SIGNING_ALLOWED=NO -test-timeouts-enabled YES -default-test-execution-time-allowance 300 -maximum-test-execution-time-allowance 600 2>&1 | tee "$RUNNER_TEMP/large-$CASE.log" | awk '/Test Case|PASS native|error:|failed|TEST SUCCEEDED/{print;fflush()}' || { xcrun simctl io "$DEVICE" screenshot "$RUNNER_TEMP/failed-large-$CASE.png";tail -150 "$RUNNER_TEMP/large-$CASE.log";exit 1; }
           done
+      - name: Require complete genuine native screenshot set before Apple upload
+        run: |
+          python3 - <<'PY_CHECK'
+          import os,json,pathlib
+          root=pathlib.Path(os.environ['RUNNER_TEMP'])/'store-ipad-native'
+          assert json.loads((root/'provenance.json').read_text())['passed'] is True
+          for label in ['01-editor','02-projects','03-syntax','04-menu']:assert (root/('store-'+label+'.png')).stat().st_size>1000
+          print('PASS: all four genuine iPad screenshots captured; no screenshot preparation failure ignored.')
+          PY_CHECK
       - name: Export diagnostic screenshots even when a native test fails
         if: always()
         run: |
