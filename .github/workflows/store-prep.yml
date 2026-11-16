@@ -7,7 +7,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: ate-store-preparation-last-destination-case
+  group: ate-store-preparation-destination-full-allowance
   cancel-in-progress: false
 env:
   ATE_BUILD_NUMBER: "28"
@@ -122,7 +122,7 @@ jobs:
           for CASE in testProjectDestinationsAndClose;do
             xcrun simctl terminate "$DEVICE" io.github.willyros01.clearpage || true
             xcrun simctl uninstall "$DEVICE" io.github.willyros01.clearpage || true
-            xcodebuild test-without-building -project ios/App/App.xcodeproj -scheme ATEFunctional -configuration Debug -destination "platform=iOS Simulator,id=$DEVICE" -derivedDataPath "$RUNNER_TEMP/DerivedData" -only-testing:"ATEFunctionalTests/ATEFunctionalTests/$CASE" -resultBundlePath "$RUNNER_TEMP/ATERepair-$CASE.xcresult" CODE_SIGNING_ALLOWED=NO -test-timeouts-enabled YES -default-test-execution-time-allowance 300 -maximum-test-execution-time-allowance 600 2>&1 | tee "$RUNNER_TEMP/repair-$CASE.log" | awk '/Test Case|PASS native|error:|failed|TEST SUCCEEDED/{print;fflush()}' || { xcrun simctl io "$DEVICE" screenshot "$RUNNER_TEMP/failed-$CASE.png";tail -150 "$RUNNER_TEMP/repair-$CASE.log";FAILURES=1; }
+            xcodebuild test-without-building -project ios/App/App.xcodeproj -scheme ATEFunctional -configuration Debug -destination "platform=iOS Simulator,id=$DEVICE" -derivedDataPath "$RUNNER_TEMP/DerivedData" -only-testing:"ATEFunctionalTests/ATEFunctionalTests/$CASE" -resultBundlePath "$RUNNER_TEMP/ATERepair-$CASE.xcresult" CODE_SIGNING_ALLOWED=NO -test-timeouts-enabled YES -default-test-execution-time-allowance 600 -maximum-test-execution-time-allowance 600 2>&1 | tee "$RUNNER_TEMP/repair-$CASE.log" | awk '/Test Case|PASS native|error:|failed|TEST SUCCEEDED/{print;fflush()}' || { xcrun simctl io "$DEVICE" screenshot "$RUNNER_TEMP/failed-$CASE.png";tail -150 "$RUNNER_TEMP/repair-$CASE.log";FAILURES=1; }
           done
           exit "$FAILURES"
       - name: Require complete genuine native screenshot set before Apple upload

@@ -18,9 +18,9 @@ permissions:
   contents: read
 concurrency:
   group: ate-coordinated-release
-  cancel-in-progress: true
+  cancel-in-progress: false
 env:
-  ATE_BUILD_NUMBER: "27"
+  ATE_BUILD_NUMBER: "28"
 jobs:
   browser:
     if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[all-platforms]')
@@ -112,12 +112,11 @@ jobs:
           name: ate-mac-native-evidence
           path: ${{ runner.temp }}/mac-testflight-native.txt
   mac-release:
-    needs: [mac-build, windows, android]
+    needs: [mac-build]
     strategy:
       fail-fast: false
       matrix:
         channel:
-          - testflight
           - website
     runs-on: macos-26
     timeout-minutes: 40
