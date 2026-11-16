@@ -30,15 +30,15 @@ jobs:
         run: |
           node --input-type=module <<'JS'
           const base='https://api.github.com/repos/willyros01/clear-page',headers={Authorization:'Bearer '+process.env.GH_TOKEN,Accept:'application/vnd.github+json'};
-          const source=await fetch(base+'/actions/runs/43870646847',{headers});if(!source.ok)throw Error('Source lookup failed');const run=await source.json();if(run.head_sha!=='7d1cdee51b76c50da32f031dcb083a28fbd700fe'||run.path!=='.github/workflows/store-prep.yml')throw Error('Unexpected source build');
-          const response=await fetch(base+'/actions/runs/43870646847/jobs?per_page=100',{headers});if(!response.ok)throw Error('Verification lookup failed');const jobs=(await response.json()).jobs;
+          const source=await fetch(base+'/actions/runs/43874608409',{headers});if(!source.ok)throw Error('Source lookup failed');const run=await source.json();if(run.head_sha!=='aa690766ebd7ed0d7938f102e06374b8749b3369'||run.path!=='.github/workflows/store-prep.yml')throw Error('Unexpected source build');
+          const response=await fetch(base+'/actions/runs/43874608409/jobs?per_page=100',{headers});if(!response.ok)throw Error('Verification lookup failed');const jobs=(await response.json()).jobs;
           for(const name of ['regression','mac-verify','iphone-verified','iphone-largest','ipad-verified'])if(!jobs.some(x=>x.name===name&&x.conclusion==='success'))throw Error('Special build '+name+' is not verified; refuse screenshot preparation.');
           console.log('PASS: unchanged app source and native core gates verified; build attachment remains gated on full iPad tests and Apple processing.');
           JS
       - uses: actions/download-artifact@v4
         with:
           name: ate-store-iPhone-screenshots
-          run-id: 43870646847
+          run-id: 43874608409
           github-token: ${{ github.token }}
           path: store/native-assets/iPhone
       - uses: actions/download-artifact@v4
@@ -91,7 +91,7 @@ jobs:
           const required=['regression','mac-verify','iphone-verified','iphone-largest','ipad-verified','simulator (iPad)','testflight','mac-testflight'];
           let passed=false;
           for(let n=0;n<180;n++){
-            const r=await fetch(base+'/actions/runs/43870646847/jobs?per_page=100',{headers});if(!r.ok)throw Error('Gate lookup failed');const jobs=(await r.json()).jobs;
+            const r=await fetch(base+'/actions/runs/43874608409/jobs?per_page=100',{headers});if(!r.ok)throw Error('Gate lookup failed');const jobs=(await r.json()).jobs;
             for(const name of required){const j=jobs.find(x=>x.name===name);if(j&&['failure','cancelled','skipped','timed_out'].includes(j.conclusion))throw Error('Required gate '+name+' '+j.conclusion+'; no build attached');}
             if(required.every(name=>jobs.some(x=>x.name===name&&x.conclusion==='success'))){passed=true;break;}
             if(n%3===0)console.log('Waiting for required native/Apple gates: '+required.filter(name=>!jobs.some(x=>x.name===name&&x.conclusion==='success')).join(', '));

@@ -1,6 +1,6 @@
 # ATE App Store metadata preparation
 
-This folder prepares the existing ATE iOS and native universal macOS draft listings. Special build 0.8.7 (28) uses application source 23f352a4ceb3ad99a5f112a564253f0f0dd9ea9e on `desktop`. Test automation and preparation repairs are pinned at 7d1cdee51b76c50da32f031dcb083a28fbd700fe, preparation run 43870646847. No production application source changed in those test repairs.
+This folder prepares the existing ATE iOS and native universal macOS draft listings. Special build 0.8.7 (28) uses application source 23f352a4ceb3ad99a5f112a564253f0f0dd9ea9e on `desktop`. Test automation and preparation repairs are pinned at aa690766ebd7ed0d7938f102e06374b8749b3369, preparation run 43874608409. No production application source changed in those test repairs.
 
 The workflow on `main` prepares metadata only; it never builds the older application code on `main`, submits for App Review or releases an app. The first job delivers reviewed native screenshot sets to the existing drafts using `ATE_DRAFT_STAGE=assets` and `ATE_ONLY=assets`. The second job waits for all required native gates and both Apple upload/processing jobs, then attaches only the exact VALID 0.8.7 (28) build for each platform using `ATE_ONLY=builds`.
 
