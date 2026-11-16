@@ -1,0 +1,41 @@
+name: Prepare ATE App Store text and policies
+on:
+  push:
+    branches: [main]
+    paths: ['store/apply-draft.mjs', 'store/listing.json', '.github/workflows/store-draft-copy.yml']
+  workflow_dispatch: {}
+permissions:
+  contents: read
+concurrency:
+  group: ate-store-text-preparation
+  cancel-in-progress: false
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+      ATE_DRAFT_STAGE: copy
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate copy-ready fields
+        run: |
+          node --input-type=module <<'JS'
+          import fs from 'node:fs';const l=JSON.parse(fs.readFileSync('store/listing.json'));
+          for(const [key,max] of [['name',30],['subtitle',30],['keywords',100],['promotionalText',170],['description',4000]])if(!l[key]||l[key].length>max)throw Error('Invalid listing field '+key);
+          if(l.versionString!=='0.8.7'||l.buildNumber!=='28'||l.locale!=='en-CA')throw Error('Unexpected special build');
+          console.log('PASS: field lengths, English-Canada and special-build identity.');
+          JS
+      - name: Prepare existing ATE drafts without attaching or submitting builds
+        run: node store/apply-draft.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ate-store-text-preparation-result
+          path: store/draft-evidence/result.json
+          if-no-files-found: error

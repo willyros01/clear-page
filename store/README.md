@@ -1,0 +1,3 @@
+# ATE App Store metadata preparation
+
+This folder prepares the existing ATE iOS and native macOS draft listings. Application build 0.8.7 (28) is verified on `desktop`, application source 23f352a4ceb3ad99a5f112a564253f0f0dd9ea9e, with test-only repairs at ef91d1f6081625b06bd7f196bffb4df5c5d2637a. The metadata workflow on main does not build the older application source on main, attach an unverified binary, submit for App Review or release an app. `ATE_DRAFT_STAGE=copy` prepares text/policies/private review contact and Free pricing while native gates continue independently. No private contact phone or signing credential is exported.
