@@ -170,48 +170,47 @@ jobs:
 
   mac-verify:
     needs: regression
-    runs-on: macos-26
-    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
     steps:
       - uses: actions/checkout@v4
-      - uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: latest-stable
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-      - uses: dtolnay/rust-toolchain@stable
+      - name: Verify preserved native Mac artifact provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node store/reuse-mac.mjs
+      - uses: actions/download-artifact@v4
         with:
-          targets: aarch64-apple-darwin,x86_64-apple-darwin
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: src-tauri -> target
-      - run: npm ci
-      - run: npm run desktop:icons
-      - run: npm run build
-      - run: cargo test --locked --manifest-path src-tauri/Cargo.toml -- --nocapture
-      - run: npm run tauri -- build --target universal-apple-darwin --no-bundle --features editor-verification
-      - name: Verify native Mac and capture actual app windows
-        run: bash store/capture-mac.sh
-      - run: npm run tauri -- build --target universal-apple-darwin --bundles app
-      - name: Package exact tested universal application
-        run: |
-          mkdir -p mac-input
-          APP=src-tauri/target/universal-apple-darwin/release/bundle/macos/ATE.app
-          lipo "$APP/Contents/MacOS/ate-desktop" -verify_arch arm64 x86_64
-          ditto -c -k --keepParent "$APP" mac-input/ate-mac-app.zip
+          name: ate-store-mac-input
+          run-id: 43810798310
+          github-token: ${{ github.token }}
+          path: mac-input
       - uses: actions/upload-artifact@v4
         with:
           name: ate-store-mac-input
           path: mac-input/*
-      - uses: actions/upload-artifact@v4
-        if: always()
+          if-no-files-found: error
+  account-survey:
+    needs: regression
+    runs-on: ubuntu-latest
+    env:
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          name: ate-store-Mac-screenshots-and-evidence
-          path: |
-            ${{ runner.temp }}/ate-store-mac/*.png
-            ${{ runner.temp }}/mac-store-native.txt
+          node-version: 22
+      - run: node store/account-survey.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ate-store-account-survey
+          path: store/account-evidence/survey.json
   mac-testflight:
     needs: [regression, simulator, mac-verify]
     runs-on: macos-26

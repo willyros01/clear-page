@@ -7,13 +7,23 @@ final class ATEFunctionalTests: XCTestCase {
         app.terminate()
         app.launch()
         let accept = app.buttons["Accept and continue"]
-        if accept.waitForExistence(timeout: 5) {
-            let agree = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "I have read and agree to the Terms of Use")).firstMatch
-            for _ in 0..<12 { if agree.isHittable { break }; app.webViews.firstMatch.swipeUp() }
+        if accept.waitForExistence(timeout: 10) {
+            let agree = app.switches["I have read and agree to the Terms of Use"]
             XCTAssertTrue(agree.waitForExistence(timeout: 10), app.debugDescription)
-            agree.tap()
-            if !accept.isHittable { app.swipeUp() }
+            for _ in 0..<12 {
+                if agree.isHittable && app.frame.contains(agree.frame) { break }
+                app.webViews.firstMatch.swipeUp()
+            }
+            XCTAssertTrue(agree.isHittable && app.frame.contains(agree.frame), app.debugDescription)
+            // WKWebView exposes the whole label as a Switch. Its centre can fall
+            // outside the checkbox hit region; tap the actual box at the left.
+            agree.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0)).withOffset(CGVector(dx: 14, dy: 16)).tap()
+            let enabled = XCTNSPredicateExpectation(predicate: NSPredicate(format: "enabled == true"), object: accept)
+            XCTAssertEqual(XCTWaiter.wait(for: [enabled], timeout: 5), .completed, app.debugDescription)
+            for _ in 0..<6 { if accept.isHittable && app.frame.contains(accept.frame) { break }; app.webViews.firstMatch.swipeUp() }
+            XCTAssertTrue(accept.isEnabled && accept.isHittable, app.debugDescription)
             accept.tap()
+            XCTAssertTrue(waitForGone(accept, timeout: 10), app.debugDescription)
         }
         XCTAssertTrue(app.buttons["Menu"].waitForExistence(timeout: 30), app.debugDescription)
     }
