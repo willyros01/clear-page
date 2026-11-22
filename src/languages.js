@@ -1,8 +1,8 @@
-export const languageLabels = {plain:'Plain text',javascript:'JavaScript',typescript:'TypeScript',json:'JSON',html:'HTML',css:'CSS',yaml:'YAML',c:'C',python:'Python',sql:'SQL',markdown:'Markdown',shell:'Shell'};
+export const languageLabels = {plain:'Plain text',javascript:'JavaScript',typescript:'TypeScript',json:'JSON',html:'HTML',css:'CSS',yaml:'YAML',c:'C',python:'Python',sql:'SQL',markdown:'Markdown',shell:'Shell',java:'Java',cpp:'C++',csharp:'C#',go:'Go',rust:'Rust',php:'PHP',ruby:'Ruby',swift:'Swift',kotlin:'Kotlin',xml:'XML',toml:'TOML',ini:'INI',powershell:'PowerShell',lua:'Lua'};
 export function languageForName(name='') {
  const base=name.trim().split('/').pop().toLowerCase();
  if(['.env','.cshrc','.tcshrc','.login','.logout','.bash_aliases','.zshenv','.zlogout','.bashrc','.bash_profile','.bash_login','.bash_logout','.profile','.zshrc','.zprofile','.zlogin','.kshrc','bashrc','zshrc'].includes(base))return 'shell';
- return ({sh:'shell',bash:'shell',zsh:'shell',ksh:'shell',csh:'shell',tcsh:'shell',fish:'shell',js:'javascript',mjs:'javascript',cjs:'javascript',jsx:'javascript',ts:'typescript',tsx:'typescript',mts:'typescript',cts:'typescript',json:'json',html:'html',htm:'html',css:'css',yaml:'yaml',yml:'yaml',c:'c',h:'c',py:'python',sql:'sql',md:'markdown',markdown:'markdown'})[name.trim().split('.').pop().toLowerCase()] || 'plain';
+ return ({sh:'shell',bash:'shell',zsh:'shell',ksh:'shell',csh:'shell',tcsh:'shell',fish:'shell',js:'javascript',mjs:'javascript',cjs:'javascript',jsx:'javascript',ts:'typescript',tsx:'typescript',mts:'typescript',cts:'typescript',json:'json',html:'html',htm:'html',css:'css',yaml:'yaml',yml:'yaml',c:'c',h:'c',py:'python',sql:'sql',md:'markdown',markdown:'markdown',java:'java',cpp:'cpp',cc:'cpp',cxx:'cpp',hpp:'cpp',hh:'cpp',hxx:'cpp',cs:'csharp',go:'go',rs:'rust',php:'php',rb:'ruby',swift:'swift',kt:'kotlin',kts:'kotlin',xml:'xml',xsd:'xml',xsl:'xml',xslt:'xml',svg:'xml',plist:'xml',toml:'toml',ini:'ini',cfg:'ini',ps1:'powershell',psm1:'powershell',psd1:'powershell',lua:'lua'})[name.trim().split('.').pop().toLowerCase()] || 'plain';
 }
 
 // Bounded, local detection only: never execute text or change the document name.
@@ -23,6 +23,8 @@ export function languageForDocument(name='',text='') {
  // Ignore comments when looking for code signatures; preserve quoted strings.
  const code=sample.replace(/"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\/\*[\s\S]*?\*\/|\/\/[^\n]*/g,match=>/^\//.test(match)?' ':match);
  const cCode=code.replace(/"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/g,' ');
+ if(/^\s*<\?xml\b/.test(sample))return 'xml';
+ if(/^\s*(?:package\s+[\w.]+\s*;|import\s+java[x]?\.[\w.*]+\s*;)/m.test(code)&&/\b(?:class|interface|record|enum)\s+[A-Z]\w*/.test(code))return 'java';
  const typedFunction=/^\s*(?:(?:static|extern|inline|const|unsigned|signed)\s+)*(?:void|int|char|float|double|short|long|size_t)\b[\w\s*]*\b\w+\s*\([^;{}]*\)\s*\{/m.test(cCode);
  const include=/^\s*#\s*include\s*[<"]/m.test(code);
  const main=/\b(?:int|void)\s+main\s*\([^;{}]*\)\s*\{/m.test(cCode);

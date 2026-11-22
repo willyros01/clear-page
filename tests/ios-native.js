@@ -175,6 +175,22 @@ import {Filesystem,Directory,Encoding} from '@capacitor/filesystem';
   await open("#!/usr/bin/env bash\npython3 <<'PY'\ndef hello():\n    print('hello')\nPY\n",'embedded.sh');
   assert($('language').value==='shell','Shell header and extension override embedded Python');await check();assert($('syntaxIssues').children.length===0,'Embedded Python is not checked as Python in a shell script');$('closeSyntax').click();
   await open('#!/bin/zsh\nprint hello\n','dialect.zsh');$('checkSyntax').click();await until(()=>$('syntaxSummary').textContent.includes('unavailable'),'Unsupported shell dialect is not falsely certified');assert($('syntaxDetails').textContent.includes('dialect'),'Shell checker explains dialect limit');$('closeSyntax').click();
+  // 0.8.8: new offline checkers in the packaged worker, colour-only languages, and sandboxed Preview in the native WebView.
+  for(const [name,lang,value,expect] of [['Bad.java','java','class A {\n  void f() {\n    int x = 1\n  }\n}\n',/Line 3, column 14/],['bad.xml','xml','<a>\n<b></c>\n</a>\n',/Line 2/],['bad.toml','toml','[a]\nx = 1\n[a]\n',/Line 3/],['bad.ini','ini','[s]\n[broken\n',/Line 2/]]){
+   await open(value,name);assert($('language').value===lang,name+' detected as '+lang);await check();
+   assert(expect.test($('syntaxIssues').textContent),'Native worker checks '+name+': '+$('syntaxIssues').textContent.slice(0,60));$('closeSyntax').click();
+  }
+  await open('fn main() { let x = "s"; }\n','main.rs');assert($('language').value==='rust','Rust detected');await wait(300);
+  assert(document.querySelectorAll('.cm-content span[class]').length>2,'Rust file is coloured');
+  await open('# Native preview\n\n<script>document.title="SCRIPT RAN"</script>\n','native-preview.md');
+  $('menuButton').click();assert(!$('preview').hidden,'Preview offered for Markdown');$('preview').click();
+  assert($('previewDialog').open&&$('previewFrame')?.getAttribute('sandbox')==='','Preview opens in a fully sandboxed frame');
+  await wait(600);assert(document.title!=='SCRIPT RAN','Preview never runs scripts');
+  const pr=$('previewFrame').getBoundingClientRect();assert(pr.height>innerHeight*0.5&&pr.width>=innerWidth-2,'Preview fills the screen');
+  $('closePreview').click();await wait(200);assert(!$('previewDialog').open&&!$('previewFrame'),'Back to editor closes Preview');
+  {const probe=document.createElement('iframe');probe.setAttribute('sandbox','allow-same-origin');probe.srcdoc='<style>h1{color:rgb(138, 59, 18)}</style><h1>x</h1><p style="background:rgb(1, 2, 3)">y</p>';document.body.append(probe);
+   await until(()=>!!probe.contentDocument?.querySelector('p'),'Preview probe loaded');await wait(200);
+   assert(getComputedStyle(probe.contentDocument.querySelector('h1')).color==='rgb(138, 59, 18)'&&getComputedStyle(probe.contentDocument.querySelector('p')).backgroundColor==='rgb(1, 2, 3)','Preview page styles apply in the native WebView');probe.remove();}
   const prior=text(),priorName=$('name').value;$('basicMode').click();assert(text()===prior&&$('name').value===priorName,'Switch to Basic preserves text and filename');$('advancedMode').click();assert(text()===prior,'Switch to Advanced preserves edits');
   $('projectsButton').click();await until(()=>$('projects').open&&!$('createProject').disabled,'Project dialog ready');
   $('projectName').value='Native verification';await $('createProject').onclick();

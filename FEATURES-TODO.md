@@ -13,4 +13,6 @@ These previously discussed features remain planned. Priority order is preserved 
 
 Tabs, Basic/Advanced mode, Projects and expanded syntax checking are already implemented and are not remaining feature items.
 
+Added 22 November 2026 (owner approved, release 0.8.8 (29)): HTML/Markdown Preview; Java syntax checking; XML, TOML and INI checks; colours for C++, C#, Go, Rust, PHP, Ruby, Swift, Kotlin, PowerShell and Lua. These are implemented in 0.8.8; release status is tracked in CHANGELOG.md and TODO.md, and physical-device acceptance is recorded separately.
+
 Before releasing each feature, complete relevant regression and full functional checks, including native simulator/emulator coverage for affected mobile platforms. Record automated verification separately from physical-device acceptance.

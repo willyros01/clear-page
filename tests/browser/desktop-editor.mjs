@@ -8,12 +8,16 @@ import {checkToolbarLayout} from '../toolbar-layout.js';
 // Exercise the built assets under the nonce policy Tauri applies to its assets.
 // A plain development server misses the desktop-only stylesheet failure.
 const nonce='ate-test-nonce-2026';
-const csp=JSON.parse(await readFile(new URL('../../src-tauri/tauri.conf.json',import.meta.url),'utf8')).app.security.csp.replace("style-src 'self' 'unsafe-inline'","style-src 'self' 'nonce-"+nonce+"'");
+// Tauri adds nonces to style-src unless that directive is excluded from asset CSP modification.
+// Since 0.8.8 it is excluded so HTML Preview keeps page styles; mirror whichever policy the config produces.
+const security=JSON.parse(await readFile(new URL('../../src-tauri/tauri.conf.json',import.meta.url),'utf8')).app.security;
+const styleNonced=!(security.dangerousDisableAssetCspModification===true||(security.dangerousDisableAssetCspModification||[]).includes('style-src'));
+const csp=styleNonced?security.csp.replace("style-src 'self' 'unsafe-inline'","style-src 'self' 'nonce-"+nonce+"'"):security.csp;
 const server=createServer(async(req,res)=>{
  try{
   const path=req.url.split('?')[0];
   let data=await readFile(new URL('../../dist/'+(path==='/'?'index.html':path.slice(1)),import.meta.url));
-  if(path==='/')data=Buffer.from(data.toString().replace('<style>',`<style nonce="${nonce}">`));
+  if(path==='/'&&styleNonced)data=Buffer.from(data.toString().replace('<style>',`<style nonce="${nonce}">`));
   res.setHeader('Content-Type',path.endsWith('.js')?'application/javascript':path.endsWith('.wasm')?'application/wasm':'text/html');
   res.setHeader('Content-Security-Policy',csp);
   res.end(data);
@@ -56,7 +60,7 @@ try{
    assert.equal(styles.display,'flex',JSON.stringify(styles));
    assert.ok(['pre-wrap','break-spaces'].includes(styles.whiteSpace));assert.match(styles.font,/monospace/);
    assert.equal(styles.size,'36px');assert.equal(styles.padding,'24px');
-   assert.ok(styles.keyword&&styles.keyword!==styles.color,'JavaScript keywords must have syntax colors');assert.ok(styles.nonce);
+   assert.ok(styles.keyword&&styles.keyword!==styles.color,'JavaScript keywords must have syntax colors');assert.ok(!!styles.nonce===styleNonced,'CodeMirror styles carry a nonce exactly when the desktop policy uses nonces');
    assert.match(await text(),/\n    const answer/,'Opening must preserve indentation');
    await editor.click();await page.keyboard.press('ControlOrMeta+End');await page.keyboard.press('Tab');
    assert.match(await text(),/\n    }$/);await page.keyboard.press('Shift+Tab');assert.match(await text(),/\n}$/);
@@ -169,6 +173,37 @@ try{
    assert.ok(await page.locator('#syntaxDialog').evaluate(e=>e.scrollWidth<=e.clientWidth+1),'Syntax results must fit a narrow screen');
    await page.screenshot({path:`editor-evidence/${name}-syntax-narrow.png`});
    await page.locator('#closeSyntax').click();
+   // 0.8.8 Preview: HTML and Markdown only, under the desktop policy; styles shown, no scripts, Back/Escape return.
+   {
+    const violations=[];await page.exposeFunction('__ateCsp',v=>violations.push(v));
+    await page.evaluate(()=>document.addEventListener('securitypolicyviolation',e=>window.__ateCsp(e.violatedDirective+' '+e.blockedURI)));
+    const fileInput=page.locator('#file'),frame=page.frameLocator('#previewFrame');
+    await fileInput.setInputFiles({name:'preview-check.html',mimeType:'text/html',buffer:Buffer.from('<!doctype html><html><head><style>h1{color:rgb(138, 59, 18)}</style></head><body><h1 id="t">Preview heading</h1><p style="background:rgb(1, 2, 3)" id="s">styled</p><script>parent.document.title="SCRIPT RAN"</script><img src="https://example.com/x.png"></body></html>')});
+    await page.waitForFunction(()=>document.getElementById('language').value==='html');
+    await menu();assert.equal(await page.locator('#preview').isVisible(),true,'Preview offered for HTML');
+    await page.locator('#preview').click();await page.locator('#previewDialog[open]').waitFor();
+    assert.equal(await frame.locator('#t').textContent(),'Preview heading');
+    assert.equal(await frame.locator('#t').evaluate(e=>getComputedStyle(e).color),'rgb(138, 59, 18)','Page <style> applies in Preview');
+    assert.equal(await frame.locator('#s').evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(1, 2, 3)','Inline style attribute applies in Preview');
+    assert.notEqual(await page.title(),'SCRIPT RAN','Preview never runs scripts');
+    const box=await page.locator('#previewFrame').boundingBox();assert.ok(box.height>400,'Preview fills the screen: '+box.height);
+    await page.screenshot({path:`editor-evidence/${name}-preview-html.png`});
+    await page.keyboard.press('Escape');await page.locator('#previewDialog').waitFor({state:'hidden'});
+    assert.equal(await page.locator('#previewFrame').count(),0,'Rendered copy removed after leaving Preview');
+    await fileInput.setInputFiles({name:'preview-check.md',mimeType:'text/markdown',buffer:Buffer.from('# Read me\n\n| a | b |\n|---|---|\n| 1 | 2 |\n\n<script>parent.document.title="SCRIPT RAN"</script>\n')});
+    await page.waitForFunction(()=>document.getElementById('language').value==='markdown');
+    await menu();await page.locator('#preview').click();await page.locator('#previewDialog[open]').waitFor();
+    assert.equal(await frame.locator('h1').textContent(),'Read me');
+    assert.equal(await frame.locator('td').first().textContent(),'1');
+    assert.match(await frame.locator('body').textContent(),/<script>/,'Raw HTML in Markdown is shown as text');
+    assert.equal(await frame.locator('table').evaluate(e=>getComputedStyle(e).borderCollapse),'collapse','Preview base stylesheet applies');
+    await page.locator('#closePreview').click();await page.locator('#previewDialog').waitFor({state:'hidden'});
+    await fileInput.setInputFiles({name:'Plain.java',mimeType:'text/plain',buffer:Buffer.from('class A {}\n')});
+    await page.waitForFunction(()=>document.getElementById('language').value==='java');
+    await menu();assert.equal(await page.locator('#preview').isVisible(),false,'Preview hidden for non-HTML/Markdown');
+    await page.locator('#closeMenu').click();
+    assert.deepEqual(violations.filter(v=>/^(frame-src|style-src)/.test(v)),[],'No frame or style policy violations');
+   }
    assert.deepEqual(errors,[]);
    await mkdir('editor-evidence',{recursive:true});
    await page.screenshot({path:`editor-evidence/${name}-editor.png`});

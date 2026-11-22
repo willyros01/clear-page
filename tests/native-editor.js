@@ -163,6 +163,32 @@
   assert((await io('read','src/query.sql')).text===null,'Native confirmed deletion removes directory bytes');assert((await io('read','keep.sql')).text==='SELECT 2;','Native folder deletion preserves sibling bytes');
   await storeShot('03-projects');$('closeProject').click();await until(()=>$('projectActions').hidden);$('closeProjects').click();
   assert(document.querySelectorAll('#tabs [role=tab]').length>0,'Closing a project keeps the ordinary workspace');
+  // 0.8.8: Preview under the real desktop webview policy, new checkers in the packaged worker, colour-only languages.
+  {
+   const probe=document.createElement('iframe');probe.setAttribute('sandbox','allow-same-origin');
+   probe.srcdoc='<!doctype html><html><head><style>h1{color:rgb(138, 59, 18)}</style></head><body><h1>x</h1><p style="background:rgb(1, 2, 3)">y</p></body></html>';
+   document.body.append(probe);await until(()=>probe.contentDocument?.querySelector('p'));await wait(200);
+   const doc=probe.contentDocument;
+   assert(getComputedStyle(doc.querySelector('h1')).color==='rgb(138, 59, 18)','Preview page stylesheets apply under the packaged desktop policy');
+   assert(getComputedStyle(doc.querySelector('p')).backgroundColor==='rgb(1, 2, 3)','Preview inline style attributes apply under the packaged desktop policy');
+   probe.remove();
+   await open('<!doctype html><h1>Native preview</h1><script>document.title="SCRIPT RAN"</script>','native-preview.html');
+   await until(()=>$('language').value==='html');
+   $('menuButton').click();assert(!$('preview').hidden,'Preview offered for an HTML file');
+   $('preview').click();assert($('previewDialog').open,'Preview opens full screen');
+   assert($('previewFrame').getAttribute('sandbox')==='','Preview frame is fully sandboxed');
+   await wait(500);assert(document.title!=='SCRIPT RAN','Preview never runs page scripts');
+   const r=$('previewFrame').getBoundingClientRect();assert(r.height>innerHeight*0.6&&r.width>=innerWidth-2,'Preview fills the window');
+   $('closePreview').click();await wait(200);assert(!$('previewDialog').open&&!$('previewFrame'),'Back to editor closes Preview and removes its copy');
+   for(const [name,lang,text,expect] of [['Bad.java','java','class A {\n  void f() {\n    int x = 1\n  }\n}\n',/Line 3, column 14/],['bad.xml','xml','<a>\n<b></c>\n</a>\n',/Line 2/],['bad.toml','toml','[a]\nx = 1\n[a]\n',/Line 3/],['bad.ini','ini','[s]\n[broken\n',/Line 2/]]){
+    await open(text,name);await until(()=>$('language').value===lang);
+    $('menuButton').click();$('checkSyntax').click();await until(()=>$('syntaxIssues').children.length>0);
+    assert(expect.test($('syntaxIssues').textContent),'Native worker checks '+name+': '+$('syntaxIssues').textContent.slice(0,80));
+    $('closeSyntax').click();
+   }
+   await open('fn main() { let x = "s"; }\n','main.rs');await until(()=>$('language').value==='rust');await wait(300);
+   assert(document.querySelectorAll('.cm-content span[class]').length>2,'Rust file is coloured');
+  }
   await window.__TAURI_INTERNALS__.invoke('editor_verification_result',{passed:true,report:checks.map(x=>'PASS: '+x).join('\n')});
  }catch(error){
   await window.__TAURI_INTERNALS__.invoke('editor_verification_result',{passed:false,report:checks.map(x=>'PASS: '+x).join('\n')+'\nFAIL: '+error.message+'\n'+error.stack});

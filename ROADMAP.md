@@ -2,6 +2,9 @@
 
 Work in small, reviewable steps. Keep one shared editor for all platforms.
 
+## 0.8.8 (29) — Preview, Java checking and 14 more languages
+Owner approved the real-screen preview (ATE.v0.8.8.preview-mockup.pdf) on 22 November 2026: Preview for HTML/Markdown, Java checker (syntax only; C++ colour-only by owner decision), XML/TOML/INI checks. Desktop first, then iPhone/iPad, then App Store Connect drafts updated to build 29 after testing.
+
 ## 0.8.6 (27) — Vim mode in the bottom line
 Owner approved option B from real-screen mock-ups on 15 November 2026; all platforms from one source.
 

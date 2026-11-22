@@ -5,6 +5,7 @@ import {parse as parseCSS,tokenize,tokenTypes as T} from 'css-tree';
 import {parse as parseHTML} from 'parse5';
 
 import {sqlDiagnostics,markdownDiagnostics} from './extra-syntax.js';
+import {javaDiagnostics,xmlDiagnostics,tomlDiagnostics,iniDiagnostics} from './more-syntax.js';
 import {MAX_CHECK_LENGTH,checkableLanguages,diagnostic} from './syntax-common.js';
 const limit=100;
 function javascript(text,typescript=false,jsx=false) {
@@ -42,6 +43,14 @@ export function checkSyntax({text,language,name=''}) {
   diagnostics=sqlDiagnostics(text);message='Offline SQLite SQL syntax only. Other SQL dialects, table/column existence and database behavior are not checked. No statements are executed.';
  } else if(language==='markdown') {
   diagnostics=markdownDiagnostics(text);message='Markdown lint: duplicate headings, unclosed fenced code blocks and trailing whitespace. Markdown permits flexible syntax; these are warnings, not compiler errors.';
+ } else if(language==='java') {
+  diagnostics=javaDiagnostics(text);message='Java 21 syntax only. Imports, types and compilation are not checked. Nothing is run.';
+ } else if(language==='xml') {
+  diagnostics=xmlDiagnostics(text);message='XML well-formedness only. Schemas (XSD/DTD) are not validated.';
+ } else if(language==='toml') {
+  diagnostics=tomlDiagnostics(text);message='TOML 1.0 syntax, including duplicate keys.';
+ } else if(language==='ini') {
+  diagnostics=iniDiagnostics(text);message='INI structure: section headers, key = value lines and duplicate keys. INI has no single standard.';
  } else if(language==='json') {
   const errors=[];parseJSON(text,errors,{allowTrailingComma:false,disallowComments:true,allowEmptyContent:false});
   diagnostics=errors.map(e=>diagnostic(text,e.offset,e.offset+e.length,printParseErrorCode(e.error).replace(/([a-z])([A-Z])/g,'$1 $2')));

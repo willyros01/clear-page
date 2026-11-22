@@ -14,6 +14,9 @@ capture_failure(){
  [ -f android-logcat.txt ] && { echo '=== App log at failure ==='; grep -E 'Capacitor|DocumentFiles|AndroidRuntime|ActivityTaskManager' android-logcat.txt | tail -60 || true; }
 }
 trap 'status=$?; if [ "$status" -ne 0 ]; then capture_failure; fi' EXIT
+# The previous emulator's evidence is already uploaded separately.
+# Never label a tablet screenshot as this phone's failure capture.
+rm -f android-large-failure.png android-large-failure.xml android-native.png android-debug.png android-ui.xml android-webview-report.json android-instrumentation.txt android-saved.c android-saved-extensionless
 adb install android/app/build/outputs/apk/debug/app-debug.apk
 adb install android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
 adb logcat -c

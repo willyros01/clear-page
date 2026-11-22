@@ -429,6 +429,39 @@ final class ATEFunctionalTests: XCTestCase {
         app.buttons["Close without saving"].tap()
         print("PASS native UI: filename metadata stays separate from document text; menu return preserves readable toolbar and Open files label")
     }
+    // Named to run after every existing case (XCTest runs cases alphabetically), so it cannot change their starting mode.
+    func testZPreviewAndNewCheckers() {
+        // 0.8.8: Markdown Preview fills the screen, renders the text and returns; Java errors are found offline.
+        menu(); setMode("Advanced"); finishMenu()
+        menu(); app.buttons["New"].tap()
+        rename("preview-notes.md")
+        editor().tap(); editor().typeText("# Preview heading")
+        menu()
+        let preview = app.buttons["Preview"]
+        XCTAssertTrue(preview.waitForExistence(timeout: 10), app.debugDescription)
+        preview.tap()
+        let back = app.buttons["Back to editor"]
+        XCTAssertTrue(back.waitForExistence(timeout: 10) && back.isHittable, app.debugDescription)
+        let heading = app.staticTexts.matching(NSPredicate(format: "label == %@", "Preview heading")).firstMatch
+        XCTAssertTrue(heading.waitForExistence(timeout: 10), app.debugDescription)
+        XCTAssertFalse(app.staticTexts["Editor menu"].exists, app.debugDescription)
+        back.tap()
+        XCTAssertTrue(app.buttons["Menu"].waitForExistence(timeout: 10) && app.buttons["Menu"].isHittable, app.debugDescription)
+        assertWord("Preview heading")
+        menu(); app.buttons["New"].tap()
+        rename("Broken.java")
+        editor().tap(); editor().typeText("class A { void f() { int x = 1 } }")
+        menu(); app.buttons["Check syntax"].tap()
+        let issue = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", "Missing ;")).firstMatch
+        XCTAssertTrue(issue.waitForExistence(timeout: 20), app.debugDescription)
+        app.buttons["Back to editor"].firstMatch.tap()
+        for _ in 0..<2 {
+            app.buttons["Close current tab"].tap()
+            let discard = app.buttons["Close without saving"]
+            if discard.waitForExistence(timeout: 5) { discard.tap() }
+        }
+        print("PASS native UI: Markdown Preview opens full screen, shows the rendered heading and returns; Java syntax error found offline")
+    }
     func testModesAndProjects() {
         exerciseModesAndProjects()
     }

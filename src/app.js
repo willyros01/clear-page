@@ -2,6 +2,7 @@
 import 'core-js/actual/object/has-own.js';
 import 'core-js/actual/string/replace-all.js';
 import {setupLegal} from './legal.js';
+import {setupPreview} from './preview.js';
 import {setupIOSViewport} from './ios-viewport.js';
 import {setupProjects} from './project-ui.js';
 import {createDocumentTabs} from './document-tabs.js';
@@ -47,7 +48,7 @@ $('smaller').onclick=()=>setFont(font-1);$('larger').onclick=()=>setFont(font+1)
 let saving=false;
 async function save(){if(legal.required())return false;if(saving)return false;saving=true;try{let name=$('name').value||'Untitled';const text=editor.value,tabId=workspace?.current.id,ref=workspace?.current.projectRef;const result=ref?await projects.save(ref,name,text):await saveText(text,name);notice(typeof result==='string'?result:result.message);if(result?.name&&(!workspace||workspace.current.id===tabId)&&$('name').value===name&&result.name!==name){$('name').value=result.name;if(!languageManual)setLanguage(languageForDocument(result.name,editor.value));}dirty=editor.value!==text;if(workspace)workspace.saved(tabId,text,result?.name||name,result?.projectRef);else persist();return true}catch(e){notice((workspace?.current.projectRef?e.message+' ':'Save was cancelled or could not complete. ')+'Your draft is kept.');return false}finally{saving=false}}
 $('save').onclick=save;
-$('menuButton').onclick=()=>{$('menu').showModal();$('menu').scrollTop=0;iosViewport?.restore()};
+$('menuButton').onclick=()=>{previewUi.update();$('menu').showModal();$('menu').scrollTop=0;iosViewport?.restore()};
 $('closeMenu').onclick=()=>leaveMenu();
 $('menu').addEventListener('cancel',()=>{commitFilename();if(document.activeElement instanceof HTMLElement)document.activeElement.blur();iosViewport?.restore()});
 let closingTabId=null;
@@ -91,7 +92,7 @@ $('leaveFocus').onclick=leave;document.addEventListener('fullscreenchange',()=>{
 
 function applyButtonStyle(){document.body.classList.toggle('icons',$('buttonStyle').value==='icons')}
 function setupIcons(){
- const paths={search:'M10 3a7 7 0 100 14 7 7 0 000-14M15 15l6 6',goToLine:'M3 6h18M3 12h18M3 18h18M7 3v18',selectAll:'M3 3h18v18H3zM7 7h10v10H7z',copy:'M8 8h13v13H8zM16 8V3H3v13h5',helpButton:'M9 8a3 3 0 116 0c0 2-3 2-3 5M12 17h.01M12 2a10 10 0 100 20 10 10 0 000-20',menuButton:'M4 6h16M4 12h16M4 18h16',exit:'M10 4H4v16h6M14 8l4 4-4 4M8 12h12',save:'M5 3h12l4 4v14H3V3h2M7 3v6h10V3M7 21v-8h10v8',new:'M6 3h8l4 4v14H6zM14 3v5h4M9 14h6M12 11v6',open:'M3 8V5h6l2 3h10v12H3z',closeMenu:'M5 12l4 4L19 6',indent:'M10 5h11M10 12h11M10 19h11M3 8l4 4-4 4',unindent:'M10 5h11M10 12h11M10 19h11M7 8l-4 4 4 4',smaller:'M3 19L8 5l5 14M5 14h6M16 12h6',larger:'M3 19L8 5l5 14M5 14h6M16 12h6M19 9v6',theme:'M12 3a9 9 0 100 18V3zM12 3a9 9 0 010 18',focus:'M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5',leaveFocus:'M3 8h5V3M21 8h-5V3M8 21v-5H3M16 21v-5h5'};
+ const paths={search:'M10 3a7 7 0 100 14 7 7 0 000-14M15 15l6 6',goToLine:'M3 6h18M3 12h18M3 18h18M7 3v18',selectAll:'M3 3h18v18H3zM7 7h10v10H7z',copy:'M8 8h13v13H8zM16 8V3H3v13h5',preview:'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 9a3 3 0 100 6 3 3 0 000-6',helpButton:'M9 8a3 3 0 116 0c0 2-3 2-3 5M12 17h.01M12 2a10 10 0 100 20 10 10 0 000-20',menuButton:'M4 6h16M4 12h16M4 18h16',exit:'M10 4H4v16h6M14 8l4 4-4 4M8 12h12',save:'M5 3h12l4 4v14H3V3h2M7 3v6h10V3M7 21v-8h10v8',new:'M6 3h8l4 4v14H6zM14 3v5h4M9 14h6M12 11v6',open:'M3 8V5h6l2 3h10v12H3z',closeMenu:'M5 12l4 4L19 6',indent:'M10 5h11M10 12h11M10 19h11M3 8l4 4-4 4',unindent:'M10 5h11M10 12h11M10 19h11M7 8l-4 4 4 4',smaller:'M3 19L8 5l5 14M5 14h6M16 12h6',larger:'M3 19L8 5l5 14M5 14h6M16 12h6M19 9v6',theme:'M12 3a9 9 0 100 18V3zM12 3a9 9 0 010 18',focus:'M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5',leaveFocus:'M3 8h5V3M21 8h-5V3M8 21v-5H3M16 21v-5h5'};
  for(const [id,path] of Object.entries(paths)){const b=$(id),label=b.textContent;b.classList.add('icon-button');b.setAttribute('aria-label',b.getAttribute('aria-label')||label);b.title=b.getAttribute('aria-label');b.innerHTML='<svg class="control-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="'+path+'"/></svg><span class="control-label"></span>';b.querySelector('.control-label').textContent=label}
 }
 
@@ -101,6 +102,7 @@ $('goToLine').onclick=()=>{$('menu').close();editor.goToLine()};
 $('selectAll').onclick=()=>{$('menu').close();editor.selectAll()};
 $('copy').onclick=async()=>{const text=editor.selectedText();if(!text){$('menu').close();notice('Select text first, or choose Select all.');return}try{await navigator.clipboard.writeText(text);$('menu').close();notice('Copied selection to clipboard.')}catch(e){$('menu').close();$('copyText').value=text;$('copyDialog').showModal();$('copyText').select()}};
 $('closeCopy').onclick=()=>{$('copyDialog').close();editor.focus()};
+const previewUi=setupPreview({document,$,editor,getLanguage:()=>$('language').value,getName:()=>$('name').value||'Untitled'});
 $('helpButton').onclick=()=>{$('menu').close();$('help').showModal();$('help').scrollTop=0};
 $('closeHelp').onclick=()=>{$('help').close();editor.focus()};
 editor.commands(save,()=>{$('exit').click()},async()=>{if(ios){closingTabId=workspace.current.id;if(await save()&&!workspace.current.dirty)await closeEditor(true)}else{requestExit();await $('saveExit').onclick()}});

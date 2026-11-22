@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.8 (29) — Preview, Java checking and 14 more languages
+- Preview (Menu, shown for HTML and Markdown files): a full-screen, read-only view of the current text with Back to editor. Runs no scripts, forms or pop-ups and loads nothing from the internet; Markdown raw HTML is shown as text. The rendered copy is removed when Preview closes.
+- Syntax colours for Java, C++, C#, Go, Rust, PHP, Ruby, Swift, Kotlin, XML, TOML, INI, PowerShell and Lua, chosen by file extension or in Menu → Language. XML declarations and Java package files are also recognised by content.
+- New offline checks: Java 21 (syntax only, first error), XML well-formedness (no schema), TOML 1.0 and INI structure with duplicate keys. The other ten new languages are colour-only and Check syntax says so.
+- Desktop (Mac/Windows): style-src is excluded from Tauri's automatic nonce so HTML Preview keeps the page's own styles; scripts stay hash-locked and every other directive is unchanged.
+- Added bundled components: java-parser and chevrotain (Apache-2.0), marked, @xmldom/xmldom, @codemirror/lang-php (MIT), smol-toml (BSD-3-Clause). About 0.5 MB larger.
+
 ## 0.8.6 (27) — Vim mode in the bottom line
 - With Vim editing on, the mode (NORMAL, INSERT…) shows in the slim bottom line instead of its own strip; on touch devices with the keyboard up it shows as a small tag in the top row. The Vim strip appears only for a command (:w, /search) or a Vim message.
 - Menu heading stays "Editor menu" (VoiceOver and native tests) with the version shown beside it — already in iPhone/iPad 0.8.5, now on every platform.
