@@ -323,13 +323,26 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
+      # Cache Gradle dependencies between runs so Maven Central rate limits (HTTP 429) cannot stop a release.
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: false
       - run: sudo apt-get update -qq && sudo apt-get install -y -qq imagemagick > /dev/null
       - run: npm ci
       - name: Build native Android verification app
+        shell: bash
         run: |-
+          set -euo pipefail
           ATE_ANDROID_VERIFICATION=1 npm run build
           ATE_ANDROID_VERIFICATION=1 node build/prepare-android.mjs
-          cd android && chmod +x gradlew && ./gradlew --no-daemon --console=plain :app:assembleDebug :app:assembleDebugAndroidTest
+          cd android && chmod +x gradlew
+          # Retry only dependency download failures (e.g. 429 Too Many Requests); compile errors fail at once.
+          for attempt in 1 2 3; do
+            if ./gradlew --no-daemon --console=plain :app:assembleDebug :app:assembleDebugAndroidTest 2>&1 | tee "$RUNNER_TEMP/gradle-$attempt.log"; then exit 0; fi
+            grep -qE 'Could not (resolve|GET|download)|status code (429|5[0-9][0-9])' "$RUNNER_TEMP/gradle-$attempt.log" || exit 1
+            echo "Dependency download failed (attempt $attempt); waiting before retry"; sleep $((attempt*60))
+          done
+          exit 1
       - name: Enable KVM
         run: |-
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules

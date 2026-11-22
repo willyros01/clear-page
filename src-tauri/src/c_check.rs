@@ -68,6 +68,12 @@ pub fn check(tools: &CTools, text: String, standard: String, includes: Vec<Strin
 #[cfg(test)]
 mod tests {
     use super::*;
+    // A cold CI runner (first Clang start, antivirus scan) can exceed the 10-second product limit once.
+    // Warm Clang before the timed real-Clang checks; the limit itself is unchanged.
+    fn warm_clang(){
+        static WARM:std::sync::Once=std::sync::Once::new();
+        WARM.call_once(||{for _ in 0..3{if check(&CTools::default(),"int x;".into(),"c17".into(),vec![],vec![]).status=="checked"{break}}});
+    }
     #[test] fn rejects_compiler_options_in_macro_names(){let r=check(&CTools::default(),"".into(),"c17".into(),vec![],vec!["-include=bad".into()]);assert_eq!(r.status,"unavailable");assert!(r.message.contains("Macros"));}
     #[test] fn requires_project_for_relative_headers(){let r=check(&CTools::default(),"".into(),"c17".into(),vec!["include".into()],vec![]);assert!(r.message.contains("project folder"));}
     #[test] fn missing_compiler_is_setup_failure(){
@@ -75,6 +81,7 @@ mod tests {
         let r=check(&tools,"int x;".into(),"c17".into(),vec![],vec![]);assert_eq!(r.status,"unavailable");assert!(r.message.contains("could not start"));
     }
     #[test] fn real_clang_resolves_project_and_additional_headers(){
+        warm_clang();
         let root=std::env::temp_dir().join(format!("ate-c-test-{}-{}",std::process::id(),std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
         std::fs::create_dir_all(root.join("include")).unwrap();
         std::fs::write(root.join("local.h"),"#define LOCAL_VALUE 1\n").unwrap();
@@ -85,6 +92,7 @@ mod tests {
         assert_eq!(result.status,"checked","{result:?}");assert!(!result.output.contains("error:"),"{result:?}");
     }
     #[test] fn real_clang_checks_headers_macros_and_unsaved_errors(){
+        warm_clang();
         let tools=CTools::default();
         let r=check(&tools,"#include <stdio.h>\n#ifndef ATE_TEST\n#error Missing macro\n#endif\nint main(void) { puts(\"hello\"); return ATE_TEST; }".into(),"c17".into(),vec![],vec!["ATE_TEST=0".into()]);
         assert_eq!(r.status,"checked","{r:?}");assert!(!r.output.contains("error:"),"{r:?}");
