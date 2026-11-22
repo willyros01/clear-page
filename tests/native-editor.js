@@ -178,7 +178,7 @@
    $('preview').click();assert($('previewDialog').open,'Preview opens full screen');
    assert($('previewFrame').getAttribute('sandbox')==='','Preview frame is fully sandboxed');
    await wait(500);assert(document.title!=='SCRIPT RAN','Preview never runs page scripts');
-   const r=$('previewFrame').getBoundingClientRect();assert(r.height>innerHeight*0.6&&r.width>=innerWidth-2,'Preview fills the window');
+   const r=$('previewFrame').getBoundingClientRect(),vw=document.documentElement.clientWidth,vh=document.documentElement.clientHeight;assert(r.height>vh*0.6&&r.width>=vw-2,'Preview fills the window '+JSON.stringify([r.width,r.height,vw,vh]));
    $('closePreview').click();await wait(200);assert(!$('previewDialog').open&&!$('previewFrame'),'Back to editor closes Preview and removes its copy');
    for(const [name,lang,text,expect] of [['Bad.java','java','class A {\n  void f() {\n    int x = 1\n  }\n}\n',/Line 3, column 14/],['bad.xml','xml','<a>\n<b></c>\n</a>\n',/Line 2/],['bad.toml','toml','[a]\nx = 1\n[a]\n',/Line 3/],['bad.ini','ini','[s]\n[broken\n',/Line 2/]]){
     await open(text,name);await until(()=>$('language').value===lang);

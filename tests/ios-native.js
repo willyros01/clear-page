@@ -186,7 +186,7 @@ import {Filesystem,Directory,Encoding} from '@capacitor/filesystem';
   $('menuButton').click();assert(!$('preview').hidden,'Preview offered for Markdown');$('preview').click();
   assert($('previewDialog').open&&$('previewFrame')?.getAttribute('sandbox')==='','Preview opens in a fully sandboxed frame');
   await wait(600);assert(document.title!=='SCRIPT RAN','Preview never runs scripts');
-  const pr=$('previewFrame').getBoundingClientRect();assert(pr.height>innerHeight*0.5&&pr.width>=innerWidth-2,'Preview fills the screen');
+  const pr=$('previewFrame').getBoundingClientRect(),dr=$('previewDialog').getBoundingClientRect(),vw=document.documentElement.clientWidth,vh=document.documentElement.clientHeight;const cs=getComputedStyle($('previewDialog')),inner=dr.width-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight);assert(dr.width>=vw-2&&dr.height>=vh-2&&pr.width>=inner-2&&pr.height>vh*0.5,'Preview fills the screen '+JSON.stringify({frame:[pr.width,pr.height],dialog:[dr.left,dr.top,dr.width,dr.height],view:[vw,vh,innerWidth,innerHeight]}));
   $('closePreview').click();await wait(200);assert(!$('previewDialog').open&&!$('previewFrame'),'Back to editor closes Preview');
   {const probe=document.createElement('iframe');probe.setAttribute('sandbox','allow-same-origin');probe.srcdoc='<style>h1{color:rgb(138, 59, 18)}</style><h1>x</h1><p style="background:rgb(1, 2, 3)">y</p>';document.body.append(probe);
    await until(()=>!!probe.contentDocument?.querySelector('p'),'Preview probe loaded');await wait(200);
