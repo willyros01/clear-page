@@ -1,19 +1,14 @@
 // Offline syntax checks added in 0.8.8: Java (syntax only), XML, TOML, INI. Nothing is executed.
-import {parse as parseJava} from 'java-parser';
 import {parse as parseToml} from 'smol-toml';
 import {DOMParser} from '@xmldom/xmldom';
 import {diagnostic} from './syntax-common.js';
 function offset(text,line,column){const lines=text.split('\n');let n=0;for(let i=0;i<Math.min(line-1,lines.length-1);i++)n+=lines[i].length+1;return n+Math.max(0,column-1);}
+// The Java grammar is large, so it is loaded only when a Java file is first checked.
 export function javaDiagnostics(text){
- try{parseJava(text);return [];}catch(e){
-  const m=String(e.message).match(/line: (\d+), column: (\d+)[\s\S]*?Expecting[\s\S]*?--> (.*?) <-- but found --> (.*?) <--/);
-  if(!m){const p=String(e.message).match(/line: (\d+), column: (\d+)/);return [diagnostic(text,p?offset(text,+p[1],+p[2]):0,undefined,'Java syntax error')];}
-  const found=(m[4]==="''"||m[4]===''?'end of file':m[4]).replace(/^'|'$/g,''),want=m[3].replace(/^'|'$/g,'');
-  let at=offset(text,+m[1],+m[2]);
-  // A missing ; or ) belongs at the end of the previous code, not on the next line's first token.
-  if([';',')',']'].includes(want)){let i=at-1;while(i>0&&/\s/.test(text[i]))i--;return [diagnostic(text,i+1,i+2,`Missing ${want} here (found ${found} next)`)];}
-  return [diagnostic(text,at,undefined,`Expected ${want} but found ${found}`)];
- }
+ let check=globalThis.ateJavaDiagnostics;
+ if(!check&&typeof importScripts==='function'){importScripts('java-check.js');check=globalThis.ateJavaDiagnostics;}
+ if(typeof check!=='function')throw Error('Java checker unavailable');
+ return check(text);
 }
 export function xmlDiagnostics(text){
  // Well-formedness only; schemas (XSD/DTD) are not validated. Nothing is fetched.

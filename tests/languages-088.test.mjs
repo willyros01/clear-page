@@ -4,6 +4,7 @@ import {checkSyntax} from '../src/syntax.js';
 import {languageForName,languageForDocument,languageLabels} from '../src/languages.js';
 import {languages} from '../src/editor.js';
 import {previewDocument} from '../src/preview.js';
+import '../src/java-check.js';
 
 const lines=r=>r.diagnostics.map(d=>[d.line,d.column,d.severity]);
 

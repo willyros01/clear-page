@@ -202,6 +202,12 @@ try{
     await page.waitForFunction(()=>document.getElementById('language').value==='java');
     await menu();assert.equal(await page.locator('#preview').isVisible(),false,'Preview hidden for non-HTML/Markdown');
     await page.locator('#closeMenu').click();
+    // The Java checker is a separate file the worker loads on first use; it must load under the desktop policy.
+    await menu();await page.locator('#checkSyntax').click();
+    await page.waitForFunction(()=>{const t=document.getElementById('syntaxSummary').textContent;return t&&!/Checking|not checked/.test(t)});
+    assert.doesNotMatch(await page.locator('#syntaxSummary').textContent(),/unavailable/i,'Java checker loads on demand');
+    assert.match(await page.locator('#syntaxDetails').textContent(),/Java 21/);
+    await page.locator('#closeSyntax').click();
     assert.deepEqual(violations.filter(v=>/^(frame-src|style-src)/.test(v)),[],'No frame or style policy violations');
    }
    assert.deepEqual(errors,[]);

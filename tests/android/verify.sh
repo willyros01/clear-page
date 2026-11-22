@@ -12,6 +12,7 @@ capture_failure(){
   grep -oE '(package|text|content-desc)="[^"]+"' "$f" | sort -u | head -80 || true
  done
  [ -f android-logcat.txt ] && { echo '=== App log at failure ==='; grep -E 'Capacitor|DocumentFiles|AndroidRuntime|ActivityTaskManager' android-logcat.txt | tail -60 || true; }
+ [ -f android-logcat.txt ] && { echo '=== Crash and memory events ==='; grep -iE 'lowmemorykiller|lmkd|low on memory|fatal signal|FATAL EXCEPTION|renderer process|render process gone|cr_|ZygoteInit|Killing [0-9]+:io.github|system_server' android-logcat.txt | head -40 || true; }
 }
 trap 'status=$?; if [ "$status" -ne 0 ]; then capture_failure; fi' EXIT
 # The previous emulator's evidence is already uploaded separately.

@@ -44,7 +44,8 @@ export function checkSyntax({text,language,name=''}) {
  } else if(language==='markdown') {
   diagnostics=markdownDiagnostics(text);message='Markdown lint: duplicate headings, unclosed fenced code blocks and trailing whitespace. Markdown permits flexible syntax; these are warnings, not compiler errors.';
  } else if(language==='java') {
-  diagnostics=javaDiagnostics(text);message='Java 21 syntax only. Imports, types and compilation are not checked. Nothing is run.';
+  try{diagnostics=javaDiagnostics(text)}catch(e){return {status:'unavailable',diagnostics:[],message:'The Java checker could not be loaded. Editing and saving still work.'}}
+  message='Java 21 syntax only. Imports, types and compilation are not checked. Nothing is run.';
  } else if(language==='xml') {
   diagnostics=xmlDiagnostics(text);message='XML well-formedness only. Schemas (XSD/DTD) are not validated.';
  } else if(language==='toml') {
