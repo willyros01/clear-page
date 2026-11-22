@@ -189,7 +189,8 @@ try{
     const box=await page.locator('#previewFrame').boundingBox();assert.ok(box.height>400,'Preview fills the screen: '+box.height);
     await page.screenshot({path:`editor-evidence/${name}-preview-html.png`});
     await page.keyboard.press('Escape');await page.locator('#previewDialog').waitFor({state:'hidden'});
-    assert.equal(await page.locator('#previewFrame').count(),0,'Rendered copy removed after leaving Preview');
+    // The dialog's close event is delivered as a separate task; wait for it rather than racing it.
+    await page.locator('#previewFrame').waitFor({state:'detached',timeout:5000});
     await fileInput.setInputFiles({name:'preview-check.md',mimeType:'text/markdown',buffer:Buffer.from('# Read me\n\n| a | b |\n|---|---|\n| 1 | 2 |\n\n<script>parent.document.title="SCRIPT RAN"</script>\n')});
     await page.waitForFunction(()=>document.getElementById('language').value==='markdown');
     await menu();await page.locator('#preview').click();await page.locator('#previewDialog[open]').waitFor();

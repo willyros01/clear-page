@@ -24,7 +24,7 @@ export function setupPreview({document,$,editor,getLanguage,getName}){
   $('previewFrame')?.remove();$('previewDialog').append(frame);
   $('previewDialog').showModal();
  };
- $('closePreview').onclick=()=>{$('previewDialog').close();editor.focus();};
+ $('closePreview').onclick=()=>{$('previewDialog').close();$('previewFrame')?.remove();editor.focus();};
  // Escape also closes the dialog.
  $('previewDialog').addEventListener('close',()=>$('previewFrame')?.remove());
  return {update};
