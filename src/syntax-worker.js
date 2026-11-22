@@ -1,6 +1,8 @@
 // Older Android/Fire WebViews need these worker-local standard APIs.
 import 'core-js/actual/object/has-own.js';
 import 'core-js/actual/string/replace-all.js';
+import 'core-js/actual/array/at.js';
+import 'core-js/actual/string/at.js';
 import {shellDialect} from './languages.js';
 import {checkSyntax} from './syntax.js';
 import {createPythonChecker} from './python-syntax.js';

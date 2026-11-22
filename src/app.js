@@ -1,6 +1,8 @@
 // Match the worker compatibility layer for Android 11 / older Fire WebViews.
 import 'core-js/actual/object/has-own.js';
 import 'core-js/actual/string/replace-all.js';
+import 'core-js/actual/array/at.js';
+import 'core-js/actual/string/at.js';
 import {setupLegal} from './legal.js';
 import {setupPreview} from './preview.js';
 import {setupIOSViewport} from './ios-viewport.js';
