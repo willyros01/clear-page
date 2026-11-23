@@ -1,0 +1,89 @@
+name: Update ATE App Store drafts to a tested build
+# Run only on the owner's instruction, after the TestFlight builds have been tested.
+# Updates the existing iOS and Mac drafts (version, text, review notes) and attaches the
+# exact processed builds. It never submits for review and never releases an app.
+on:
+  workflow_dispatch:
+    inputs:
+      ios_run:
+        description: Successful "ATE iOS Tabs" run that uploaded the iPhone/iPad build
+        required: true
+      mac_run:
+        description: Successful "ATE Mac TestFlight" run, or the "Apple processing" run that finished it
+        required: true
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: ate-store-text-preparation
+  cancel-in-progress: false
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+      IOS_RUN: ${{ inputs.ios_run }}
+      MAC_RUN: ${{ inputs.mac_run }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Require the tested uploads named by the owner
+        run: |
+          node --input-type=module <<'JS'
+          import fs from 'node:fs';
+          const L=JSON.parse(fs.readFileSync('store/listing.json','utf8'));
+          const base='https://api.github.com/repos/willyros01/clear-page/actions/runs/',headers={Authorization:'Bearer '+process.env.GH_TOKEN,Accept:'application/vnd.github+json'};
+          const get=async p=>{const r=await fetch(base+p,{headers});if(!r.ok)throw Error('Lookup failed '+p);return r.json()};
+          const ios=await get(process.env.IOS_RUN),mac=await get(process.env.MAC_RUN);
+          if(ios.path!=='.github/workflows/ios-tabs.yml'||ios.conclusion!=='success')throw Error('iOS run is not a successful ATE iOS Tabs run');
+          if(!['.github/workflows/mac-testflight.yml','.github/workflows/apple-processing.yml'].includes(mac.path)||mac.conclusion!=='success')throw Error('Mac run is not a successful Mac TestFlight upload or Apple processing run');
+          for(const run of [ios,mac]){const s=await (await fetch('https://api.github.com/repos/willyros01/clear-page/contents/release.json?ref='+run.head_sha,{headers})).json();const r=JSON.parse(Buffer.from(s.content,'base64').toString());
+           if(r.version!==L.versionString||String(r.build)!==L.buildNumber)throw Error('Run '+run.id+' built '+r.version+' ('+r.build+'), listing expects '+L.versionString+' ('+L.buildNumber+')');}
+          const jobs=(await get(process.env.IOS_RUN+'/jobs?per_page=100')).jobs;
+          for(const name of ['regression','simulator (iPhone)','simulator (iPad)','testflight'])if(!jobs.some(j=>j.name===name&&j.conclusion==='success'))throw Error('iOS gate '+name+' did not pass');
+          console.log('PASS: iPhone/iPad simulator gates and both TestFlight uploads are '+L.versionString+' ('+L.buildNumber+').');
+          JS
+      - name: Update draft version, description, keywords and review notes
+        env:
+          ATE_DRAFT_STAGE: copy
+          ATE_ONLY: copy
+        run: node store/apply-draft.mjs
+      - name: Update App Review notes only (contact details are kept as they are)
+        run: |
+          node --input-type=module <<'JS'
+          import fs from 'node:fs';import crypto from 'node:crypto';
+          const L=JSON.parse(fs.readFileSync('store/listing.json','utf8')),appId='6833284199';
+          const enc=x=>Buffer.from(JSON.stringify(x)).toString('base64url');
+          const jwt=()=>{const n=Math.floor(Date.now()/1000),s=enc({alg:'ES256',kid:process.env.ASC_KEY_ID.trim(),typ:'JWT'})+'.'+enc({iss:process.env.ASC_ISSUER_ID.trim(),iat:n,exp:n+600,aud:'appstoreconnect-v1'});return s+'.'+crypto.sign('sha256',Buffer.from(s),{key:process.env.ASC_KEY_P8.trim(),dsaEncoding:'ieee-p1363'}).toString('base64url')};
+          const api=async(path,method='GET',body)=>{const r=await fetch('https://api.appstoreconnect.apple.com/v1/'+path,{method,headers:{Authorization:'Bearer '+jwt(),'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});const j=r.status===204?{}:await r.json();if(!r.ok)throw Error(method+' '+path.split('?')[0]+' HTTP '+r.status+' '+JSON.stringify(j.errors||[]));return j};
+          for(const platform of ['IOS','MAC_OS']){
+           const versions=await api('apps/'+appId+'/appStoreVersions?filter[platform]='+platform+'&include=appStoreReviewDetail&limit=200');
+           const v=versions.data.find(x=>x.attributes.appStoreState==='PREPARE_FOR_SUBMISSION'&&x.attributes.versionString===L.versionString);if(!v)throw Error(platform+' draft '+L.versionString+' missing');
+           const id=v.relationships?.appStoreReviewDetail?.data?.id;if(!id)throw Error(platform+' review details missing');
+           await api('appStoreReviewDetails/'+id,'PATCH',{data:{type:'appStoreReviewDetails',id,attributes:{notes:L.review.notes}}});console.log('PASS '+platform+' review notes updated');
+          }
+          JS
+      - name: Attach the exact processed builds (no screenshots changed, no submission)
+        env:
+          ATE_ONLY: builds
+        run: |
+          # The existing screenshots stay; no new screenshot set is uploaded by this step.
+          echo '[]' > store/prepared-assets.json
+          node store/apply-draft.mjs
+      - name: Read back both drafts
+        if: always()
+        run: node store/finalize.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ate-store-update-result
+          path: |
+            store/draft-evidence/result.json
+            store/final-evidence/readiness.json
+          if-no-files-found: warn

@@ -29,7 +29,7 @@ jobs:
           node --input-type=module <<'JS'
           import fs from 'node:fs';const l=JSON.parse(fs.readFileSync('store/listing.json'));
           for(const [key,max] of [['name',30],['subtitle',30],['keywords',100],['promotionalText',170],['description',4000]])if(!l[key]||l[key].length>max)throw Error('Invalid listing field '+key);
-          if(l.versionString!=='0.8.7'||l.buildNumber!=='28'||l.locale!=='en-CA')throw Error('Unexpected special build');
+          if(l.versionString!=='0.8.8'||l.buildNumber!=='29'||l.locale!=='en-CA')throw Error('Unexpected special build');
           console.log('PASS: field lengths, English-Canada and special-build identity.');
           JS
       - name: Prepare existing ATE drafts without attaching or submitting builds
