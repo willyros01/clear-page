@@ -15,8 +15,21 @@ jobs:
   linux:
     if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[linux]') }}
     # Built on the oldest supported Ubuntu so the packages also run on newer Linux versions.
-    runs-on: ubuntu-22.04
-    timeout-minutes: 75
+    # Linux has no universal binary: Intel/AMD (amd64) and ARM (arm64) are built separately.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            platform: linux-x64
+            runner: ubuntu-22.04
+            bundles: deb,appimage
+          - arch: arm64
+            platform: linux-arm64
+            runner: ubuntu-22.04-arm
+            bundles: deb
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -57,13 +70,13 @@ jobs:
           grep -q 'Native worker checks Bad.java' "$ATE_VERIFICATION_REPORT"
           if grep -q 'FAIL' "$ATE_VERIFICATION_REPORT"; then exit 1; fi
       - name: Build the Linux packages without verification controls
-        run: npm run tauri -- build --bundles deb,appimage
+        run: npm run tauri -- build --bundles ${{ matrix.bundles }}
       - name: Install the .deb and launch the installed app; run the AppImage
         shell: bash
         run: |
           set -euo pipefail
           DEB=$(ls src-tauri/target/release/bundle/deb/*.deb); test "$(echo "$DEB" | wc -l)" = 1
-          IMG=$(ls src-tauri/target/release/bundle/appimage/*.AppImage); test "$(echo "$IMG" | wc -l)" = 1
+          test "$(dpkg-deb -f "$DEB" Architecture)" = "${{ matrix.arch }}"
           dpkg-deb --info "$DEB"
           sudo apt-get install -y "./$DEB"
           BIN=$(dpkg -L "$(dpkg-deb -f "$DEB" Package)" | grep -E '^/usr/bin/' | head -1); test -x "$BIN"
@@ -79,13 +92,20 @@ jobs:
           }
           launch "$BIN"
           echo "PASS: .deb installed (menu entry, icon) and the installed app opened its window"
-          chmod +x "$IMG"
-          launch "$IMG" --appimage-extract-and-run
-          echo "PASS: AppImage opened its window"
+          if [ "${{ matrix.arch }}" = amd64 ]; then
+            IMG=$(ls src-tauri/target/release/bundle/appimage/*.AppImage); test "$(echo "$IMG" | wc -l)" = 1
+            chmod +x "$IMG"
+            launch "$IMG" --appimage-extract-and-run
+            echo "PASS: AppImage opened its window"
+          fi
           sudo apt-get remove -y "$(dpkg-deb -f "$DEB" Package)" > /dev/null
           echo "PASS: .deb removed cleanly"
       - name: Stage verified packages and checksum manifest
         shell: bash
+        env:
+          ARCH: ${{ matrix.arch }}
+          PLATFORM: ${{ matrix.platform }}
+          RUNNER_LABEL: ${{ matrix.runner }}
         run: |
           set -euo pipefail
           node --input-type=module <<'JS'
@@ -94,23 +114,62 @@ jobs:
           const version=JSON.parse(readFileSync('package.json','utf8')).version,build=JSON.parse(readFileSync('release.json','utf8')).build;
           mkdirSync('linux-artifacts',{recursive:true});
           const files=[];
-          for(const [dir,ext,name,kind] of [['deb','.deb','ATE-'+version+'-linux-amd64.deb','deb'],['appimage','.AppImage','ATE-'+version+'-linux-x86_64.AppImage','appimage']]){
+          const arch=process.env.ARCH,list=[['deb','.deb','ATE-'+version+'-linux-'+arch+'.deb','deb']];
+          if(arch==='amd64')list.push(['appimage','.AppImage','ATE-'+version+'-linux-x86_64.AppImage','appimage']);
+          for(const [dir,ext,name,kind] of list){
            const found=readdirSync('src-tauri/target/release/bundle/'+dir).filter(x=>x.endsWith(ext));if(found.length!==1)throw Error('Expected one '+ext);
            copyFileSync('src-tauri/target/release/bundle/'+dir+'/'+found[0],'linux-artifacts/'+name);
            const bytes=readFileSync('linux-artifacts/'+name);
            files.push({kind,file:name,sha256:createHash('sha256').update(bytes).digest('hex'),bytes:bytes.length});
           }
-          writeFileSync('linux-artifacts/manifest.json',JSON.stringify({app:'ATE',platform:'linux-x64',version,build,run_id:Number(process.env.GITHUB_RUN_ID),source_sha:process.env.GITHUB_SHA,files,signature:'unsigned',verification:'ci-native-verified-installed-and-launched',built_on:'ubuntu-22.04'},null,2)+'\n');
+          writeFileSync('linux-artifacts/manifest.json',JSON.stringify({app:'ATE',platform:process.env.PLATFORM,arch,version,build,run_id:Number(process.env.GITHUB_RUN_ID),source_sha:process.env.GITHUB_SHA,files,signature:'unsigned',verification:'ci-native-verified-installed-and-launched',built_on:process.env.RUNNER_LABEL},null,2)+'\n');
           console.log(readFileSync('linux-artifacts/manifest.json','utf8'));
           JS
       - uses: actions/upload-artifact@v4
         with:
-          name: ate-linux-x64
+          name: ate-${{ matrix.platform }}
           path: linux-artifacts/*
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: ate-linux-evidence
+          name: ate-${{ matrix.platform }}-evidence
           path: ${{ runner.temp }}/linux-native.txt
           if-no-files-found: ignore
+  appcenter:
+    # Install each package on a clean Ubuntu 26.04 the way App Center does (PackageKit),
+    # on the matching processor, before anything can be published.
+    needs: linux
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux-x64
+            runner: ubuntu-latest
+          - platform: linux-arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    container: ubuntu:26.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: ate-${{ matrix.platform }}
+          path: /tmp/art
+      - name: Install through PackageKit on Ubuntu 26.04 and check the result
+        shell: bash
+        run: |
+          set -euo pipefail
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update -qq
+          apt-get install -y -qq packagekit gir1.2-packagekitglib-1.0 python3-gi dbus coreutils > /dev/null
+          DEB=$(ls /tmp/art/*.deb); test "$(echo "$DEB" | wc -l)" = 1
+          test "$(dpkg-deb -f "$DEB" Architecture)" = "$(dpkg --print-architecture)"
+          mkdir -p /run/dbus; dbus-daemon --system --fork
+          (/usr/libexec/packagekitd > /tmp/pk.log 2>&1 &)
+          sleep 3
+          timeout 900 python3 build/packagekit-install.py "$DEB"
+          dpkg -s ate | grep -E '^(Status|Version|Architecture)'
+          test -x /usr/bin/ate-desktop
+          echo "PASS: ${{ matrix.platform }} package installed on Ubuntu 26.04 through PackageKit (App Center's installer)"
