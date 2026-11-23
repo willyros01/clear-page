@@ -4,7 +4,18 @@ Last updated: 12 November 2026 (UTC).
 
 Feature backlog: [ATE features to-do list](FEATURES-TODO.md), recorded 15 November 2026, with six planned features in the agreed priority order.
 
-## Coordinated 0.6.0 (19) update — released; physical acceptance pending
+## 0.8.8 (29) — Preview, Java checking, 14 more languages — released to all channels (22 November 2026)
+
+| Channel | Result |
+| --- | --- |
+| Cuberoot web, Mac universal, Windows, Android APK | Desktop run 45085562313 passed all gates (browser, native Mac/Windows, Android 11 emulator); published. |
+| Mac App Store TestFlight | Run 45087301350 uploaded the exact verified universal app; run 45089369282 confirmed VALID and internal testers. |
+| iPhone/iPad TestFlight | Run 45096357411: iPhone and iPad simulator suites passed (incl. Preview and Java UI test); uploaded, VALID, internal testers. |
+| App Store Connect drafts | Prepared on branch store-088 (text, review notes, build 29). Not applied: waits for owner device testing and go-ahead. |
+
+Owner physical-device acceptance is pending. Known, pre-existing: plain .txt files with "Word: text" lines are coloured as YAML.
+
+ — released; physical acceptance pending
 
 Owner authorized the combined update after being unable to reproduce the unsaved .txt report. No cause for that report is claimed. All distributions will use release.json: version 0.6.0, build 19.
 
