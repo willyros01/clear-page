@@ -162,13 +162,19 @@ final class ATEFunctionalTests: XCTestCase {
         if choose.waitForExistence(timeout: 5) { choose.tap() }
         let cancel = app.buttons["Cancel"].firstMatch
         let popup = app.otherElements["PopoverDismissRegion"].firstMatch
-        if cancel.waitForExistence(timeout: 5) {
+        // A cold simulator can take well over 5 seconds to present the system picker.
+        // Wait for whichever form of the picker appears instead of giving up early.
+        let deadline = Date().addingTimeInterval(30)
+        while Date() < deadline && !cancel.exists && !popup.exists {
+            RunLoop.current.run(until: Date().addingTimeInterval(0.25))
+        }
+        if cancel.exists {
             cancel.tap()
             XCTAssertTrue(waitForGone(cancel, timeout: 10), app.debugDescription)
         } else {
             // iPadOS 26's 13-inch multi-file browser has an X and supports
             // outside dismissal; its remote controls are absent from app AX.
-            XCTAssertTrue(min(app.frame.width, app.frame.height) > 600 && popup.waitForExistence(timeout: 10), app.debugDescription)
+            XCTAssertTrue(min(app.frame.width, app.frame.height) > 600 && popup.exists, app.debugDescription)
             app.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.1)).tap()
             XCTAssertTrue(waitForGone(popup, timeout: 10), app.debugDescription)
         }
