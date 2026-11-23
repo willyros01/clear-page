@@ -1,0 +1,67 @@
+name: ATE Linux App Center install check
+# Installs an ATE .deb on a clean Ubuntu 26.04 the way App Center does (PackageKit
+# "install local file"), not with apt in Terminal. Used to diagnose and to guard releases.
+on:
+  workflow_dispatch:
+    inputs:
+      deb_url:
+        description: URL of the .deb to test
+        required: true
+        default: https://www.cuberoot-systems.com/downloads/ate-linux.deb
+  workflow_call:
+    inputs:
+      artifact:
+        type: string
+        required: true
+permissions:
+  contents: read
+jobs:
+  appcenter:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container: ubuntu:26.04
+    steps:
+      - name: Prepare a clean Ubuntu 26.04 with PackageKit (App Center's installer service)
+        run: |
+          set -eux
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update -qq
+          apt-get install -y -qq packagekit packagekit-tools dbus curl ca-certificates > /dev/null
+          grep -E '^(NAME|VERSION)=' /etc/os-release
+      - name: Fetch the package (from the given address)
+        if: ${{ inputs.deb_url != '' }}
+        run: curl -fsSL "${{ inputs.deb_url }}" -o /tmp/ate.deb
+      - uses: actions/download-artifact@v4
+        if: ${{ inputs.artifact != '' }}
+        with:
+          name: ${{ inputs.artifact }}
+          path: /tmp/art
+      - name: Use the release artifact
+        if: ${{ inputs.artifact != '' }}
+        run: cp /tmp/art/*-linux-amd64.deb /tmp/ate.deb
+      - name: What the package asks for, and how Ubuntu 26.04 answers
+        run: |
+          set -x
+          dpkg-deb -f /tmp/ate.deb Package Version Depends
+          for p in $(dpkg-deb -f /tmp/ate.deb Depends | tr ',' '\n' | sed 's/(.*)//;s/|.*//' | xargs); do
+            echo "== $p"; apt-cache policy "$p" | head -4; apt-cache showpkg "$p" | sed -n '/Reverse Provides/,$p' | head -5
+          done
+          apt-get install -s /tmp/ate.deb | tail -5 || true
+      - name: Install exactly as App Center does (PackageKit, local file)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /run/dbus
+          dbus-daemon --system --fork
+          (/usr/libexec/packagekitd --verbose > /tmp/pk.log 2>&1 &)
+          sleep 3
+          set +e
+          timeout 600 pkcon --noninteractive --plain install-local /tmp/ate.deb
+          code=$?
+          set -e
+          echo "pkcon exit code: $code"
+          tail -40 /tmp/pk.log || true
+          dpkg -s ate | grep -E '^(Status|Version)'
+          test -x /usr/bin/ate-desktop
+          ls /usr/share/applications/ | grep -i ate
+          echo "PASS: ATE installed on Ubuntu 26.04 through PackageKit, the App Center installer path"
