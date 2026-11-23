@@ -26,7 +26,9 @@ jobs:
           set -eux
           export DEBIAN_FRONTEND=noninteractive
           apt-get update -qq
-          apt-get install -y -qq packagekit packagekit-tools dbus curl ca-certificates > /dev/null
+          apt-get install -y -qq packagekit dbus curl ca-certificates > /dev/null
+          apt-get install -y -qq packagekit-tools > /dev/null 2>&1 || true
+          command -v pkcon || apt-cache search packagekit
           grep -E '^(NAME|VERSION)=' /etc/os-release
       - name: Fetch the package (from the given address)
         if: ${{ inputs.deb_url != '' }}
