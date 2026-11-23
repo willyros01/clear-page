@@ -11,7 +11,7 @@ Feature backlog: [ATE features to-do list](FEATURES-TODO.md), recorded 15 Novemb
 | Cuberoot web, Mac universal, Windows, Android APK | Desktop run 45085562313 passed all gates (browser, native Mac/Windows, Android 11 emulator); published. |
 | Mac App Store TestFlight | Run 45087301350 uploaded the exact verified universal app; run 45089369282 confirmed VALID and internal testers. |
 | iPhone/iPad TestFlight | Run 45096357411: iPhone and iPad simulator suites passed (incl. Preview and Java UI test); uploaded, VALID, internal testers. |
-| App Store Connect drafts | Prepared on branch store-088 (text, review notes, build 29). Not applied: waits for owner device testing and go-ahead. |
+| App Store Connect drafts | 22 Nov, owner go-ahead: iOS and Mac drafts updated to 0.8.8 (29) — description, keywords, review notes, builds attached; readback run passed. Not submitted for review. Screenshots unchanged (0.8.7 screens). |
 
 Owner physical-device acceptance is pending. Known, pre-existing: plain .txt files with "Word: text" lines are coloured as YAML.
 
