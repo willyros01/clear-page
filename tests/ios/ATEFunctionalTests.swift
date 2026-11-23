@@ -175,8 +175,15 @@ final class ATEFunctionalTests: XCTestCase {
             // iPadOS 26's 13-inch multi-file browser has an X and supports
             // outside dismissal; its remote controls are absent from app AX.
             XCTAssertTrue(min(app.frame.width, app.frame.height) > 600 && popup.exists, app.debugDescription)
-            app.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.1)).tap()
-            XCTAssertTrue(waitForGone(popup, timeout: 10), app.debugDescription)
+            // A tap outside is ignored while the popover is still animating in, so let it
+            // settle first and tap again if it is still showing.
+            RunLoop.current.run(until: Date().addingTimeInterval(2))
+            var dismissed = false
+            for _ in 0..<3 where !dismissed {
+                app.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.1)).tap()
+                dismissed = waitForGone(popup, timeout: 5)
+            }
+            XCTAssertTrue(dismissed, app.debugDescription)
         }
         if popup.exists { XCTAssertTrue(waitForGone(popup, timeout: 10), app.debugDescription) }
     }
