@@ -21,14 +21,13 @@ jobs:
     timeout-minutes: 30
     container: ubuntu:26.04
     steps:
+      - uses: actions/checkout@v4
       - name: Prepare a clean Ubuntu 26.04 with PackageKit (App Center's installer service)
         run: |
           set -eux
           export DEBIAN_FRONTEND=noninteractive
           apt-get update -qq
-          apt-get install -y -qq packagekit dbus curl ca-certificates > /dev/null
-          apt-get install -y -qq packagekit-tools > /dev/null 2>&1 || true
-          command -v pkcon || apt-cache search packagekit
+          apt-get install -y -qq packagekit gir1.2-packagekitglib-1.0 python3-gi dbus curl ca-certificates coreutils > /dev/null
           grep -E '^(NAME|VERSION)=' /etc/os-release
       - name: Fetch the package (from the given address)
         if: ${{ inputs.deb_url != '' }}
@@ -58,7 +57,7 @@ jobs:
           (/usr/libexec/packagekitd --verbose > /tmp/pk.log 2>&1 &)
           sleep 3
           set +e
-          timeout 600 pkcon --noninteractive --plain install-local /tmp/ate.deb
+          timeout 600 python3 build/packagekit-install.py /tmp/ate.deb
           code=$?
           set -e
           echo "pkcon exit code: $code"
