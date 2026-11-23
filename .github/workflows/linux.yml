@@ -1,0 +1,116 @@
+name: ATE Linux
+# Builds, natively verifies, installs and launches the Linux packages (.deb installer and
+# AppImage). Separate from the coordinated release for now: runs on desktop pushes marked
+# [linux], or on request. To be joined to the general release at the next version.
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [desktop]
+permissions:
+  contents: read
+concurrency:
+  group: ate-linux
+  cancel-in-progress: true
+jobs:
+  linux:
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[linux]') }}
+    # Built on the oldest supported Ubuntu so the packages also run on newer Linux versions.
+    runs-on: ubuntu-22.04
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+          cache-on-failure: true
+      - name: Install Linux build and test tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libssl-dev patchelf file \
+            xvfb xauth xdotool dbus-x11 clang desktop-file-utils > /dev/null
+      - run: npm ci
+      - run: npm test
+      - run: npm run desktop:icons
+      - run: npm run build
+      - name: Rust tests (project settings and real Clang checks)
+        run: cargo test --locked --manifest-path src-tauri/Cargo.toml -- --nocapture
+      - name: Build native Linux verification app
+        run: npm run tauri -- build --no-bundle --features editor-verification
+      - name: Verify native editing, syntax, Preview and projects in the Linux app
+        shell: bash
+        run: |
+          set -euo pipefail
+          export ATE_VERIFICATION_REPORT="$RUNNER_TEMP/linux-native.txt"
+          rm -rf "$HOME/.local/share/io.github.willyros01.clearpage"
+          set +e
+          timeout 300 xvfb-run -a -s '-screen 0 1440x900x24' dbus-run-session -- src-tauri/target/release/ate-desktop
+          code=$?
+          set -e
+          cat "$ATE_VERIFICATION_REPORT" || true
+          test "$code" = 0
+          grep -q 'Preview never runs page scripts' "$ATE_VERIFICATION_REPORT"
+          grep -q 'Native worker checks Bad.java' "$ATE_VERIFICATION_REPORT"
+          if grep -q 'FAIL' "$ATE_VERIFICATION_REPORT"; then exit 1; fi
+      - name: Build the Linux packages without verification controls
+        run: npm run tauri -- build --bundles deb,appimage
+      - name: Install the .deb and launch the installed app; run the AppImage
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEB=$(ls src-tauri/target/release/bundle/deb/*.deb); test "$(echo "$DEB" | wc -l)" = 1
+          IMG=$(ls src-tauri/target/release/bundle/appimage/*.AppImage); test "$(echo "$IMG" | wc -l)" = 1
+          dpkg-deb --info "$DEB"
+          sudo apt-get install -y "./$DEB"
+          BIN=$(dpkg -L "$(dpkg-deb -f "$DEB" Package)" | grep -E '^/usr/bin/' | head -1); test -x "$BIN"
+          DESKTOP=$(dpkg -L "$(dpkg-deb -f "$DEB" Package)" | grep -E '\.desktop$' | head -1); desktop-file-validate "$DESKTOP"
+          dpkg -L "$(dpkg-deb -f "$DEB" Package)" | grep -qE '/icons/hicolor/.*\.png$'
+          launch(){
+            xvfb-run -a -s '-screen 0 1280x800x24' dbus-run-session -- bash -c '
+              "$@" & pid=$!
+              for i in $(seq 1 30); do xdotool search --onlyvisible --name "Another Text Editor" >/dev/null 2>&1 && break; sleep 1; done
+              xdotool search --onlyvisible --name "Another Text Editor" >/dev/null 2>&1 || { echo "No ATE window appeared"; kill $pid; exit 1; }
+              sleep 3; kill -0 $pid || { echo "App exited unexpectedly"; exit 1; }
+              kill $pid' _ "$@"
+          }
+          launch "$BIN"
+          echo "PASS: .deb installed (menu entry, icon) and the installed app opened its window"
+          chmod +x "$IMG"
+          launch "$IMG" --appimage-extract-and-run
+          echo "PASS: AppImage opened its window"
+          sudo apt-get remove -y "$(dpkg-deb -f "$DEB" Package)" > /dev/null
+          echo "PASS: .deb removed cleanly"
+      - name: Stage verified packages and checksum manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'JS'
+          import {readFileSync,readdirSync,mkdirSync,copyFileSync,writeFileSync} from 'node:fs';
+          import {createHash} from 'node:crypto';
+          const version=JSON.parse(readFileSync('package.json','utf8')).version,build=JSON.parse(readFileSync('release.json','utf8')).build;
+          mkdirSync('linux-artifacts',{recursive:true});
+          const files=[];
+          for(const [dir,ext,name,kind] of [['deb','.deb','ATE-'+version+'-linux-amd64.deb','deb'],['appimage','.AppImage','ATE-'+version+'-linux-x86_64.AppImage','appimage']]){
+           const found=readdirSync('src-tauri/target/release/bundle/'+dir).filter(x=>x.endsWith(ext));if(found.length!==1)throw Error('Expected one '+ext);
+           copyFileSync('src-tauri/target/release/bundle/'+dir+'/'+found[0],'linux-artifacts/'+name);
+           const bytes=readFileSync('linux-artifacts/'+name);
+           files.push({kind,file:name,sha256:createHash('sha256').update(bytes).digest('hex'),bytes:bytes.length});
+          }
+          writeFileSync('linux-artifacts/manifest.json',JSON.stringify({app:'ATE',platform:'linux-x64',version,build,run_id:Number(process.env.GITHUB_RUN_ID),source_sha:process.env.GITHUB_SHA,files,signature:'unsigned',verification:'ci-native-verified-installed-and-launched',built_on:'ubuntu-22.04'},null,2)+'\n');
+          console.log(readFileSync('linux-artifacts/manifest.json','utf8'));
+          JS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ate-linux-x64
+          path: linux-artifacts/*
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ate-linux-evidence
+          path: ${{ runner.temp }}/linux-native.txt
+          if-no-files-found: ignore
