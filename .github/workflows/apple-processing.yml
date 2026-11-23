@@ -1,0 +1,34 @@
+name: ATE Apple processing and TestFlight testers
+# Finishes a TestFlight upload whose Apple processing outlasted the upload job:
+# waits for VALID, then assigns the existing internal tester group. Uploads nothing.
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: IOS or MAC_OS
+        required: true
+      build:
+        description: Build number, e.g. 29
+        required: true
+permissions:
+  contents: read
+jobs:
+  processing:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Wait for Apple processing, then assign internal testers
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          APPLE_PLATFORM: ${{ inputs.platform }}
+          ATE_BUILD_NUMBER: ${{ inputs.build }}
+        run: |
+          case "$APPLE_PLATFORM" in IOS|MAC_OS) ;; *) echo 'platform must be IOS or MAC_OS'; exit 1;; esac
+          export VERSION="$(node -p "require('./package.json').version")"
+          node build/apple-build-status.mjs

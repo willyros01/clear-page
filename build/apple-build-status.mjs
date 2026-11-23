@@ -14,7 +14,7 @@ function token() {
 async function main() {
  const build=process.env.ATE_BUILD_NUMBER||process.env.GITHUB_RUN_NUMBER;
  if(!/^\d+$/.test(build??'')) throw Error('Missing build number');
- for(let attempt=0;attempt<24;attempt++) {
+ for(let attempt=0;attempt<80;attempt++) {
   const url=new URL('https://api.appstoreconnect.apple.com/v1/builds');
   url.search=new URLSearchParams({'filter[app]':appId,'filter[version]':build,'include':'preReleaseVersion',limit:'5'});
   let response;
@@ -47,7 +47,7 @@ async function main() {
    }
    if(['INVALID','FAILED'].includes(state)) throw Error('Apple processing rejected build: '+state);
   } else console.log('Waiting for uploaded build to appear in Apple API.');
-  if(attempt<23) await new Promise(resolve=>setTimeout(resolve,30000));
+  if(attempt<79) await new Promise(resolve=>setTimeout(resolve,30000));
  }
  throw Error('Upload succeeded, but Apple processing is still pending after the observation window. Check TestFlight before retrying upload.');
 }
