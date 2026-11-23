@@ -2,7 +2,8 @@
 import fs from 'node:fs';
 import crypto from 'node:crypto';
 const L=JSON.parse(fs.readFileSync('store/listing.json')),appId='6833284199';
-const expected={IOS:'11dc17dd-cc04-44d0-a505-4051f32e9f61',MAC_OS:'9a2dfbfe-7bb2-48c6-b2e6-b0cb0f170601'};
+// The exact processed builds for this release are recorded in listing.json (buildIds), next to the version.
+const expected=L.buildIds||{};if(!expected.IOS||!expected.MAC_OS)throw Error('listing.json buildIds missing');
 const enc=x=>Buffer.from(JSON.stringify(x)).toString('base64url');
 function jwt(){const n=Math.floor(Date.now()/1000),s=enc({alg:'ES256',kid:process.env.ASC_KEY_ID.trim(),typ:'JWT'})+'.'+enc({iss:process.env.ASC_ISSUER_ID.trim(),iat:n,exp:n+600,aud:'appstoreconnect-v1'});return s+'.'+crypto.sign('sha256',Buffer.from(s),{key:process.env.ASC_KEY_P8.trim(),dsaEncoding:'ieee-p1363'}).toString('base64url')}
 async function api(path,method='GET',body){

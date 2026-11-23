@@ -30,5 +30,9 @@
     "iphone": "Capture production native app at 1206x2622 or another currently accepted medium Dynamic Island size.",
     "ipad": "Capture production native app at 2064x2752 or 2048x2732 (13-inch).",
     "mac": "Capture native universal Mac app and export an accepted 16:10 size (1280x800, 1440x900, 2560x1600 or 2880x1800)."
+  },
+  "buildIds": {
+    "IOS": "e8dce35c-38cd-4bc8-9a64-f4e4a11c35dc",
+    "MAC_OS": "e5f4f2b6-ed1d-479b-8132-4ce2ab98ec76"
   }
 }
