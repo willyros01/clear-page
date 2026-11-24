@@ -8,6 +8,8 @@ import {setupPreview} from './preview.js';
 import {setupIOSViewport} from './ios-viewport.js';
 import {setupProjects} from './project-ui.js';
 import {createDocumentTabs} from './document-tabs.js';
+import {createGitHub} from './github.js';
+import {setupGitHub} from './github-ui.js';
 import {Capacitor} from '@capacitor/core';
 import {openAndroid} from './android-files.js';
 import {saveText,native,desktop,closePlatform,handleDesktopExit,handleBack} from './platform.js';
@@ -24,7 +26,7 @@ const iosViewport=native?setupIOSViewport():null;
 // iOS file-provider UTIs can classify .sql and extensionless source as non-text.
 // Let users choose a file, then validate its bytes before opening/copying it.
 for(const id of ['file','projectFiles'])document.getElementById(id).removeAttribute('accept');
-let workspace=null,projects=null,loading=true,syntax=null,languageManual=false,advanced=true,closingApplication=false;
+let workspace=null,projects=null,githubUi=null,loading=true,syntax=null,languageManual=false,advanced=true,closingApplication=false;
 if(tabbed)try{const p=JSON.parse(localStorage.getItem('clear-page-preferences-v1')||'null');advanced=p?.experienceMode? p.experienceMode==='advanced':!!(p||localStorage.getItem('clear-page-workspace-v1')||localStorage.getItem('clear-page-draft-v1'));}catch{advanced=false}
 const editor=createEditor($('editor'),()=>{if(!loading){closingApplication=false;dirty=true;counts();persist();syntax?.changed()}});let font=27,dirty=false,pending=null;const key='clear-page-draft-v1';const prefsKey='clear-page-preferences-v1';
 function notice(msg){$('notice').textContent=msg;$('notice').hidden=!msg}
@@ -48,7 +50,7 @@ $('language').onchange=()=>{languageManual=true;editor.setLanguage(advanced?$('l
 $('indent').onclick=()=>editor.indent();$('unindent').onclick=()=>editor.unindent();
 $('smaller').onclick=()=>setFont(font-1);$('larger').onclick=()=>setFont(font+1);$('fontSize').oninput=()=>{const value=$('fontSize').valueAsNumber;if(Number.isFinite(value)&&value>=10&&value<=54){font=value;$('editor').style.fontSize=font+'pt';$('smaller').disabled=font<=10;$('larger').disabled=font>=54;persistPreferences();persist()}};$('fontSize').onchange=()=>setFont($('fontSize').valueAsNumber);$('buttonStyle').onchange=()=>{applyButtonStyle();persistPreferences()};$('theme').onclick=()=>{document.body.classList.toggle('dark');themeLabel();persistPreferences();persist()};
 let saving=false;
-async function save(){if(legal.required())return false;if(saving)return false;saving=true;try{let name=$('name').value||'Untitled';const text=editor.value,tabId=workspace?.current.id,ref=workspace?.current.projectRef;const result=ref?await projects.save(ref,name,text):await saveText(text,name);notice(typeof result==='string'?result:result.message);if(result?.name&&(!workspace||workspace.current.id===tabId)&&$('name').value===name&&result.name!==name){$('name').value=result.name;if(!languageManual)setLanguage(languageForDocument(result.name,editor.value));}dirty=editor.value!==text;if(workspace)workspace.saved(tabId,text,result?.name||name,result?.projectRef);else persist();return true}catch(e){notice((workspace?.current.projectRef?e.message+' ':'Save was cancelled or could not complete. ')+'Your draft is kept.');return false}finally{saving=false}}
+async function save(){if(legal.required())return false;if(saving)return false;saving=true;try{let name=$('name').value||'Untitled';const text=editor.value,tabId=workspace?.current.id,ref=workspace?.current.projectRef;const result=ref?.kind==='github'?await githubUi.save(ref,name,text):ref?await projects.save(ref,name,text):await saveText(text,name);notice(typeof result==='string'?result:result.message);if(result?.name&&(!workspace||workspace.current.id===tabId)&&$('name').value===name&&result.name!==name){$('name').value=result.name;if(!languageManual)setLanguage(languageForDocument(result.name,editor.value));}dirty=editor.value!==text;if(workspace)workspace.saved(tabId,text,result?.name||name,result?.projectRef);else persist();return true}catch(e){notice((workspace?.current.projectRef?e.message+' ':'Save was cancelled or could not complete. ')+'Your draft is kept.');return false}finally{saving=false}}
 $('save').onclick=save;
 $('menuButton').onclick=()=>{previewUi.update();$('menu').showModal();$('menu').scrollTop=0;iosViewport?.restore()};
 $('closeMenu').onclick=()=>leaveMenu();
@@ -147,6 +149,8 @@ function applyExperience(){
 if(tabbed){
  $('experienceModes').hidden=false;$('projectsButton').hidden=false;$('exportCopy').hidden=false;
  projects=setupProjects({workspace,openDocument:opened,canChange:()=>!saving,notice,exclusive:async fn=>{if(saving)throw Error('Finish the current save first.');saving=true;try{return await fn()}finally{saving=false}}});
+ githubUi=setupGitHub({github:createGitHub(),workspace,opened,notice});
+ $('githubButton').onclick=()=>{if(saving)return;$('menu').close();githubUi.open()};
  $('basicMode').onclick=()=>{advanced=false;applyExperience();persistPreferences()};
  $('advancedMode').onclick=()=>{advanced=true;applyExperience();persistPreferences()};
  $('exportCopy').onclick=async()=>{if(saving)return;leaveMenu({focus:false});saving=true;try{notice(await saveText(editor.value,$('name').value.split('/').pop()||'Untitled'))}catch{notice('Export cancelled or unavailable. Your editor tab is kept.')}finally{saving=false;iosViewport?.restore()}};

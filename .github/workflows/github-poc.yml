@@ -1,0 +1,31 @@
+name: ATE GitHub proof of concept (web)
+# Runs only on the github-poc branch. Never touches the release branches or the App Store builds.
+on:
+  push:
+    branches: [github-poc]
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium webkit
+      - name: GitHub proof of concept (Chromium and WebKit/Safari engine)
+        run: node tests/browser/github-poc.mjs
+      - name: Existing web editor and projects still work
+        run: npm run test:browser
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ate-web-github-poc
+          path: dist/*
+          if-no-files-found: error

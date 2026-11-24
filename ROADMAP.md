@@ -190,3 +190,7 @@ Mac TestFlight is VALID / IN_BETA_TESTING (Apple build `baa2893b-a90b-4785-9785-
 ## 0.8.7 (28) - App Store preparation special build
 
 Owner authorized preparation on 16 November 2026 for iPhone, iPad and native universal Mac. Adds Fairpot-style mandatory first-use supplementary Terms, versioned local consent, Help/legal/support links, copy-ready listing and native screenshot capture. Existing 0.8.6 layout and editing behavior retained. New legal gates and full existing regression/native suites must pass before TestFlight; no App Review submission or public App Store availability claimed. See store/RELEASE-REQUIREMENTS.md.
+
+## GitHub proof of concept (web only, branch github-poc)
+
+- Menu → GitHub: connect with a fine-grained GitHub key kept in page memory only, choose repository and branch, open files into tabs, save with a note. A save counts only once GitHub confirms the commit; a file changed on GitHub since opening is refused. Not part of any release.
