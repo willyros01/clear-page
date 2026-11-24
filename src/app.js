@@ -149,7 +149,7 @@ function applyExperience(){
 if(tabbed){
  $('experienceModes').hidden=false;$('projectsButton').hidden=false;$('exportCopy').hidden=false;
  projects=setupProjects({workspace,openDocument:opened,canChange:()=>!saving,notice,exclusive:async fn=>{if(saving)throw Error('Finish the current save first.');saving=true;try{return await fn()}finally{saving=false}}});
- githubUi=setupGitHub({github:createGitHub(),workspace,opened,notice});
+ githubUi=setupGitHub({github:createGitHub(),workspace,opened,notice,isAdvanced:()=>advanced});
  $('githubButton').onclick=()=>{if(saving)return;$('menu').close();githubUi.open()};
  $('basicMode').onclick=()=>{advanced=false;applyExperience();persistPreferences()};
  $('advancedMode').onclick=()=>{advanced=true;applyExperience();persistPreferences()};

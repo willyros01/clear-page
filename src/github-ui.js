@@ -13,7 +13,7 @@ const html=`
   <div class="actions"><button id="githubConnectButton" class="primary">Connect</button></div>
  </section>
  <section id="githubBrowse" hidden>
-  <div class="gh-row"><span id="githubUser"></span><button id="githubDisconnect">Disconnect</button></div>
+  <div class="gh-row"><span id="githubUser"></span><span><button id="githubRefresh">Refresh</button> <button id="githubDisconnect">Disconnect</button></span></div>
   <label class="gh-field">Repository<select id="githubRepo"></select></label>
   <label class="gh-field">Branch<select id="githubBranch"></select></label>
   <label class="gh-field">Find a file<input id="githubFilter" type="search" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Type part of a name"></label>
@@ -33,7 +33,7 @@ const html=`
  <div class="actions"><button id="githubSaveCancel">Cancel</button><button id="githubSaveConfirm" class="primary">Save to GitHub</button></div>
 </dialog>`;
 
-export function setupGitHub({github,workspace,opened,notice}){
+export function setupGitHub({github,workspace,opened,notice,isAdvanced=()=>true}){
  document.body.insertAdjacentHTML('beforeend',html);
  const $=id=>document.getElementById(id);
  let repos=[],files=[],busy=false;
@@ -48,24 +48,26 @@ export function setupGitHub({github,workspace,opened,notice}){
   $('githubCount').textContent=shown.length>200?`Showing 200 of ${shown.length} files. Type more of the name to narrow the list.`:`${shown.length} ${shown.length===1?'file':'files'}`;
  }
  async function loadFiles(){const r=repo();if(!r)return;status('Loading files…');const result=await github.files(r.owner,r.name,$('githubBranch').value);files=result.files.sort((a,b)=>a.path.localeCompare(b.path));list();status(r.canPush?'':'This key can read this repository but not save to it.');if(result.truncated)status('This repository is very large; GitHub sent only part of the file list.');}
- async function loadBranches(){const r=repo();if(!r)return;status('Loading branches…');const names=await github.branches(r.owner,r.name);$('githubBranch').textContent='';for(const n of names){const o=document.createElement('option');o.value=n;o.textContent=n;$('githubBranch').append(o)}$('githubBranch').value=names.includes(r.branch)?r.branch:names[0];await loadFiles();}
- async function loadRepos(){status('Loading repositories…');repos=await github.repos();$('githubRepo').textContent='';repos.forEach((r,i)=>{const o=document.createElement('option');o.value=String(i);o.textContent=r.full+(r.canPush?'':' (read only)');$('githubRepo').append(o)});if(!repos.length){status('This key cannot see any repositories.');return}await loadBranches();}
+ async function loadBranches(keep){const r=repo();if(!r)return;status('Loading branches…');const names=await github.branches(r.owner,r.name);$('githubBranch').textContent='';for(const n of names){const o=document.createElement('option');o.value=n;o.textContent=n;$('githubBranch').append(o)}$('githubBranch').value=keep&&names.includes(keep)?keep:names.includes(r.branch)?r.branch:names[0];await loadFiles();}
+ async function loadRepos(){const was=repo()?.full,branch=$('githubBranch').value;status('Loading repositories…');repos=await github.repos();$('githubRepo').textContent='';repos.forEach((r,i)=>{const o=document.createElement('option');o.value=String(i);o.textContent=r.full+(r.canPush?'':' (read only)');$('githubRepo').append(o)});if(!repos.length){status('This key cannot see any repositories.');return}const i=repos.findIndex(r=>r.full===was);if(i>=0)$('githubRepo').value=String(i);await loadBranches(i>=0?branch:'');}
  function openFile(f){return task(async()=>{const r=repo(),branch=$('githubBranch').value;
   const existing=workspace.documents().find(t=>t.projectRef?.kind==='github'&&t.projectRef.owner===r.owner&&t.projectRef.repo===r.name&&t.projectRef.branch===branch&&t.projectRef.path===f.path);
-  if(existing){$('githubDialog').close();workspace.activate(existing.id);return}
+  if(existing&&existing.projectRef.sha!==f.sha){if(existing.dirty)throw Error('This file changed on GitHub, and its tab has unsaved edits. Copy your edits, close that tab, then open the file again.');workspace.closeMany([existing.id],{focus:false});}
+  else if(existing){$('githubDialog').close();workspace.activate(existing.id);return}
   if(workspace.list().length>=12)throw Error('Close a tab before opening another (12 tabs maximum).');
   status('Opening '+f.path+'…');const result=await github.read(r.owner,r.name,branch,f);
-  $('githubDialog').close();opened(result.text,f.path.split('/').pop(),result.ref);notice('Opened from GitHub: '+r.full+' · '+branch+' · '+f.path);});}
+  $('githubDialog').close();opened(result.text,f.path.split('/').pop(),result.ref);notice('Opened from GitHub: '+r.full+' · '+branch+' · '+f.path+(isAdvanced()?'':'. For colours and syntax checks: Menu → Advanced.'));});}
  $('githubShowKey').onchange=()=>{$('githubKey').type=$('githubShowKey').checked?'text':'password'};
  $('githubConnectButton').onclick=()=>task(async()=>{status('Connecting…');await github.connect($('githubKey').value);$('githubKey').value='';$('githubShowKey').checked=false;$('githubKey').type='password';view();await loadRepos();});
  $('githubDisconnect').onclick=()=>{github.disconnect();repos=[];files=[];view();status('Disconnected. The key has been forgotten.')};
- $('githubRepo').onchange=()=>task(loadBranches);
+ $('githubRepo').onchange=()=>task(()=>loadBranches());
+ $('githubRefresh').onclick=()=>task(async()=>{await loadRepos();if(!$('githubStatus').textContent)status('Up to date with GitHub.')});
  $('githubBranch').onchange=()=>task(loadFiles);
  $('githubFilter').oninput=list;
  $('githubCreate').onclick=()=>task(async()=>{const r=repo(),path=$('githubNewPath').value.trim();if(!validPath(path))throw Error('Type a path such as folder/notes.md, without a leading slash.');if(files.some(f=>f.path===path))throw Error('That file already exists. Choose it from the list instead.');if(workspace.list().length>=12)throw Error('Close a tab before opening another (12 tabs maximum).');$('githubDialog').close();opened('',path.split('/').pop(),{kind:'github',owner:r.owner,repo:r.name,branch:$('githubBranch').value,path,sha:null});$('githubNewPath').value='';notice('New GitHub file '+path+'. Save to create it on GitHub.');});
  $('githubClose').onclick=()=>$('githubDialog').close();
  return {
-  open(){view();status('');$('githubDialog').showModal();if(!github.connected)$('githubKey').focus();},
+  open(){view();status('');$('githubDialog').showModal();if(!github.connected)$('githubKey').focus();else task(loadRepos);},
   // Ask for a note, then save. Resolves with the confirmed result, or rejects.
   save(ref,name,text){return new Promise((resolve,reject)=>{
    if(!github.connected){reject(Error('Connect to GitHub first: Menu → GitHub. The key is forgotten when the page is closed.'));return}
@@ -76,7 +78,7 @@ export function setupGitHub({github,workspace,opened,notice}){
    $('githubSaveCancel').onclick=()=>done(reject,Error('Save to GitHub was cancelled. Nothing was saved.'));
    $('githubSave').oncancel=e=>{e.preventDefault();if(!$('githubSaveConfirm').disabled)done(reject,Error('Save to GitHub was cancelled. Nothing was saved.'))};
    $('githubSaveConfirm').onclick=async()=>{$('githubSaveConfirm').disabled=$('githubSaveCancel').disabled=true;$('githubSaveStatus').textContent='Saving to GitHub…';
-    try{const result=await github.save(ref,name,text,$('githubMessage').value);done(resolve,result)}
+    try{const result=await github.save(ref,name,text,$('githubMessage').value);const r=repo(),n=result.projectRef;if(r&&r.owner===n.owner&&r.name===n.repo&&$('githubBranch').value===n.branch){const f=files.find(f=>f.path===n.path);if(f)f.sha=n.sha;else{files.push({path:n.path,sha:n.sha,size:0});files.sort((a,b)=>a.path.localeCompare(b.path))}}done(resolve,result)}
     catch(e){done(reject,e)}
     finally{$('githubSaveConfirm').disabled=$('githubSaveCancel').disabled=false}};
    $('githubSave').showModal();$('githubMessage').focus();

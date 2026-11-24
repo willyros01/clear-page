@@ -13,7 +13,7 @@ try{for(const [engineName,engine] of Object.entries(engines)){
  try{
   const page=await browser.newPage({viewport:{width:1194,height:834}});const errors=[];page.on('pageerror',e=>errors.push(e.message));
   // Pretend GitHub. remote holds the file versions on the server.
-  const remote={'README.md':{sha:SHA('1'),text:'# Hello\n'},'src/app.js':{sha:SHA('2'),text:'let a = 1;\n'}};let puts=[],failNext=0,seq=3;
+  const remote={'README.md':{sha:SHA('1'),text:'# Hello\n'},'src/app.js':{sha:SHA('2'),text:'let a = 1;\n'}};let puts=[],failNext=0,seq=3,branches=['main','dev'];
   await page.route('https://api.github.com/**',async route=>{
    const req=route.request(),url=new URL(req.url()),p=url.pathname,m=req.method();
    const json=(status,body)=>route.fulfill({status,contentType:'application/json',headers:{'Access-Control-Allow-Origin':'*'},body:JSON.stringify(body)});
@@ -21,8 +21,8 @@ try{for(const [engineName,engine] of Object.entries(engines)){
    assert.equal(req.headers().authorization,'Bearer '+KEY);
    if(p==='/user')return json(200,{login:'tester'});
    if(p==='/user/repos')return json(200,[{owner:{login:'tester'},name:'notes',full_name:'tester/notes',default_branch:'main',permissions:{push:true}}]);
-   if(p==='/repos/tester/notes/branches')return json(200,[{name:'main'},{name:'dev'}]);
-   if(p.startsWith('/repos/tester/notes/git/trees/'))return json(200,{truncated:false,tree:[{type:'tree',path:'src'},...Object.entries(remote).map(([path,f])=>({type:'blob',path,sha:f.sha,size:f.text.length}))]});
+   if(p==='/repos/tester/notes/branches')return json(200,branches.map(name=>({name})));
+   if(p.startsWith('/repos/tester/notes/git/trees/'))return json(200,{truncated:false,tree:[{type:'tree',path:'src'},...(p.endsWith('/fairpot')?[{type:'blob',path:'www/index.html',sha:SHA('7'),size:5}]:[]),...Object.entries(remote).map(([path,f])=>({type:'blob',path,sha:f.sha,size:f.text.length}))]});
    if(p.startsWith('/repos/tester/notes/git/blobs/')){const sha=p.split('/').pop(),f=Object.values(remote).find(f=>f.sha===sha);return f?json(200,{sha,encoding:'base64',content:Buffer.from(f.text).toString('base64')}):json(404,{})}
    if(m==='PUT'&&p.startsWith('/repos/tester/notes/contents/')){
     const path=decodeURIComponent(p.slice('/repos/tester/notes/contents/'.length)),body=JSON.parse(req.postData());puts.push({path,body});
@@ -47,7 +47,7 @@ try{for(const [engineName,engine] of Object.entries(engines)){
   // Open, edit, save with a note.
   await $('githubFilter').fill('app');assert.match(await $('githubCount').innerText(),/1 file/);
   await page.getByRole('button',{name:'src/app.js',exact:true}).click();await page.waitForSelector('#githubDialog',{state:'hidden'});
-  assert.equal((await editor.innerText()).trim(),'let a = 1;');assert.match(await $('notice').innerText(),/Opened from GitHub: tester\/notes · main · src\/app.js/);
+  assert.equal((await editor.innerText()).trim(),'let a = 1;');assert.match(await $('notice').innerText(),/Opened from GitHub: tester\/notes · main · src\/app.js/);assert.match(await $('notice').innerText(),/Menu → Advanced/,'Basic mode must say how to get colours');
   await editor.fill('let a = 2;\n');await $('save').click();await page.waitForSelector('#githubSave[open]');
   assert.match(await $('githubSaveWhere').innerText(),/tester\/notes · branch main · src\/app.js/);assert.equal(await $('githubMessage').inputValue(),'Update src/app.js');
   await $('githubMessage').fill('Change a');await $('githubSaveConfirm').click();await page.waitForSelector('#githubSave',{state:'hidden'});
@@ -84,6 +84,26 @@ try{for(const [engineName,engine] of Object.entries(engines)){
   await $('save').click();await page.waitForFunction(()=>/Connect to GitHub first/.test(document.getElementById('notice').textContent));
   assert.equal((await editor.innerText()).trim(),'after reload');
   await openGitHub();assert.equal(await $('githubConnect').isVisible(),true);
-  assert.deepEqual(errors,[]);console.log('PASS: '+engineName+' GitHub proof of concept: connect, open, edit, save with note, conflict refused, offline kept, cancel, new file, key forgotten on reload');
+  // Basic mode: notice says how to get colours.
+  await $('githubKey').fill(KEY);await $('githubConnectButton').click();await page.waitForSelector('#githubBrowse:not([hidden])');await idle();
+  // A branch created on GitHub after connecting shows up when the GitHub screen is opened again.
+  branches.push('fairpot');await $('githubClose').click();await openGitHub();await idle();
+  assert.ok((await $('githubBranch').locator('option').allInnerTexts()).includes('fairpot'),'new branch must appear on reopening');
+  await $('githubBranch').selectOption('fairpot');await idle();assert.ok(await page.getByRole('button',{name:'www/index.html',exact:true}).count(),'branch switch must show that branch');
+  assert.equal(await $('githubBranch').inputValue(),'fairpot');
+  branches.push('extra');await $('githubRefresh').click();await idle();assert.ok((await $('githubBranch').locator('option').allInnerTexts()).includes('extra'));assert.equal(await $('githubBranch').inputValue(),'fairpot','Refresh keeps the chosen branch');assert.match(await $('githubStatus').innerText(),/Up to date/);
+  await $('githubClose').click();await openGitHub();await idle();assert.equal(await $('githubBranch').inputValue(),'fairpot','reopening keeps the chosen branch');
+  // A file changed on GitHub opens fresh, not from an old list.
+  await $('githubBranch').selectOption('main');await idle();await $('githubClose').click();
+  // Changed on GitHub, tab has unsaved edits: refused with a plain message, edits kept.
+  remote['docs/new.md']={sha:SHA('8'),text:'changed on github\n'};
+  await openGitHub();await idle();await $('githubFilter').fill('new.md');await page.getByRole('button',{name:'docs/new.md',exact:true}).click();await idle();
+  assert.match(await $('githubStatus').innerText(),/changed on GitHub, and its tab has unsaved edits/);await $('githubClose').click();
+  assert.equal((await editor.innerText()).trim(),'after reload');
+  // Changed on GitHub, tab clean: the old tab is replaced by the latest version.
+  remote['README.md']={sha:SHA('6'),text:'# Newer on GitHub\n'};
+  await openGitHub();await idle();await $('githubFilter').fill('README');await page.getByRole('button',{name:'README.md',exact:true}).click();await page.waitForSelector('#githubDialog',{state:'hidden'});
+  assert.equal((await editor.innerText()).trim(),'# Newer on GitHub');
+  assert.deepEqual(errors,[]);console.log('PASS: '+engineName+' GitHub proof of concept: connect, open, edit, save with note, conflict refused, offline kept, cancel, new file, key forgotten on reload, branches and files refreshed, changed files reopened fresh');
  }finally{await browser.close()}
 }}finally{server.close()}
