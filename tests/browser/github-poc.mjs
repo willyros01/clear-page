@@ -1,109 +1,141 @@
-// Web GitHub proof of concept, against a pretend GitHub (no real network).
+// ATE GitHub (web test build) against a pretend GitHub and sign-in relay: no real network.
+// Taps through every screen the way a person would.
 import {acceptTerms} from './legal-helper.mjs';
 import {createServer} from 'node:http';
 import {readFile} from 'node:fs/promises';
 import assert from 'node:assert/strict';
 import {chromium,webkit} from 'playwright';
+import {createFakeGitHub} from '../fake-github.mjs';
+
 const server=createServer(async(req,res)=>{try{const path=req.url.split('?')[0],file=path==='/'?'index.html':path.slice(1);res.setHeader('Content-Type',file.endsWith('.js')?'application/javascript':file.endsWith('.wasm')?'application/wasm':'text/html');res.end(await readFile(new URL('../../dist/'+file,import.meta.url)))}catch{res.statusCode=404;res.end()}});
 await new Promise(r=>server.listen(0,'127.0.0.1',r));
-const KEY='github_pat_'+'T'.repeat(50),SHA=c=>c.repeat(40);
+const REAL_RELAY='https://ate-github-login.willyros01.workers.dev';
 const engines=process.env.ATE_BROWSER==='chromium'?{chromium}:{chromium,webkit};
 try{for(const [engineName,engine] of Object.entries(engines)){
  const browser=await engine.launch();
  try{
+  const fake=createFakeGitHub();const S=fake.state;
+  S.addRepo('ate-test',{'README.md':'# Hello\n','src/app.js':'let a = 1;\n','www/index.html':'<p>hi</p>\n'});
+  const R=S.repos.get('ate-test');
+  R.workflows=[{id:1,name:'Build',path:'.github/workflows/b.yml',state:'active',dispatch:true},{id:2,name:'Nightly',path:'.github/workflows/n.yml',state:'active',dispatch:false}];
+  R.runs=[{id:5,name:'Build',display_title:'Build',head_branch:'main',event:'push',status:'completed',conclusion:'failure',created_at:'2026-11-26T10:00:00Z',jobs:[{id:77,name:'web',status:'completed',conclusion:'failure',steps:[{name:'npm test',conclusion:'failure'}],annotations:[{annotation_level:'failure',message:'Process completed with exit code 1.'}],log:'2026-11-26T10:00:01.0Z ##[error]AssertionError: expected 2'}]},
+   {id:4,name:'Build',display_title:'Build',head_branch:'main',event:'push',status:'completed',conclusion:'success',created_at:'2026-11-25T10:00:00Z',jobs:[]}];
   const page=await browser.newPage({viewport:{width:1194,height:834}});const errors=[];page.on('pageerror',e=>errors.push(e.message));
-  // Pretend GitHub. remote holds the file versions on the server.
-  const remote={'README.md':{sha:SHA('1'),text:'# Hello\n'},'src/app.js':{sha:SHA('2'),text:'let a = 1;\n'}};let puts=[],failNext=0,seq=3,branches=['main','dev'];
-  await page.route('https://api.github.com/**',async route=>{
-   const req=route.request(),url=new URL(req.url()),p=url.pathname,m=req.method();
-   const json=(status,body)=>route.fulfill({status,contentType:'application/json',headers:{'Access-Control-Allow-Origin':'*'},body:JSON.stringify(body)});
-   if(m==='OPTIONS')return route.fulfill({status:204,headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'*','Access-Control-Allow-Methods':'GET,PUT'}});
-   assert.equal(req.headers().authorization,'Bearer '+KEY);
-   if(p==='/user')return json(200,{login:'tester'});
-   if(p==='/user/repos')return json(200,[{owner:{login:'tester'},name:'notes',full_name:'tester/notes',default_branch:'main',permissions:{push:true}}]);
-   if(p==='/repos/tester/notes/branches')return json(200,branches.map(name=>({name})));
-   if(p.startsWith('/repos/tester/notes/git/trees/'))return json(200,{truncated:false,tree:[{type:'tree',path:'src'},...(p.endsWith('/fairpot')?[{type:'blob',path:'www/index.html',sha:SHA('7'),size:5}]:[]),...Object.entries(remote).map(([path,f])=>({type:'blob',path,sha:f.sha,size:f.text.length}))]});
-   if(p.startsWith('/repos/tester/notes/git/blobs/')){const sha=p.split('/').pop(),f=Object.values(remote).find(f=>f.sha===sha);return f?json(200,{sha,encoding:'base64',content:Buffer.from(f.text).toString('base64')}):json(404,{})}
-   if(m==='PUT'&&p.startsWith('/repos/tester/notes/contents/')){
-    const path=decodeURIComponent(p.slice('/repos/tester/notes/contents/'.length)),body=JSON.parse(req.postData());puts.push({path,body});
-    if(failNext){failNext--;return route.abort('failed')}
-    if(remote[path]&&body.sha!==remote[path].sha)return json(remote[path]&&!body.sha?422:409,{message:remote[path]&&!body.sha?'"sha" wasn\'t supplied':'does not match'});
-    const sha=String(seq++%10).repeat(40);remote[path]={sha,text:Buffer.from(body.content,'base64').toString('utf8')};return json(200,{content:{path,sha},commit:{sha:SHA('c')}});
-   }
-   return json(404,{message:'Not Found'});
-  });
+  const route=async(route,base)=>{const req=route.request(),u=new URL(req.url());
+   const cors={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'*','Access-Control-Allow-Methods':'GET,POST,PUT,PATCH,DELETE'};
+   if(req.method()==='OPTIONS')return route.fulfill({status:204,headers:cors});
+   if(base===fake.API)assert.equal(req.headers().authorization,'Bearer ghu_fake','API call without the sign-in pass: '+u.pathname);
+   const res=await fake.handle(req.method(),base+u.pathname+u.search,req.postData()?JSON.parse(req.postData()):null);
+   await route.fulfill({status:res.status,headers:{...cors,'Content-Type':'application/json'},body:res.status===204?'':res.text!==undefined?res.text:JSON.stringify(res.data)});};
+  await page.route('https://api.github.com/**',r=>route(r,fake.API));
+  await page.route(REAL_RELAY+'/**',r=>route(r,fake.RELAY));
   await page.goto('http://127.0.0.1:'+server.address().port);await acceptTerms(page);await page.waitForSelector('.cm-content');
-  const $=id=>page.locator('#'+id),editor=page.locator('.cm-content');
-  const openGitHub=async()=>{await $('menuButton').click();await $('githubButton').click();await page.waitForSelector('#githubDialog[open]')};
-  const idle=()=>page.waitForFunction(()=>!document.getElementById('githubClose').disabled);
-  // Connect: wrong-looking key refused, real one accepted; key field cleared afterwards.
-  await openGitHub();await $('githubKey').fill('nonsense');await $('githubConnectButton').click();await idle();
-  assert.match(await $('githubStatus').innerText(),/does not look like a GitHub key/);
-  await $('githubShowKey').check();assert.equal(await $('githubKey').getAttribute('type'),'text');
-  await $('githubKey').fill(KEY);await $('githubConnectButton').click();await page.waitForSelector('#githubBrowse:not([hidden])');await idle();
-  assert.equal(await $('githubKey').inputValue(),'');assert.match(await $('githubUser').innerText(),/tester/);
-  assert.equal(await $('githubBranch').inputValue(),'main');assert.match(await $('githubCount').innerText(),/2 files/);
-  const stored=await page.evaluate(()=>JSON.stringify({...localStorage})+JSON.stringify({...sessionStorage}));assert.ok(!stored.includes(KEY),'key must not be stored in the browser');
-  // Open, edit, save with a note.
-  await $('githubFilter').fill('app');assert.match(await $('githubCount').innerText(),/1 file/);
-  await page.getByRole('button',{name:'src/app.js',exact:true}).click();await page.waitForSelector('#githubDialog',{state:'hidden'});
-  assert.equal((await editor.innerText()).trim(),'let a = 1;');assert.match(await $('notice').innerText(),/Opened from GitHub: tester\/notes · main · src\/app.js/);assert.match(await $('notice').innerText(),/Menu → Advanced/,'Basic mode must say how to get colours');
-  await editor.fill('let a = 2;\n');await $('save').click();await page.waitForSelector('#githubSave[open]');
-  assert.match(await $('githubSaveWhere').innerText(),/tester\/notes · branch main · src\/app.js/);assert.equal(await $('githubMessage').inputValue(),'Update src/app.js');
-  await $('githubMessage').fill('Change a');await $('githubSaveConfirm').click();await page.waitForSelector('#githubSave',{state:'hidden'});
-  await page.waitForFunction(()=>/Saved to GitHub/.test(document.getElementById('notice').textContent));
-  assert.equal(remote['src/app.js'].text,'let a = 2;\n');assert.equal(puts.at(-1).body.message,'Change a');assert.equal(puts.at(-1).body.sha,SHA('2'));
-  assert.equal(await page.locator('#tabs [aria-selected="true"]').innerText().then(t=>t.includes('•')),false,'saved tab must not be marked unsaved');
-  // Second save in a row uses the new version (no false conflict).
-  await editor.fill('let a = 3;\n');await $('save').click();await page.waitForSelector('#githubSave[open]');await $('githubSaveConfirm').click();await page.waitForFunction(()=>/Saved to GitHub/.test(document.getElementById('notice').textContent)&&!document.getElementById('githubSave').open);
-  assert.equal(remote['src/app.js'].text,'let a = 3;\n');
-  // Someone else changes the file: ATE must refuse and keep the edit unsaved.
-  remote['src/app.js']={sha:SHA('9'),text:'changed elsewhere\n'};
-  await editor.fill('my edit\n');await $('save').click();await page.waitForSelector('#githubSave[open]');await $('githubSaveConfirm').click();await page.waitForSelector('#githubSave',{state:'hidden'});
-  await page.waitForFunction(()=>/changed on GitHub since you opened it/.test(document.getElementById('notice').textContent));
-  assert.equal(remote['src/app.js'].text,'changed elsewhere\n');assert.equal((await editor.innerText()).trim(),'my edit');
-  // Network failure: nothing saved, edit kept.
-  await page.getByRole('tab').last().click().catch(()=>{});
-  await openGitHub();await $('githubFilter').fill('README');await page.getByRole('button',{name:'README.md',exact:true}).click();await page.waitForSelector('#githubDialog',{state:'hidden'});
-  failNext=1;await editor.fill('# Hello again\n');await $('save').click();await page.waitForSelector('#githubSave[open]');await $('githubSaveConfirm').click();
-  await page.waitForFunction(()=>/Could not reach GitHub/.test(document.getElementById('notice').textContent));assert.equal(remote['README.md'].text,'# Hello\n');
-  // Cancel the note: nothing sent.
-  const before=puts.length;await $('save').click();await page.waitForSelector('#githubSave[open]');await $('githubSaveCancel').click();
-  await page.waitForFunction(()=>/cancelled/.test(document.getElementById('notice').textContent));assert.equal(puts.length,before);
-  // Then a real save of the same edit works.
-  await $('save').click();await page.waitForSelector('#githubSave[open]');await $('githubSaveConfirm').click();await page.waitForFunction(()=>/Saved to GitHub/.test(document.getElementById('notice').textContent)&&!document.getElementById('githubSave').open);
-  assert.equal(remote['README.md'].text,'# Hello again\n');
-  // New file.
-  await openGitHub();await $('githubNew').locator('summary').click();await $('githubNewPath').fill('docs/new.md');await $('githubCreate').click();await page.waitForSelector('#githubDialog',{state:'hidden'});
-  await editor.fill('fresh\n');await $('save').click();await page.waitForSelector('#githubSave[open]');assert.equal(await $('githubMessage').inputValue(),'Create docs/new.md');
-  await $('githubSaveConfirm').click();await page.waitForFunction(()=>/Saved to GitHub/.test(document.getElementById('notice').textContent)&&!document.getElementById('githubSave').open);
-  assert.equal(remote['docs/new.md'].text,'fresh\n');assert.equal(puts.at(-1).body.sha,undefined);
-  // Ordinary (non-GitHub) save still downloads a file as before.
-  // Reload: key forgotten; saving a GitHub tab asks to connect and keeps the draft.
-  await editor.fill('after reload\n');await page.reload();await page.waitForSelector('.cm-content');
-  await $('save').click();await page.waitForFunction(()=>/Connect to GitHub first/.test(document.getElementById('notice').textContent));
-  assert.equal((await editor.innerText()).trim(),'after reload');
-  await openGitHub();assert.equal(await $('githubConnect').isVisible(),true);
-  // Basic mode: notice says how to get colours.
-  await $('githubKey').fill(KEY);await $('githubConnectButton').click();await page.waitForSelector('#githubBrowse:not([hidden])');await idle();
-  // A branch created on GitHub after connecting shows up when the GitHub screen is opened again.
-  branches.push('fairpot');await $('githubClose').click();await openGitHub();await idle();
-  assert.ok((await $('githubBranch').locator('option').allInnerTexts()).includes('fairpot'),'new branch must appear on reopening');
-  await $('githubBranch').selectOption('fairpot');await idle();assert.ok(await page.getByRole('button',{name:'www/index.html',exact:true}).count(),'branch switch must show that branch');
-  assert.equal(await $('githubBranch').inputValue(),'fairpot');
-  branches.push('extra');await $('githubRefresh').click();await idle();assert.ok((await $('githubBranch').locator('option').allInnerTexts()).includes('extra'));assert.equal(await $('githubBranch').inputValue(),'fairpot','Refresh keeps the chosen branch');assert.match(await $('githubStatus').innerText(),/Up to date/);
-  await $('githubClose').click();await openGitHub();await idle();assert.equal(await $('githubBranch').inputValue(),'fairpot','reopening keeps the chosen branch');
-  // A file changed on GitHub opens fresh, not from an old list.
-  await $('githubBranch').selectOption('main');await idle();await $('githubClose').click();
-  // Changed on GitHub, tab has unsaved edits: refused with a plain message, edits kept.
-  remote['docs/new.md']={sha:SHA('8'),text:'changed on github\n'};
-  await openGitHub();await idle();await $('githubFilter').fill('new.md');await page.getByRole('button',{name:'docs/new.md',exact:true}).click();await idle();
-  assert.match(await $('githubStatus').innerText(),/changed on GitHub, and its tab has unsaved edits/);await $('githubClose').click();
-  assert.equal((await editor.innerText()).trim(),'after reload');
-  // Changed on GitHub, tab clean: the old tab is replaced by the latest version.
-  remote['README.md']={sha:SHA('6'),text:'# Newer on GitHub\n'};
-  await openGitHub();await idle();await $('githubFilter').fill('README');await page.getByRole('button',{name:'README.md',exact:true}).click();await page.waitForSelector('#githubDialog',{state:'hidden'});
-  assert.equal((await editor.innerText()).trim(),'# Newer on GitHub');
-  assert.deepEqual(errors,[]);console.log('PASS: '+engineName+' GitHub proof of concept: connect, open, edit, save with note, conflict refused, offline kept, cancel, new file, key forgotten on reload, branches and files refreshed, changed files reopened fresh');
+  const $=id=>page.locator('#'+id),editor=page.locator('.cm-content'),text=async()=>(await editor.innerText()).trim();
+  const idle=()=>page.waitForFunction(()=>!document.getElementById('githubRefresh')?.disabled&&!document.getElementById('githubSignIn')?.disabled);
+  const openGitHub=async()=>{if(await $('githubDialog').evaluate(d=>d.open).catch(()=>false))await $('githubClose').click();await $('menuButton').click();await $('githubButton').click();await page.waitForSelector('#githubDialog[open]');await idle()};
+  const notice=re=>page.waitForFunction(r=>new RegExp(r).test(document.getElementById('notice').textContent),re.source);
+  const status=()=>$('githubStatus').innerText();
+  const askOk=async()=>{await $('githubAskOk').click();await page.waitForSelector('#githubAsk',{state:'hidden'})};
+  const nav=async name=>{await page.locator('#githubNav button',{hasText:name}).click();await idle()};
+  const fileBtn=p=>page.getByRole('button',{name:p,exact:true});
+  const openFile=async p=>{await openGitHub();await nav('Files');await $('githubFilter').fill(p);await fileBtn(p).click();await page.waitForSelector('#githubDialog',{state:'hidden'})};
+  const saveTab=async note=>{await $('save').click();await page.waitForSelector('#githubAsk[open]');if(note)await $('ghAsk_note').fill(note);await askOk()};
+
+  // Sign in with a code: no key anywhere.
+  await openGitHub();assert.equal(await page.locator('#githubDialog input[type=password]').count(),0,'no key field');
+  await $('githubSignIn').click();await page.waitForFunction(()=>document.getElementById('githubCode').textContent==='WDJB-MJHT');
+  assert.equal(await $('githubDeviceLink').getAttribute('href'),'https://github.com/login/device');
+  await page.waitForSelector('#githubSignedIn:not([hidden])',{timeout:20000});await idle();
+  assert.match(await $('githubUser').innerText(),/tester/);assert.match(await $('githubChooseRepos').getAttribute('href'),/github\.com\/apps\/.+\/installations\/new/);
+  const stored=await page.evaluate(()=>JSON.stringify({...localStorage})+JSON.stringify({...sessionStorage}));assert.ok(!stored.includes('ghu_fake'),'sign-in must not be stored');
+
+  // A: open, edit, see changes before saving, save with a note.
+  await $('githubFilter').fill('app');await fileBtn('src/app.js').click();await page.waitForSelector('#githubDialog',{state:'hidden'});
+  assert.equal(await text(),'let a = 1;');await editor.fill('let a = 2;\n');
+  await $('save').click();await page.waitForSelector('#githubAsk[open]');await $('githubShowChanges').click();
+  await page.waitForSelector('#githubSaveChanges .gh-add');assert.match(await $('githubSaveChanges').innerText(),/let a = 1;[\s\S]*let a = 2;/);
+  await $('ghAsk_note').fill('Change a');await askOk();await notice(/Saved to GitHub/);
+  assert.equal(S.filesAt('ate-test','main')['src/app.js'],'let a = 2;\n');
+  // A file changed elsewhere is not overwritten; the edit stays.
+  S.pushElsewhere('ate-test','main',{'src/app.js':'changed elsewhere\n'});
+  await editor.fill('mine\n');await $('save').click();await page.waitForSelector('#githubAsk[open]');await $('githubAskOk').click();
+  await page.waitForFunction(()=>/changed on GitHub since you opened it/.test(document.getElementById('githubAskStatus').textContent));
+  await $('githubAskCancel').click();await notice(/cancelled/);assert.equal(S.filesAt('ate-test','main')['src/app.js'],'changed elsewhere\n');assert.equal(await text(),'mine');
+
+  // A: several files in one change (the conflicting app.js tab is left out).
+  await openFile('README.md');await editor.fill('# Hello there\n');
+  await openFile('www/index.html');await editor.fill('<p>hello</p>\n');
+  await openGitHub();await nav('Files');await page.waitForSelector('#githubSaveAll');
+  await $('githubSaveAll').click();await page.waitForSelector('#githubAsk[open]');
+  const boxes=page.locator('#githubAskBody .gh-check');for(let i=0;i<await boxes.count();i++)if(/src\/app\.js/.test(await boxes.nth(i).innerText()))await boxes.nth(i).locator('input').uncheck();
+  await $('ghAsk_note').fill('Two files');await askOk();await notice(/Saved 2 files to GitHub in one change/);
+  const now=S.filesAt('ate-test','main');assert.equal(now['README.md'],'# Hello there\n');assert.equal(now['www/index.html'],'<p>hello</p>\n');
+  assert.equal(fake.commits.get(S.head('ate-test','main')).message,'Two files');
+
+  // A: history, what changed, restore an older version.
+  await openGitHub();await nav('Files');await $('githubFilter').fill('README');await page.getByRole('button',{name:'More for README.md'}).click();await idle();
+  await $('githubFileHistory').click();await idle();await page.getByRole('button',{name:/^Initial/}).click();await idle();
+  assert.match(await $('githubPanel').innerText(),/# Hello/);await $('githubRestore').click();await page.waitForSelector('#githubDialog',{state:'hidden'});
+  assert.equal(await text(),'# Hello');await notice(/not yet saved/);
+  await saveTab('Restore README');assert.equal(S.filesAt('ate-test','main')['README.md'],'# Hello\n');
+
+  // A: search inside files, rename/move, delete, new file.
+  await openGitHub();await nav('Files');await page.locator('#githubSearchBox summary').click();await $('githubSearch').fill('hello');await $('githubSearchGo').click();await idle();
+  assert.match(await status(),/2 matches/);await page.locator('#githubSearchResults button',{hasText:'www/index.html:1'}).click();await page.waitForSelector('#githubDialog',{state:'hidden'});
+  await notice(/match on line 1/);
+  await openGitHub();await nav('Files');await $('githubFilter').fill('index');await page.getByRole('button',{name:'More for www/index.html'}).click();await idle();await $('githubFileRename').click();
+  await page.waitForSelector('#githubAsk[open]');await $('ghAsk_path').fill('web/home.html');await askOk();await notice(/Renamed on GitHub/);
+  assert.equal(S.filesAt('ate-test','main')['web/home.html'],'<p>hello</p>\n');assert.equal(S.filesAt('ate-test','main')['www/index.html'],undefined);
+  await openGitHub();await nav('Files');await $('githubFilter').fill('home');await page.getByRole('button',{name:'More for web/home.html'}).click();await idle();await $('githubFileDelete').click();
+await page.waitForSelector('#githubAsk[open]');assert.match(await $('githubAskBody').innerText(),/history stays on GitHub/);await askOk();await notice(/Deleted from GitHub/);
+  assert.equal(S.filesAt('ate-test','main')['web/home.html'],undefined);
+  await openGitHub();await nav('Files');await page.locator('#githubNew summary').click();await $('githubNewPath').fill('docs/new.md');await $('githubCreate').click();
+  await page.waitForSelector('#githubDialog',{state:'hidden'});await editor.fill('fresh\n');await saveTab();assert.equal(S.filesAt('ate-test','main')['docs/new.md'],'fresh\n');
+
+  // B: create a branch, change it, merge it back, delete it.
+  await openGitHub();await nav('Branches');await page.locator('#githubNewBranchBox summary').click();await $('githubNewBranch').fill('fairpot');await $('githubCreateBranch').click();await idle();
+  assert.equal(await $('githubBranch').inputValue(),'fairpot');assert.match(await status(),/Created branch fairpot/);
+  await nav('Files');await $('githubFilter').fill('new.md');await fileBtn('docs/new.md').click();await page.waitForSelector('#githubDialog',{state:'hidden'});
+  await editor.fill('from fairpot\n');await saveTab('On fairpot');assert.equal(S.filesAt('ate-test','fairpot')['docs/new.md'],'from fairpot\n');assert.equal(S.filesAt('ate-test','main')['docs/new.md'],'fresh\n');
+  await openGitHub();await $('githubBranch').selectOption('main');await idle();await nav('Branches');
+  await page.locator('[data-merge="fairpot"]').click();await page.waitForSelector('#githubAsk[open]');await askOk();await idle();
+  assert.match(await status(),/Merged fairpot into main/);assert.equal(S.filesAt('ate-test','main')['docs/new.md'],'from fairpot\n');
+  await nav('Branches');await page.locator('[data-delete="fairpot"]').click();await page.waitForSelector('#githubAsk[open]');await askOk();await idle();assert.equal(S.head('ate-test','fairpot'),undefined);
+
+  // C: pull request: open, see changes, comment, merge.
+  await nav('Branches');await page.locator('#githubNewBranchBox summary').click();await $('githubNewBranch').fill('fix');await $('githubCreateBranch').click();await idle();
+  S.pushElsewhere('ate-test','fix',{'README.md':'# Fixed\n'});
+  await nav('Pull requests');await page.locator('#githubNewPr summary').click();await $('githubPrHead').selectOption('fix');await $('githubPrBase').selectOption('main');
+  await $('githubPrTitle').fill('Fix readme');await $('githubCreatePr').click();await idle();
+  assert.match(await $('githubPanel').innerText(),/#\d+ Fix readme[\s\S]*README\.md[\s\S]*# Fixed/);
+  await $('githubPrComment').fill('Looks good');await $('githubPrSendComment').click();await idle();assert.match(await $('githubPanel').innerText(),/Looks good/);
+  await $('githubPrMerge').click();await page.waitForSelector('#githubAsk[open]');await askOk();await idle();
+  assert.equal(S.filesAt('ate-test','main')['README.md'],'# Fixed\n');assert.match(await status(),/Merged #\d+ into main/);
+
+  // D: Actions: green/red, why a run failed, start by hand, refused start.
+  await nav('Actions');assert.match(await $('githubPanel').innerText(),/✗ failed · Build[\s\S]*✓ passed · Build/);
+  await page.getByRole('button',{name:/✗ failed · Build/}).click();await idle();
+  assert.match(await $('githubPanel').innerText(),/Failed step: npm test[\s\S]*(AssertionError: expected 2|exit code 1)/);
+  await page.locator('.gh-back').click();await idle();await page.locator('#githubStartBox summary').click();await $('githubWorkflow').selectOption('1');await $('githubStartWorkflow').click();await idle();
+  assert.match(await status(),/Started/);assert.equal(R.runs[0].event,'workflow_dispatch');
+  await page.locator('#githubStartBox summary').click();await $('githubWorkflow').selectOption('2');await $('githubStartWorkflow').click();await idle();assert.match(await status(),/cannot be started by hand/);
+
+  // E: issues.
+  await nav('Issues');await page.locator('#githubNewIssue summary').click();await $('githubIssueTitle').fill('Buy golf balls');await $('githubCreateIssue').click();await idle();
+  await $('githubIssueComment').fill('Pro V1');await $('githubIssueSendComment').click();await idle();assert.match(await $('githubPanel').innerText(),/Pro V1/);
+  await $('githubIssueState').click();await idle();assert.match(await status(),/Issue closed/);assert.equal(R.issues.find(i=>i.title==='Buy golf balls').state,'closed');
+
+  // F: new repository.
+  await nav('New repository');await $('githubRepoName').fill('brand-new');await $('githubCreateRepo').click();await idle();
+  assert.match(await status(),/Created tester\/brand-new/);assert.ok(S.repos.has('brand-new'));assert.match(await $('githubRepo').locator('option:checked').innerText(),/brand-new/);
+
+  // Sign-in ended on GitHub's side: plain message, back to the sign-in screen.
+  S.tokenValid=false;await $('githubRefresh').click();await idle();assert.match(await status(),/sign-in has ended/);assert.equal(await $('githubSignedOut').isVisible(),true);
+  S.tokenValid=true;
+  // Reload forgets the sign-in; saving a GitHub tab asks to sign in and keeps the draft.
+  await $('githubClose').click();await page.reload();await page.waitForSelector('.cm-content');
+  await editor.fill('after reload\n');await $('save').click();await notice(/Sign in to GitHub first/);assert.equal(await text(),'after reload');
+  assert.deepEqual(errors,[]);
+  console.log('PASS: '+engineName+' GitHub: sign in with code (nothing stored), open/edit/show changes/save, conflict refused, several files in one change, history and restore, search, rename, delete, new file, branches create/merge/delete, pull request open/comment/merge, Actions runs/why failed/start, issues, new repository, ended sign-in, reload forgets sign-in');
  }finally{await browser.close()}
 }}finally{server.close()}

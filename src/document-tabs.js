@@ -28,7 +28,7 @@ export function createDocumentTabs({editor,storage,getMeta,setMeta,changed,rende
  function activate(id){capture();const index=tabs.findIndex(t=>t.id===id);if(index<0)return;active=index;show();persist();editor.focus();}
  function add(text='',name='Untitled',language='plain',projectRef=null){if(tabs.length>=12)return false;capture();tabs.push(make(text,name,language,false,false,projectRef));active=tabs.length-1;show();persist();editor.focus();return true;}
  function edit(){capture();const t=tabs[active];t.dirty=t.text!==t.savedText||t.name!==t.savedName;persist();}
- function saved(id,text,name,projectRef){const t=tabs.find(t=>t.id===id);if(!t)return;if(projectRef)t.projectRef=projectRef;t.savedText=text;t.savedName=name;if(t.id===tabs[active].id){capture();}t.dirty=t.text!==text||t.name!==name;persist();}
+ function saved(id,text,name,projectRef){const t=tabs.find(t=>t.id===id);if(!t)return;if(projectRef)t.projectRef=projectRef;t.savedText=text;t.savedName=name;if(t.id===tabs[active].id){capture();}else t.name=name;t.dirty=t.text!==text||t.name!==name;persist();}
  function closeMany(ids,{focus=true}={}){const removing=new Set(ids);if(!tabs.some(t=>removing.has(t.id)))return;capture();const activeId=tabs[active].id,before=tabs.slice(0,active).filter(t=>!removing.has(t.id)).length;tabs=tabs.filter(t=>!removing.has(t.id));if(!tabs.length)tabs=[make()];const kept=tabs.findIndex(t=>t.id===activeId);active=kept>=0?kept:Math.min(before,tabs.length-1);show();persist();if(focus)editor.focus();}
  function close(id){closeMany([id])}
  function clear({keepRecovery=false}={}){cancelScrollRestore();tabs=[make()];active=0;recoveryBlocked=false;show();cancelScrollRestore();if(!keepRecovery)try{storage.removeItem(workspaceKey)}catch{status(false)}}

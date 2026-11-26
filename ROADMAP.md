@@ -194,3 +194,5 @@ Owner authorized preparation on 16 November 2026 for iPhone, iPad and native uni
 ## GitHub proof of concept (web only, branch github-poc)
 
 - Menu → GitHub: connect with a fine-grained GitHub key kept in page memory only, choose repository and branch, open files into tabs, save with a note. A save counts only once GitHub confirms the commit; a file changed on GitHub since opening is refused. Not part of any release.
+
+- Nov 26, 2026: full GitHub test build (A–F): Sign in with GitHub by code (no keys; web sign-in kept in page memory only, via a small sign-in relay in relay/worker.js), files (open, edit, show changes, save, several files in one change, history, restore, search, rename/move, delete, new), branches (create, merge, delete), pull requests (open, view changes, comment, merge), Actions (runs, why a run failed, start a workflow), issues, new repository. Every change counts only once GitHub confirms it; files changed elsewhere are never overwritten.
