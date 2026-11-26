@@ -2,7 +2,7 @@
 // Browsers cannot call github.com/login/* directly (GitHub sends no CORS headers there).
 // This passes exactly two sign-in calls through. It holds no secrets, stores nothing and
 // never sees anyone's code: only the public app ID, the sign-in code and the resulting pass.
-const CLIENT_ID='REPLACE_WITH_GITHUB_APP_CLIENT_ID';
+const CLIENT_ID='Iv23li8BSDes04NZkw1o';
 const ALLOWED=['https://www.cuberoot-systems.com','https://cuberoot-systems.com'];
 export default {
   async fetch(request){

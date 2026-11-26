@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-const src=(await readFile(new URL('../relay/worker.js',import.meta.url),'utf8')).replace("'REPLACE_WITH_GITHUB_APP_CLIENT_ID'","'Iv1.test'");
+const src=(await readFile(new URL('../relay/worker.js',import.meta.url),'utf8')).replace("'Iv23li8BSDes04NZkw1o'","'Iv1.test'");
 const worker=(await import('data:text/javascript,'+encodeURIComponent(src))).default;
 const ORIGIN='https://www.cuberoot-systems.com';
 function withFetch(fn,impl){const old=globalThis.fetch;globalThis.fetch=impl;return fn().finally(()=>{globalThis.fetch=old})}

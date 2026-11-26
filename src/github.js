@@ -5,7 +5,7 @@
 export const GITHUB_CONFIG={
  api:'https://api.github.com',
  relay:'https://ate-github-login.willyros01.workers.dev', // forwards the two sign-in calls that browsers cannot make to github.com
- appSlug:'another-text-editor', // the registered GitHub App; used for the "Choose repositories" link
+ appSlug:'ate-another-text-editor', // the registered GitHub App; used for the "Choose repositories" link
 };
 const MAX_BYTES=10*1024*1024;
 
