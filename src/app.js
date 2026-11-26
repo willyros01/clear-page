@@ -149,7 +149,7 @@ function applyExperience(){
 if(tabbed){
  $('experienceModes').hidden=false;$('projectsButton').hidden=false;$('exportCopy').hidden=false;
  projects=setupProjects({workspace,openDocument:opened,canChange:()=>!saving,notice,exclusive:async fn=>{if(saving)throw Error('Finish the current save first.');saving=true;try{return await fn()}finally{saving=false}}});
- githubUi=setupGitHub({github:createGitHub(),workspace,opened,notice,isAdvanced:()=>advanced,markSaved:(id,text,name,ref)=>{const active=workspace.current.id===id;if(active)$('name').value=name;workspace.saved(id,text,name,ref);if(active)dirty=editor.value!==text},replaceText:text=>editor.replace(text)});
+ githubUi=setupGitHub({github:createGitHub(),workspace,opened,notice,isAdvanced:()=>advanced,ensureAdvanced:()=>{if(advanced)return false;advanced=true;applyExperience();persistPreferences();return true},markSaved:(id,text,name,ref)=>{const active=workspace.current.id===id;if(active)$('name').value=name;workspace.saved(id,text,name,ref);if(active)dirty=editor.value!==text},replaceText:text=>editor.replace(text)});
  $('githubButton').onclick=()=>{if(saving)return;$('menu').close();githubUi.open()};
  $('basicMode').onclick=()=>{advanced=false;applyExperience();persistPreferences()};
  $('advancedMode').onclick=()=>{advanced=true;applyExperience();persistPreferences()};

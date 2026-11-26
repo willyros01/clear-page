@@ -43,10 +43,12 @@ try{for(const [engineName,engine] of Object.entries(engines)){
 
   // Sign in with a code: no key anywhere.
   await openGitHub();assert.equal(await page.locator('#githubDialog input[type=password]').count(),0,'no key field');
+  await notice(/Switched to Advanced/);assert.equal(await page.evaluate(()=>document.body.classList.contains('basic-mode')),false,'GitHub switches to Advanced');
   await $('githubSignIn').click();await page.waitForFunction(()=>document.getElementById('githubCode').textContent==='WDJB-MJHT');
   assert.equal(await $('githubDeviceLink').getAttribute('href'),'https://github.com/login/device');
   await page.waitForSelector('#githubSignedIn:not([hidden])',{timeout:20000});await idle();
-  assert.match(await $('githubUser').innerText(),/tester/);assert.match(await $('githubChooseRepos').getAttribute('href'),/github\.com\/apps\/.+\/installations\/new/);
+  assert.match(await $('githubUser').innerText(),/tester/);assert.match(await $('githubRepoCount').innerText(),/ATE can use 1 repository/);
+  await $('githubMoreRepos').click();await page.waitForSelector('#githubAsk[open]');assert.match(await $('githubAskBody').innerText(),/Danger zone/);assert.equal(await $('githubAskOk').innerText(),'Continue to GitHub');await $('githubAskCancel').click();
   const stored=await page.evaluate(()=>JSON.stringify({...localStorage})+JSON.stringify({...sessionStorage}));assert.ok(!stored.includes('ghu_fake'),'sign-in must not be stored');
 
   // A: open, edit, see changes before saving, save with a note.
@@ -97,10 +99,12 @@ await page.waitForSelector('#githubAsk[open]');assert.match(await $('githubAskBo
   assert.equal(await $('githubBranch').inputValue(),'fairpot');assert.match(await status(),/Created branch fairpot/);
   await nav('Files');await $('githubFilter').fill('new.md');await fileBtn('docs/new.md').click();await page.waitForSelector('#githubDialog',{state:'hidden'});
   await editor.fill('from fairpot\n');await saveTab('On fairpot');assert.equal(S.filesAt('ate-test','fairpot')['docs/new.md'],'from fairpot\n');assert.equal(S.filesAt('ate-test','main')['docs/new.md'],'fresh\n');
-  await openGitHub();await $('githubBranch').selectOption('main');await idle();await nav('Branches');
-  await page.locator('[data-merge="fairpot"]').click();await page.waitForSelector('#githubAsk[open]');await askOk();await idle();
-  assert.match(await status(),/Merged fairpot into main/);assert.equal(S.filesAt('ate-test','main')['docs/new.md'],'from fairpot\n');
-  await nav('Branches');await page.locator('[data-delete="fairpot"]').click();await page.waitForSelector('#githubAsk[open]');await askOk();await idle();assert.equal(S.head('ate-test','fairpot'),undefined);
+  await openGitHub();await nav('Branches');assert.match(await $('githubPanel').innerText(),/✓ fairpot · you are working here/);
+  await page.locator('[data-switch="main"]').click();await idle();assert.equal(await $('githubBranch').inputValue(),'main');assert.match(await status(),/Now working on branch main/);
+  await nav('Branches');assert.equal(await page.locator('[data-switch]').count(),1);await page.locator('[data-branch-more="fairpot"]').click();await idle();
+  assert.match(await $('githubBranchMerge').innerText(),/Copy fairpot's changes into main/);await $('githubBranchMerge').click();await page.waitForSelector('#githubAsk[open]');await askOk();await idle();
+  assert.match(await status(),/Copied fairpot's changes into main/);assert.equal(S.filesAt('ate-test','main')['docs/new.md'],'from fairpot\n');
+  await page.locator('[data-branch-more="fairpot"]').click();await idle();await $('githubBranchDelete').click();await page.waitForSelector('#githubAsk[open]');await askOk();await idle();assert.equal(S.head('ate-test','fairpot'),undefined);
 
   // C: pull request: open, see changes, comment, merge.
   await nav('Branches');await page.locator('#githubNewBranchBox summary').click();await $('githubNewBranch').fill('fix');await $('githubCreateBranch').click();await idle();
@@ -120,6 +124,24 @@ await page.waitForSelector('#githubAsk[open]');assert.match(await $('githubAskBo
   assert.match(await status(),/Started/);assert.equal(R.runs[0].event,'workflow_dispatch');
   await page.locator('#githubStartBox summary').click();await $('githubWorkflow').selectOption('2');await $('githubStartWorkflow').click();await idle();assert.match(await status(),/cannot be started by hand/);
 
+  // Actions on/off.
+  await nav('Actions');assert.match(await $('githubActionsState').innerText(),/On/);await $('githubActionsToggle').click();await page.waitForSelector('#githubAsk[open]');await askOk();await idle();
+  assert.equal(R.actions,false);assert.match(await $('githubActionsState').innerText(),/Off/);
+  await $('githubActionsToggle').click();await page.waitForSelector('#githubAsk[open]');await askOk();await idle();assert.equal(R.actions,true);
+  // Copy: explanation page first, then copy all branches into a new repository.
+  await $('githubRepoMore').click();await idle();await $('githubCopyRepo').click();await idle();
+  const explain=await $('githubPanel').innerText();for(const w of [/Not copied/,/history of past changes/,/Secrets/,/never writes into a branch that already exists/,/switched off in a new repository/])assert.match(explain,w);
+  assert.equal(await page.locator('#githubCopyNow').count(),0,'no Copy button before the explanation is accepted');
+  await $('githubCopyNext').click();await idle();await $('githubCopyAll').check();await $('githubCopyName').fill('ate-test-copy');await $('githubCopyNow').click();await idle();
+  assert.match(await $('githubPanel').innerText(),/Copy finished[\s\S]*Copied 2 branches into tester\/ate-test-copy[\s\S]*Actions are switched off/);
+  assert.deepEqual(S.filesAt('ate-test-copy','main'),S.filesAt('ate-test','main'));assert.equal(S.repos.get('ate-test-copy').actions,false);assert.equal(S.repos.get('ate-test-copy').pushesWithActionsOn||0,0);
+  await $('githubOpenCopy').click();await idle();assert.match(await $('githubRepo').locator('option:checked').innerText(),/ate-test-copy/);
+  // Delete repository: warning, exact name, 5-second wait.
+  await $('githubRepoMore').click();await idle();await $('githubDeleteRepo').click();await idle();assert.match(await $('githubPanel').innerText(),/every file[\s\S]*history[\s\S]*90 days/);
+  await $('githubDeleteNext').click();await idle();assert.equal(await $('githubDeleteForever').isDisabled(),true);
+  await $('githubDeleteName').fill('ate-test-cop');await page.waitForTimeout(5500);assert.equal(await $('githubDeleteForever').isDisabled(),true,'wrong name keeps the button off');
+  await $('githubDeleteName').fill('ate-test-copy');assert.equal(await $('githubDeleteForever').isDisabled(),false);await $('githubDeleteForever').click();await idle();
+  assert.equal(S.repos.has('ate-test-copy'),false);assert.match(await status(),/has been deleted/);assert.match(await $('githubRepo').locator('option:checked').innerText(),/ate-test/);
   // E: issues.
   await nav('Issues');await page.locator('#githubNewIssue summary').click();await $('githubIssueTitle').fill('Buy golf balls');await $('githubCreateIssue').click();await idle();
   await $('githubIssueComment').fill('Pro V1');await $('githubIssueSendComment').click();await idle();assert.match(await $('githubPanel').innerText(),/Pro V1/);
@@ -136,6 +158,6 @@ await page.waitForSelector('#githubAsk[open]');assert.match(await $('githubAskBo
   await $('githubClose').click();await page.reload();await page.waitForSelector('.cm-content');
   await editor.fill('after reload\n');await $('save').click();await notice(/Sign in to GitHub first/);assert.equal(await text(),'after reload');
   assert.deepEqual(errors,[]);
-  console.log('PASS: '+engineName+' GitHub: sign in with code (nothing stored), open/edit/show changes/save, conflict refused, several files in one change, history and restore, search, rename, delete, new file, branches create/merge/delete, pull request open/comment/merge, Actions runs/why failed/start, issues, new repository, ended sign-in, reload forgets sign-in');
+  console.log('PASS: '+engineName+' GitHub: auto Advanced, sign in with code (nothing stored), open/edit/show changes/save, conflict refused, several files in one change, history and restore, search, rename, delete, new file, branches create/merge/delete, pull request open/comment/merge, Actions runs/why failed/start/on-off, branch tap-to-switch and ⋯ merge/delete, copy with explanation page, delete repository with checks, issues, new repository, ended sign-in, reload forgets sign-in');
  }finally{await browser.close()}
 }}finally{server.close()}

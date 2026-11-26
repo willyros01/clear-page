@@ -16,7 +16,7 @@ export function createFakeGitHub({login='tester'}={}){
  const repos=new Map();
  const state={login,repos,relayFails:false,approveAfter:1,polls:0,denied:false,tokenValid:true,calls:[],failNextRef:false,
   addRepo(name,files,{private:priv=false}={}){const t=saveTree(Object.entries(files).map(([p,text])=>[p,{sha:blob(text),mode:'100644'}]));const c=makeCommit('Initial',t,[]);
-   repos.set(name,{name,owner:login,private:priv,default:'main',branches:new Map([['main',c]]),pulls:[],issues:[],comments:new Map(),runs:[],workflows:[],nextNumber:1});return repos.get(name)},
+   repos.set(name,{name,owner:login,private:priv,default:'main',branches:new Map([['main',c]]),pulls:[],issues:[],comments:new Map(),runs:[],workflows:[],nextNumber:1,description:'',homepage:'',topics:[],hasIssues:true,hasWiki:false,hasProjects:false,actions:true});return repos.get(name)},
   head(repo,branch){return repos.get(repo).branches.get(branch)},
   filesAt(repo,branch){const t=trees.get(commits.get(state.head(repo,branch)).tree);return Object.fromEntries([...t].map(([p,f])=>[p,blobs.get(f.sha)]))},
   // A change made "elsewhere" (e.g. from another computer) on a branch.
@@ -29,7 +29,7 @@ export function createFakeGitHub({login='tester'}={}){
  const changed=(c)=>{const cur=trees.get(commits.get(c).tree),prev=commits.get(c).parents[0]?trees.get(commits.get(commits.get(c).parents[0]).tree):new Map();const out=[];
   for(const [p,f] of cur){const o=prev.get(p);if(!o)out.push({filename:p,status:'added',patch:patch('',blobs.get(f.sha))});else if(o.sha!==f.sha)out.push({filename:p,status:'modified',patch:patch(blobs.get(o.sha),blobs.get(f.sha))})}
   for(const [p,o] of prev)if(!cur.has(p))out.push({filename:p,status:'removed',patch:patch(blobs.get(o.sha),'')});return out};
- const repoJson=r=>({name:r.name,full_name:r.owner+'/'+r.name,owner:{login:r.owner},default_branch:r.default,private:r.private,permissions:{push:true},html_url:'https://github.com/'+r.owner+'/'+r.name});
+ const repoJson=r=>({name:r.name,full_name:r.owner+'/'+r.name,owner:{login:r.owner},default_branch:r.default,private:r.private,permissions:{push:true,admin:true},html_url:'https://github.com/'+r.owner+'/'+r.name,description:r.description,homepage:r.homepage,has_issues:r.hasIssues,has_wiki:r.hasWiki,has_projects:r.hasProjects});
  const resolve=(r,x)=>r.branches.get(x)||(commits.has(x)?x:null);
 
  async function handle(method,url,body){
@@ -45,20 +45,26 @@ export function createFakeGitHub({login='tester'}={}){
   if(p==='/user')return json(200,{login:state.login});
   if(p==='/user/installations')return json(200,{installations:[{id:1}]});
   if(p==='/user/installations/1/repositories')return json(200,{repositories:Number(q.get('page')||1)>1?[]:[...repos.values()].map(repoJson)});
-  if(p==='/user/repos'&&method==='POST'){if(repos.has(body.name))return json(422,{message:'Repository creation failed.',errors:[{message:'name already exists on this account'}]});const r=state.addRepo(body.name,{'README.md':'# '+body.name+'\n'},{private:body.private});return json(201,repoJson(r))}
+  if(p==='/user/repos'&&method==='POST'){if(repos.has(body.name))return json(422,{message:'Repository creation failed.',errors:[{message:'name already exists on this account'}]});const r=state.addRepo(body.name,{'README.md':'# '+body.name+'\n'},{private:body.private});Object.assign(r,{description:body.description||'',homepage:body.homepage||'',hasIssues:body.has_issues!==false,hasWiki:!!body.has_wiki,hasProjects:!!body.has_projects});return json(201,repoJson(r))}
   if(!(m=p.match(/^\/repos\/([^/]+)\/([^/]+)(\/.*)?$/)))return json(404,{message:'Not Found'});
   const r=repos.get(decodeURIComponent(m[2]));if(!r||decodeURIComponent(m[1])!==r.owner)return json(404,{message:'Not Found'});
   const rest=m[3]||'';
+  if(rest===''&&method==='GET')return json(200,repoJson(r));
+  if(rest===''&&method==='DELETE'){repos.delete(r.name);return {status:204}}
+  if(rest===''&&method==='PATCH'){if(body.default_branch){if(!r.branches.has(body.default_branch))return json(422,{message:'bad branch'});r.default=body.default_branch}return json(200,repoJson(r))}
+  if(rest==='/topics')return method==='PUT'?(r.topics=body.names,json(200,{names:r.topics})):json(200,{names:r.topics});
+  if(rest==='/actions/permissions')return method==='PUT'?(r.actions=!!body.enabled,{status:204}):json(200,{enabled:r.actions});
+  if(rest==='/git/blobs'&&method==='POST'){const t=Buffer.from(body.content,body.encoding==='base64'?'base64':'utf8').toString('utf8');return json(201,{sha:blob(t)})}
   if(rest==='/branches')return json(200,Number(q.get('page')||1)>1?[]:[...r.branches].map(([name,sha])=>({name,commit:{sha},protected:false})));
   if((m=rest.match(/^\/git\/trees\/(.+)$/))&&method==='GET'){const c=resolve(r,decodeURIComponent(m[1]));if(!c)return json(404,{message:'Not Found'});const t=trees.get(commits.get(c).tree);return json(200,{truncated:false,tree:[...t].map(([path,f])=>({path,type:'blob',sha:f.sha,mode:f.mode,size:new TextEncoder().encode(blobs.get(f.sha)).length}))})}
   if((m=rest.match(/^\/git\/blobs\/([a-f0-9]{40})$/))){const t=blobs.get(m[1]);return t===undefined?json(404,{}):json(200,{sha:m[1],encoding:'base64',content:Buffer.from(t).toString('base64')})}
   if((m=rest.match(/^\/git\/ref\/heads\/(.+)$/))){const c=r.branches.get(decodeURIComponent(m[1]));return c?json(200,{object:{sha:c}}):json(404,{})}
   if((m=rest.match(/^\/git\/commits\/([a-f0-9]{40})$/))&&method==='GET'){const c=commits.get(m[1]);return json(200,{sha:c.sha,tree:{sha:c.tree}})}
-  if(rest==='/git/trees'&&method==='POST'){const base=new Map(trees.get(body.base_tree));for(const e of body.tree){if(e.sha===null)base.delete(e.path);else base.set(e.path,{sha:e.content!==undefined?blob(e.content):e.sha,mode:e.mode})}return json(201,{sha:saveTree([...base])})}
+  if(rest==='/git/trees'&&method==='POST'){const base=new Map(body.base_tree?trees.get(body.base_tree):[]);for(const e of body.tree){if(e.sha===null)base.delete(e.path);else base.set(e.path,{sha:e.content!==undefined?blob(e.content):e.sha,mode:e.mode})}return json(201,{sha:saveTree([...base])})}
   if(rest==='/git/commits'&&method==='POST')return json(201,{sha:makeCommit(body.message,body.tree,body.parents)});
   if((m=rest.match(/^\/git\/refs\/heads\/(.+)$/))&&method==='PATCH'){const name=decodeURIComponent(m[1]),cur=r.branches.get(name);if(state.failNextRef){state.failNextRef=false;return json(422,{message:'Update is not a fast forward'})}if(!body.force&&!isAncestor(cur,body.sha))return json(422,{message:'Update is not a fast forward'});r.branches.set(name,body.sha);return json(200,{object:{sha:body.sha}})}
   if((m=rest.match(/^\/git\/refs\/heads\/(.+)$/))&&method==='DELETE'){const name=decodeURIComponent(m[1]);if(!r.branches.delete(name))return json(422,{message:'Reference does not exist'});return {status:204}}
-  if(rest==='/git/refs'&&method==='POST'){const name=body.ref.replace('refs/heads/','');if(r.branches.has(name))return json(422,{message:'Reference already exists'});r.branches.set(name,body.sha);return json(201,{ref:body.ref})}
+  if(rest==='/git/refs'&&method==='POST'){const name=body.ref.replace('refs/heads/','');if(r.branches.has(name))return json(422,{message:'Reference already exists'});r.branches.set(name,body.sha);if(r.actions)r.pushesWithActionsOn=(r.pushesWithActionsOn||0)+1;return json(201,{ref:body.ref})}
   if(rest==='/commits'&&method==='GET'){const out=[];let c=resolve(r,q.get('sha'));const path=q.get('path');while(c){const cc=commits.get(c),t=trees.get(cc.tree),pt=cc.parents[0]?trees.get(commits.get(cc.parents[0]).tree):new Map();if(!path||t.get(path)?.sha!==pt.get(path)?.sha)out.push({sha:c,commit:{message:cc.message,author:{name:'Willy',date:cc.date}},author:{login:state.login}});c=cc.parents[0]}return json(200,out)}
   if((m=rest.match(/^\/commits\/([a-f0-9]{40})$/))){const cc=commits.get(m[1]);return json(200,{sha:cc.sha,commit:{message:cc.message,author:{name:'Willy',date:cc.date}},files:changed(cc.sha)})}
   if(rest==='/merges'&&method==='POST'){const b=r.branches.get(body.base),h=r.branches.get(body.head);if(!b||!h)return json(404,{});if(isAncestor(h,b))return {status:204};

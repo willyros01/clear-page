@@ -134,3 +134,38 @@ test('line comparison',()=>{
  const d=lineDiff('a\nb\nc\n','a\nx\nc\n');assert.deepEqual(d.map(x=>x.type),['same','del','add','same']);
  assert.deepEqual(withContext(lineDiff('1\n2\n3\n4\n5\n6\n7\n8\n9\n','1\n2\n3\n4\n5\n6\n7\n8\nX\n'),1).map(x=>x.type),['gap','same','del','add']);
 });
+
+test('copy: one branch into a new repository, settings carried over, Actions off before files arrive',async()=>{
+ const {fake,gh}=await setup({files:{'README.md':'# A\n','.github/workflows/b.yml':'on: push\n','src/x.js':'x\n'}});
+ Object.assign(fake.state.repos.get(N),{description:'Notes app',homepage:'https://x.example',topics:['golf'],hasWiki:true});
+ const res=await gh.copy({owner:O,repo:N},['main'],{kind:'new',name:'notes-copy',isPrivate:true});
+ assert.equal(res.to.full,'tester/notes-copy');assert.deepEqual(res.branches,['main']);
+ const t=fake.state.repos.get('notes-copy');assert.equal(t.private,true);assert.equal(t.description,'Notes app');assert.equal(t.homepage,'https://x.example');assert.deepEqual(t.topics,['golf']);assert.equal(t.hasWiki,true);
+ assert.equal(t.actions,false);assert.equal(t.pushesWithActionsOn||0,0);
+ assert.deepEqual(fake.state.filesAt('notes-copy','main'),fake.state.filesAt(N,'main'));
+ assert.match(fake.commits.get(fake.state.head('notes-copy','main')).message,/Copied from tester\/notes \(branch main\)/);
+ await assert.rejects(gh.copy({owner:O,repo:N},['main'],{kind:'new',name:'notes-copy'}),/already exists/);
+});
+test('copy: all branches into a new repository keep their names',async()=>{
+ const {fake,gh}=await setup();const main=(await gh.branches(O,N))[0];await gh.createBranch(O,N,'fairpot',main.sha);fake.state.pushElsewhere(N,'fairpot',{'f.txt':'f\n'});
+ const res=await gh.copy({owner:O,repo:N},['main','fairpot'],{kind:'new',name:'all-copy'});
+ assert.deepEqual(res.branches.sort(),['fairpot','main']);assert.equal(fake.state.filesAt('all-copy','fairpot')['f.txt'],'f\n');assert.equal(fake.state.filesAt('all-copy','main')['f.txt'],undefined);
+});
+test('copy: into an existing repository as new branches only, never over an existing branch',async()=>{
+ const {fake,gh}=await setup();fake.state.addRepo('htest',{'old.txt':'keep\n'});
+ await assert.rejects(gh.copy({owner:O,repo:N},['main'],{kind:'existing',owner:O,repo:'htest',names:{main:'main'}}),/already exists in htest/);
+ assert.equal(fake.state.filesAt('htest','main')['old.txt'],'keep\n');
+ const res=await gh.copy({owner:O,repo:N},['main'],{kind:'existing',owner:O,repo:'htest',names:{main:'from-notes'}});
+ assert.deepEqual(res.branches,['from-notes']);assert.deepEqual(fake.state.filesAt('htest','from-notes'),fake.state.filesAt(N,'main'));assert.equal(fake.state.filesAt('htest','main')['old.txt'],'keep\n');
+});
+test('copy: too many files is refused before anything is created',async()=>{
+ const {fake,gh}=await setup();await assert.rejects(gh.copy({owner:O,repo:N},['main'],{kind:'new',name:'big'},{maxFiles:1}),/ATE copies at most 1/);assert.equal(fake.state.repos.has('big'),false);
+});
+test('delete repository: exact name required, then checked gone',async()=>{
+ const {fake,gh}=await setup();fake.state.addRepo('htest',{'a':'a'});
+ await assert.rejects(gh.deleteRepo(O,'htest','htes'),/does not match. Nothing was deleted/);assert.ok(fake.state.repos.has('htest'));
+ await gh.deleteRepo(O,'htest','htest');assert.equal(fake.state.repos.has('htest'),false);
+});
+test('Actions on/off is confirmed',async()=>{
+ const {fake,gh}=await setup();await gh.setActionsEnabled(O,N,false);assert.equal(fake.state.repos.get(N).actions,false);assert.equal(await gh.actionsEnabled(O,N),false);await gh.setActionsEnabled(O,N,true);assert.equal(await gh.actionsEnabled(O,N),true);
+});

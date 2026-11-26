@@ -11,6 +11,7 @@ const browser=await chromium.launch();
 for(const [w,h,tag] of [[1194,834,'ipad'],[390,844,'phone']]){
  const fake=createFakeGitHub({login:'willyros01'});const S=fake.state;S.addRepo('ate-test',{'README.md':'# Fairpot\n','www/index.html':'<p>hi</p>\n','www/app.js':'let total = 0;\nfunction add(x){\n  total += x;\n}\n'});
  S.pushElsewhere('ate-test','main',{'www/app.js':'let total = 0;\nfunction add(x){\n  total += Number(x);\n}\n'},'Fix adding');
+ {const m=S.head('ate-test','main');S.repos.get('ate-test').branches.set('fairpot',m);}
  const page=await browser.newPage({viewport:{width:w,height:h}});
  const route=async(r,base)=>{const q=r.request(),u=new URL(q.url());if(q.method()==='OPTIONS')return r.fulfill({status:204,headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'*','Access-Control-Allow-Methods':'*'}});const res=await fake.handle(q.method(),base+u.pathname+u.search,q.postData()?JSON.parse(q.postData()):null);await r.fulfill({status:res.status,headers:{'Access-Control-Allow-Origin':'*','Content-Type':'application/json'},body:res.status===204?'':JSON.stringify(res.data)})};
  await page.route('https://api.github.com/**',r=>route(r,fake.API));await page.route('https://ate-github-login.willyros01.workers.dev/**',r=>route(r,fake.RELAY));
@@ -21,6 +22,9 @@ for(const [w,h,tag] of [[1194,834,'ipad'],[390,844,'phone']]){
  S.approveAfter=0;await page.waitForSelector('#githubSignedIn:not([hidden])',{timeout:20000});await idle();await page.screenshot({path:`${out}/gh-${tag}-3-files.png`});
  await page.getByRole('button',{name:'More for www/app.js'}).click();await idle();await $('githubFileHistory').click();await idle();await page.getByRole('button',{name:/^Fix adding/}).click();await idle();await page.screenshot({path:`${out}/gh-${tag}-4-change.png`});
  await page.locator('#githubNav button',{hasText:'Branches'}).click();await idle();await page.screenshot({path:`${out}/gh-${tag}-5-branches.png`});
+ await $('githubRepoMore').click();await idle();await $('githubCopyRepo').click();await idle();await page.screenshot({path:`${out}/gh-${tag}-6-copy.png`,fullPage:true});
+ await $('githubCopyNext').click();await idle();await page.screenshot({path:`${out}/gh-${tag}-7-copyform.png`});
+ await page.locator('.gh-back').click();await idle();await page.locator('.gh-back').click();await idle();await $('githubDeleteRepo').click();await idle();await $('githubDeleteNext').click();await idle();await page.screenshot({path:`${out}/gh-${tag}-8-delete.png`});
  await page.close();
 }
 await browser.close();server.close();

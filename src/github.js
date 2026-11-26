@@ -101,6 +101,79 @@ export function createGitHub({fetchImpl=(...a)=>fetch(...a),config=GITHUB_CONFIG
    return {owner:data.owner.login,name:data.name,full:data.full_name,branch:data.default_branch,url:data.html_url};
   },
 
+  async repoInfo(owner,repo){
+   const r=await get(R(owner,repo));let topics=[];try{topics=(await get(`${R(owner,repo)}/topics`)).names||[]}catch{}
+   return {owner:r.owner.login,name:r.name,full:r.full_name,private:!!r.private,description:r.description||'',homepage:r.homepage||'',topics,hasIssues:r.has_issues!==false,hasWiki:!!r.has_wiki,hasProjects:!!r.has_projects,branch:r.default_branch,admin:r.permissions?.admin!==false};
+  },
+  // Deleting a whole repository. The UI asks several times first; this checks afterwards that it is really gone.
+  async deleteRepo(owner,repo,typedName){
+   if(typedName!==repo)throw new GitHubError('The name typed does not match. Nothing was deleted.');
+   await call('DELETE',R(owner,repo));
+   const check=await raw(config.api+R(owner,repo),{method:'GET'});
+   if(check.status!==404)throw new GitHubError('GitHub did not confirm the deletion. Check the repository on GitHub.');
+  },
+  async actionsEnabled(owner,repo){return !!(await get(`${R(owner,repo)}/actions/permissions`)).enabled},
+  async setActionsEnabled(owner,repo,enabled){
+   await call('PUT',`${R(owner,repo)}/actions/permissions`,{enabled:!!enabled});
+   if(await api.actionsEnabled(owner,repo)!==!!enabled)throw new GitHubError('GitHub did not confirm the change to Actions.');
+  },
+  // Copy the current files of one or more branches. Never writes into a branch that already exists.
+  // target: {kind:'new', name, isPrivate} or {kind:'existing', owner, repo, names:{sourceBranch:newBranchName}}
+  async copy(from,branches,target,{onProgress=()=>{},maxFiles=1000,maxBytes=50*1024*1024}={}){
+   if(!branches.length)throw new GitHubError('Choose at least one branch to copy.');
+   const src=await api.repoInfo(from.owner,from.repo);
+   // 1. Read everything first, so nothing is created if the source is too big or unreadable.
+   const plans=[];let bytes=0;
+   for(const b of branches){
+    onProgress('Reading '+b+'…');
+    const ref=await get(`${R(from.owner,from.repo)}/git/ref/heads/${enc(b)}`);
+    const t=await get(`${R(from.owner,from.repo)}/git/trees/${ref.object.sha}?recursive=1`);
+    if(t.truncated)throw new GitHubError(`Branch ${b} has too many files for ATE to copy. Nothing was copied.`);
+    const entries=t.tree.filter(e=>e.type==='blob');
+    if(entries.length>maxFiles)throw new GitHubError(`Branch ${b} has ${entries.length} files; ATE copies at most ${maxFiles}. Nothing was copied.`);
+    bytes+=entries.reduce((n,e)=>n+(e.size||0),0);
+    if(bytes>maxBytes)throw new GitHubError(`These files add up to more than ${Math.round(maxBytes/1048576)} MB; ATE copies at most that. Nothing was copied.`);
+    plans.push({branch:b,entries,skipped:t.tree.filter(e=>e.type==='commit').map(e=>e.path)});
+   }
+   if(target.kind==='existing'){
+    const have=new Set((await api.branches(target.owner,target.repo)).map(x=>x.name));
+    for(const p of plans){const n=target.names[p.branch];if(!validBranchName(n||''))throw new GitHubError('Choose a valid new branch name for '+p.branch+'.');if(have.has(n))throw new GitHubError(`Branch ${n} already exists in ${target.repo}. ATE never copies into an existing branch. Choose another name.`)}
+    if(new Set(plans.map(p=>target.names[p.branch])).size!==plans.length)throw new GitHubError('Each copied branch needs its own new name.');
+   }
+   // 2. Create the destination.
+   let to,root,defaultName='main';
+   if(target.kind==='new'){
+    if(!validRepoName(target.name))throw new GitHubError('Use letters, numbers, dots, dashes or underscores for the name.');
+    onProgress('Creating '+target.name+'…');
+    const {data}=await call('POST','/user/repos',{name:target.name,private:!!target.isPrivate,description:src.description,homepage:src.homepage||undefined,has_issues:src.hasIssues,has_wiki:src.hasWiki,has_projects:src.hasProjects,auto_init:true});
+    to={owner:data.owner.login,repo:data.name,full:data.full_name};defaultName=data.default_branch;
+    // Actions off before any workflow file arrives, so nothing runs without its secrets.
+    await api.setActionsEnabled(to.owner,to.repo,false);
+    if(src.topics.length)try{await call('PUT',`${R(to.owner,to.repo)}/topics`,{names:src.topics})}catch{}
+    root=(await get(`${R(to.owner,to.repo)}/git/ref/heads/${enc(defaultName)}`)).object.sha;
+   }else{to={owner:target.owner,repo:target.repo,full:target.owner+'/'+target.repo};const info=await api.repoInfo(to.owner,to.repo);root=(await get(`${R(to.owner,to.repo)}/git/ref/heads/${enc(info.branch)}`)).object.sha;}
+   // 3. Copy the files of each branch as one change.
+   const blobMap=new Map(),made=[];let done=0;const total=plans.reduce((n,p)=>n+p.entries.length,0);
+   for(const p of plans){
+    const tree=[];
+    for(const e of p.entries){
+     if(!blobMap.has(e.sha)){const b=await get(`${R(from.owner,from.repo)}/git/blobs/${e.sha}`);const {data:nb}=await call('POST',`${R(to.owner,to.repo)}/git/blobs`,{content:b.content.replace(/\s/g,''),encoding:'base64'});blobMap.set(e.sha,nb.sha)}
+     tree.push({path:e.path,mode:e.mode,type:'blob',sha:blobMap.get(e.sha)});onProgress(`Copying files… ${++done} of ${total}`);
+    }
+    const {data:t}=await call('POST',`${R(to.owner,to.repo)}/git/trees`,{tree});
+    const {data:c}=await call('POST',`${R(to.owner,to.repo)}/git/commits`,{message:`Copied from ${from.owner}/${from.repo} (branch ${p.branch})`,tree:t.sha,parents:[root]});
+    const name=target.kind==='new'?p.branch:target.names[p.branch];
+    if(target.kind==='new'&&name===defaultName)await call('PATCH',`${R(to.owner,to.repo)}/git/refs/heads/${enc(name)}`,{sha:c.sha,force:false});
+    else await call('POST',`${R(to.owner,to.repo)}/git/refs`,{ref:'refs/heads/'+name,sha:c.sha});
+    made.push(name);
+   }
+   if(target.kind==='new'&&src.branch!==defaultName&&made.includes(src.branch)){await call('PATCH',R(to.owner,to.repo),{default_branch:src.branch});if(!made.includes(defaultName))await call('DELETE',`${R(to.owner,to.repo)}/git/refs/heads/${enc(defaultName)}`);}
+   // 4. Read back: every copied branch must have exactly the source's files.
+   for(const p of plans){const name=target.kind==='new'?p.branch:target.names[p.branch];const got=(await api.files(to.owner,to.repo,name)).files;const want=new Map(p.entries.map(e=>[e.path,e.sha]));
+    if(got.length!==want.size||got.some(f=>want.get(f.path)!==f.sha))throw new GitHubError(`The copy of ${p.branch} does not match the original. Check ${to.full} on GitHub.`)}
+   return {to,branches:made,skipped:plans.flatMap(p=>p.skipped)};
+  },
+
   // ---- Files ----
   async files(owner,repo,branch){
    const tree=await get(`${R(owner,repo)}/git/trees/${encodeURIComponent(branch)}?recursive=1`);

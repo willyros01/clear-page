@@ -20,12 +20,13 @@ const html=`
   </div>
  </section>
  <section id="githubSignedIn" hidden>
-  <div class="gh-row"><span id="githubUser"></span><span class="gh-buttons"><a id="githubChooseRepos" class="gh-link" target="_blank" rel="noopener">Choose repositories</a><button id="githubSignOut">Sign out</button></span></div>
+  <div class="gh-row"><span id="githubUser"></span><span class="gh-buttons"><button id="githubMoreRepos">Give ATE more repositories…</button><button id="githubSignOut">Sign out</button></span></div>
   <div class="gh-pickers">
    <label class="gh-field">Repository<select id="githubRepo"></select></label>
    <label class="gh-field">Branch<select id="githubBranch"></select></label>
-   <button id="githubRefresh">Refresh</button>
+   <span class="gh-buttons"><button id="githubRefresh">Refresh</button><button id="githubRepoMore" aria-label="More for this repository: copy or delete">More…</button></span>
   </div>
+  <p id="githubRepoCount" class="gh-meta"></p>
   <nav id="githubNav" class="gh-nav" aria-label="GitHub sections"></nav>
   <div id="githubPanel"></div>
  </section>
@@ -35,7 +36,7 @@ const html=`
  <div class="actions"><button id="githubAskCancel">Cancel</button><button id="githubAskOk" class="primary"></button></div>
 </dialog>`;
 
-export function setupGitHub({github,workspace,opened,notice,isAdvanced=()=>true,markSaved,replaceText}){
+export function setupGitHub({github,workspace,opened,notice,isAdvanced=()=>true,ensureAdvanced=()=>false,markSaved,replaceText}){
  document.body.insertAdjacentHTML('beforeend',html);
  const $=id=>document.getElementById(id);
  let repos=[],branches=[],files=[],section='files',busy=false,signInCancelled=false,view=null;
@@ -45,8 +46,10 @@ export function setupGitHub({github,workspace,opened,notice,isAdvanced=()=>true,
  const sameBranch=ref=>{const r=repo();return !!(r&&ref?.kind==='github'&&ref.owner===r.owner&&ref.repo===r.name&&ref.branch===branch())};
  function el(tag,props={},...kids){const e=document.createElement(tag);for(const [k,v] of Object.entries(props)){if(k==='text')e.textContent=v;else if(k==='class')e.className=v;else if(k.startsWith('on'))e[k]=v;else if(k==='checked')e.checked=!!v;else if(v!==undefined&&v!==null&&v!==false)e.setAttribute(k,v===true?'':v)}for(const k of kids.flat())if(k!=null)e.append(k);return e}
  const panel=(...kids)=>{$('githubPanel').replaceChildren(...kids.filter(k=>k!=null))};
- function setDisabled(on){for(const e of $('githubDialog').querySelectorAll('button,input,select,textarea'))if(!['githubClose','githubCancelSignIn','githubCopyCode'].includes(e.id))e.disabled=on}
- async function task(work,{lock=true}={}){if(busy)return;busy=true;if(lock)setDisabled(true);try{await work()}catch(e){status(e.message);if(e.code==='signed-out')showView()}finally{busy=false;if(lock)setDisabled(false)}}
+ // While GitHub is working, controls are switched off; afterwards only those this switched off come back on
+ // (a control that was already off, such as the 5-second delete button, stays off).
+ function lockControls(){const list=[...$('githubDialog').querySelectorAll('button,input,select,textarea')].filter(e=>!e.disabled&&!['githubClose','githubCancelSignIn','githubCopyCode'].includes(e.id));for(const e of list)e.disabled=true;return ()=>{for(const e of list)if(e.isConnected)e.disabled=false}}
+ async function task(work,{lock=true}={}){if(busy)return;busy=true;const unlock=lock?lockControls():()=>{};try{await work()}catch(e){status(e.message);if(e.code==='signed-out')showView()}finally{busy=false;unlock()}}
  const when=iso=>{if(!iso)return '';const d=new Date(iso);return isNaN(d)?'':d.toLocaleString([],{dateStyle:'medium',timeStyle:'short'})};
  function diffView(lines,label){
   const box=el('div',{class:'gh-diff',role:'group','aria-label':label||'Changes'});
@@ -91,9 +94,9 @@ export function setupGitHub({github,workspace,opened,notice,isAdvanced=()=>true,
  // ---- Repository and branch ----
  async function loadRepos(){
   const was=repo()?.full,b=branch();status('Loading repositories…');repos=await github.repos();
-  $('githubChooseRepos').href=github.chooseReposUrl();
   $('githubRepo').replaceChildren(...repos.map((r,i)=>el('option',{value:String(i),text:r.full+(r.canPush?'':' (read only)')})));
   if(!repos.length){status('ATE has not been given any repositories yet. Tap "Choose repositories", pick some on GitHub, then tap Refresh.');$('githubBranch').replaceChildren();panel();return}
+  $('githubRepoCount').textContent=repos.length===1?'ATE can use 1 repository. To add more, tap "Give ATE more repositories…".':`ATE can use ${repos.length} repositories.`;
   const i=repos.findIndex(r=>r.full===was);if(i>=0)$('githubRepo').value=String(i);
   await loadBranches(i>=0?b:'');
  }
@@ -216,24 +219,94 @@ export function setupGitHub({github,workspace,opened,notice,isAdvanced=()=>true,
  }
 
  // ---- Branches ----
+ async function switchBranch(name){$('githubBranch').value=name;view=null;section='files';await loadFiles();status('Now working on branch '+name+'.')}
  function branchesPanel(){
+  if(view)return view();
   const r=repo(),b=branch(),name=el('input',{id:'githubNewBranch',autocomplete:'off',autocapitalize:'off',spellcheck:'false',placeholder:'new-branch-name'});
-  panel(el('p',{text:`Working on branch ${b}.`}),
-   el('div',{class:'gh-list'},...branches.map(x=>el('div',{class:'gh-item'},el('span',{class:'gh-name',text:x.name+(x.name===r.branch?' (main branch)':'')}),
-    r.canPush&&x.name!==b?el('button',{'data-merge':x.name,text:`Merge into ${b}`,onclick:()=>mergeBranch(x.name,b)}):null,
-    r.canPush&&x.name!==r.branch&&x.name!==b&&!x.protected?el('button',{'data-delete':x.name,class:'danger',text:'Delete',onclick:()=>deleteBranch(x.name)}):null))),
+  panel(el('p',{text:'Tap a branch to work on it.'}),
+   el('div',{class:'gh-list'},...branches.map(x=>el('div',{class:'gh-item'},
+    x.name===b?el('div',{class:'gh-file gh-current',text:'✓ '+x.name+' · you are working here'}):el('button',{class:'gh-file','data-switch':x.name,text:x.name+(x.name===r.branch?' (main branch)':''),onclick:()=>task(()=>switchBranch(x.name))}),
+    r.canPush&&x.name!==b?el('button',{class:'gh-more','data-branch-more':x.name,'aria-label':'More for branch '+x.name,text:'⋯',onclick:()=>go(()=>branchActions(x))}):null))),
    r.canPush?el('details',{id:'githubNewBranchBox'},el('summary',{text:`New branch from ${b}`}),el('label',{class:'gh-field'},'Branch name',name),el('div',{class:'actions'},el('button',{id:'githubCreateBranch',text:'Create branch',onclick:()=>task(async()=>{
     const nb=name.value.trim(),from=branches.find(x=>x.name===b);await github.createBranch(r.owner,r.name,nb,from.sha);await loadBranches(nb);status('Created branch '+nb+'. You are now working on it.')})}))):null);
  }
+ function branchActions(x){const r=repo(),b=branch();
+  panel(back('Branches'),el('h3',{text:'Branch '+x.name}),el('div',{class:'actions gh-stack'},
+   el('button',{id:'githubBranchSwitch',text:'Work on this branch',onclick:()=>task(()=>switchBranch(x.name))}),
+   el('button',{id:'githubBranchMerge',text:`Copy ${x.name}'s changes into ${b}`,onclick:()=>mergeBranch(x.name,b)}),
+   x.name!==r.branch&&!x.protected?el('button',{id:'githubBranchDelete',class:'danger',text:'Delete branch '+x.name,onclick:()=>deleteBranch(x.name)}):null))}
  async function mergeBranch(head,base){
   const r=repo();
-  const v=await ask({title:`Merge ${head} into ${base}?`,text:`Copies the changes made on ${head} into ${base}. ${head} itself is not changed.`,ok:'Merge',fields:[{id:'note',label:'Note for this change',value:`Merge ${head} into ${base}`}],
-   run:async v=>{const res=await github.merge(r.owner,r.name,base,head,v.note.trim());if(res.result==='conflict')throw Error(`The same lines were changed on both branches, so GitHub cannot merge them automatically. Nothing was changed. Open a pull request to see the differences.`);return res}});
-  if(v)await task(async()=>{await loadBranches(base);status(v.result==='nothing'?`${base} already has everything from ${head}. Nothing to merge.`:`Merged ${head} into ${base}.`)})
+  const v=await ask({title:`Copy ${head}'s changes into ${base}?`,text:`Everything changed on ${head} is added to ${base} (this is called a merge). ${head} itself stays as it is.`,ok:'Copy changes',fields:[{id:'note',label:'Note for this change',value:`Merge ${head} into ${base}`}],
+   run:async v=>{const res=await github.merge(r.owner,r.name,base,head,v.note.trim());if(res.result==='conflict')throw Error(`The same lines were changed on both branches, so GitHub cannot combine them automatically. Nothing was changed. Open a pull request to see the differences.`);return res}});
+  if(v)await task(async()=>{view=null;await loadBranches(base);section='branches';await showSection('branches');status(v.result==='nothing'?`${base} already has everything from ${head}. Nothing to copy.`:`Copied ${head}'s changes into ${base}.`)})
  }
  async function deleteBranch(name){
   const r=repo();const v=await ask({title:`Delete branch ${name}?`,text:'Changes that were only on this branch will no longer be listed. This cannot be undone from ATE.',ok:'Delete branch',run:()=>github.deleteBranch(r.owner,r.name,name)});
-  if(v)await task(async()=>{await loadBranches(branch());status('Deleted branch '+name+'.')})
+  if(v)await task(async()=>{view=null;await loadBranches(branch());section='branches';await showSection('branches');status('Deleted branch '+name+'.')})
+ }
+
+ // ---- Repository: more repositories, copy, delete ----
+ $('githubMoreRepos').onclick=()=>ask({title:'Give ATE more repositories',text:'This opens GitHub\'s page for ATE in a new tab. There, tick the repositories ATE may use, then tap Save. Do not change anything else on that page, especially the red "Danger zone" buttons. Then come back here and tap Refresh.',ok:'Continue to GitHub',run:()=>{window.open(github.chooseReposUrl(),'_blank','noopener')}});
+ $('githubRepoMore').onclick=()=>{if(!repo())return;view=()=>repoActions();task(()=>showSection(section))};
+ const clearNav=()=>{for(const b of $('githubNav').children)b.setAttribute('aria-pressed','false')};
+ function repoActions(){clearNav();const r=repo();
+  panel(back('Back'),el('h3',{text:r.full}),el('div',{class:'actions gh-stack'},
+   el('button',{id:'githubCopyRepo',text:'Copy branches to another repository…',onclick:()=>go(()=>copyExplain())}),
+   el('button',{id:'githubDeleteRepo',class:'danger',text:'Delete this repository…',onclick:()=>go(()=>deleteRepoStep1())})))}
+ function copyExplain(){clearNav();const r=repo();
+  const section=(h,lines)=>el('div',{},el('h4',{text:h}),...lines.map(t=>el('p',{text:'• '+t})));
+  panel(back('Back',()=>repoActions()),el('h3',{text:'Copy branches of '+r.full}),
+   el('p',{text:'Read this first. It explains exactly what a copy does.'}),
+   section('Copied',['The files of the branch or branches you choose, as they are right now.','Into a new repository: its description, website address, topics, which features are on (Issues, Wiki, Projects) and the main branch name.']),
+   section('You choose',['One branch, or all branches.','A new repository, or new branches in an existing repository.','For a new repository: public or private (the original\'s setting is pre-selected; nothing becomes public unless you choose it).']),
+   section('Not copied',['The history of past changes: GitHub does not let an app copy it. Only the files as they are now.','Secrets (hidden keys used by workflows): GitHub never shows their values, so you add them again yourself.','The website setup (GitHub Pages), branch locks and the people who have access.','Issues, pull requests and past Actions runs: they belong to the original.']),
+   section('Safety',['ATE never writes into a branch that already exists, so nothing can be overwritten.','Actions (automatic jobs) are switched off in a new repository before any file arrives, so its workflows cannot run without their secrets. Switch them on in the Actions section when ready.','Up to 1,000 files and 50 MB per copy. ATE checks that every file arrived exactly.']),
+   el('div',{class:'actions'},el('button',{text:'Cancel',onclick:()=>go(null)}),el('button',{id:'githubCopyNext',class:'primary',text:'I understand, continue',onclick:()=>go(()=>copyForm())})));
+ }
+ async function copyForm(){clearNav();
+  const r=repo(),b=branch();status('Reading '+r.full+'…');const info=await github.repoInfo(r.owner,r.name);status('');
+  const one=el('input',{type:'radio',name:'ghCopyWhat',id:'githubCopyOne',checked:true}),all=el('input',{type:'radio',name:'ghCopyWhat',id:'githubCopyAll'});
+  const toNew=el('input',{type:'radio',name:'ghCopyWhere',id:'githubCopyToNew',checked:true}),toOld=el('input',{type:'radio',name:'ghCopyWhere',id:'githubCopyToExisting'});
+  const newName=el('input',{id:'githubCopyName',autocomplete:'off',autocapitalize:'off',spellcheck:'false',value:r.name+'-copy'}),priv=el('input',{type:'checkbox',id:'githubCopyPrivate',checked:info.private});
+  const others=repos.filter(x=>x.full!==r.full&&x.canPush),targetSel=el('select',{id:'githubCopyTarget'},...others.map(x=>el('option',{value:x.full,text:x.full})));
+  const names=el('div',{id:'githubCopyNames'}),offBox=el('input',{type:'checkbox',id:'githubCopyActionsOff',checked:true});
+  const newBox=el('div',{},el('label',{class:'gh-field'},'Name of the new repository',newName),el('label',{class:'gh-check'},priv,' Private (only you can see it)'));
+  const oldBox=el('div',{hidden:true},others.length?el('label',{class:'gh-field'},'Copy into',targetSel):el('p',{text:'ATE has no other repository you can change.'}),names,el('label',{class:'gh-check'},offBox,' Switch off Actions in that repository first (recommended: its workflows could otherwise start on the copied branches). Switch them back on later in Actions.'));
+  const chosen=()=>all.checked?branches.map(x=>x.name):[b];
+  const drawNames=()=>{names.replaceChildren(...chosen().map(n=>el('label',{class:'gh-field'},`New branch name for ${n}`,el('input',{'data-from':n,autocomplete:'off',autocapitalize:'off',spellcheck:'false',value:`${n}-from-${r.name}`}))))};
+  const sync=()=>{newBox.hidden=!toNew.checked;oldBox.hidden=toNew.checked;drawNames()};for(const x of [one,all,toNew,toOld])x.onchange=sync;sync();
+  panel(back('Back',()=>copyExplain()),el('h3',{text:'Copy from '+r.full}),
+   el('h4',{text:'What to copy'}),el('label',{class:'gh-check'},one,` Branch ${b} only`),el('label',{class:'gh-check'},all,` All ${branches.length} branches`),
+   el('h4',{text:'Where to'}),el('label',{class:'gh-check'},toNew,' A new repository'),el('label',{class:'gh-check'},toOld,' New branches in an existing repository'),newBox,oldBox,
+   el('div',{class:'actions'},el('button',{text:'Cancel',onclick:()=>go(null)}),el('button',{id:'githubCopyNow',class:'primary',text:'Copy now',onclick:()=>task(async()=>{
+    let target;
+    if(toNew.checked)target={kind:'new',name:newName.value.trim(),isPrivate:priv.checked};
+    else{if(!others.length)throw Error('Choose a new repository instead.');const [owner,name]=targetSel.value.split('/');const map={};for(const i of names.querySelectorAll('input'))map[i.dataset.from]=i.value.trim();target={kind:'existing',owner,repo:name,names:map};
+     if(offBox.checked){status('Switching off Actions in '+targetSel.value+'…');await github.setActionsEnabled(owner,name,false)}}
+    const res=await github.copy({owner:r.owner,repo:r.name},chosen(),target,{onProgress:status});
+    await loadRepos();const i=repos.findIndex(x=>x.full===res.to.full);
+    view=()=>panel(el('h3',{text:'Copy finished'}),el('p',{text:`Copied ${res.branches.length} ${res.branches.length===1?'branch':'branches'} into ${res.to.full}: ${res.branches.join(', ')}. Every file was checked.`}),
+     el('p',{text:'Not copied: history of past changes, secrets, GitHub Pages setup, branch locks, people with access, issues, pull requests and past Actions runs.'+(target.kind==='new'||offBox.checked?' Actions are switched off in '+res.to.full+'.':'')}),
+     res.skipped.length?el('p',{text:'Skipped links to other repositories (submodules): '+res.skipped.join(', ')}):null,
+     i<0?el('p',{text:'ATE cannot open the new repository yet. Tap "Give ATE more repositories…", tick it, then Refresh.'}):el('div',{class:'actions'},el('button',{id:'githubOpenCopy',text:'Open '+res.to.full,onclick:()=>task(async()=>{view=null;$('githubRepo').value=String(i);await loadBranches()})})));
+    await showSection(section);status('Copy finished.')})})));
+ }
+ function deleteRepoStep1(){clearNav();const r=repo();
+  panel(back('Back',()=>repoActions()),el('h3',{class:'gh-danger-title',text:'Delete '+r.full+'?'}),
+   el('p',{text:'Deleting removes the whole repository from GitHub:'}),
+   ...['every file','the history of all changes','all branches','its issues and pull requests','its Actions workflows and past runs','its website, if it has one (GitHub Pages)'].map(t=>el('p',{text:'• '+t})),
+   el('p',{text:'GitHub may let you restore a recently deleted repository from your own GitHub settings (Settings → Repositories → Deleted repositories), usually within 90 days, but this is not guaranteed. ATE cannot undo it.'}),
+   el('div',{class:'actions'},el('button',{text:'Cancel',onclick:()=>go(null)}),el('button',{id:'githubDeleteNext',class:'danger',text:'Continue',onclick:()=>go(()=>deleteRepoStep2())})));
+ }
+ function deleteRepoStep2(){clearNav();const r=repo();
+  const typed=el('input',{id:'githubDeleteName',autocomplete:'off',autocapitalize:'off',spellcheck:'false'});
+  const final=el('button',{id:'githubDeleteForever',class:'danger',disabled:true,text:'Delete forever (wait 5)'});
+  let left=5,ready=false;const tick=setInterval(()=>{left--;if(left<=0){clearInterval(tick);ready=true;final.textContent='Delete forever';update()}else final.textContent=`Delete forever (wait ${left})`},1000);
+  const update=()=>{final.disabled=!(ready&&typed.value===r.name)};typed.oninput=update;
+  final.onclick=()=>task(async()=>{if(typed.value!==r.name)throw Error('Type the exact name first.');status('Deleting '+r.full+'…');await github.deleteRepo(r.owner,r.name,typed.value);view=null;await loadRepos();status(`${r.full} has been deleted from GitHub.`)});
+  panel(back('Back',()=>{clearInterval(tick);return deleteRepoStep1()}),el('h3',{class:'gh-danger-title',text:'Last check'}),el('p',{text:`To confirm, type the repository's name exactly: ${r.name}`}),el('label',{class:'gh-field'},'Repository name',typed),
+   el('div',{class:'actions'},el('button',{text:'Cancel',onclick:()=>{clearInterval(tick);go(null)}}),final));
  }
 
  // ---- Pull requests ----
@@ -265,9 +338,12 @@ export function setupGitHub({github,workspace,opened,notice,isAdvanced=()=>true,
  const runLabel=x=>x.status!=='completed'?'⏳ running':x.conclusion==='success'?'✓ passed':x.conclusion==='failure'?'✗ failed':x.conclusion==='cancelled'?'– cancelled':'• '+(x.conclusion||x.status);
  async function actionsPanel(){
   if(view)return view();
-  const r=repo();status('Loading workflow runs…');const [runs,flows]=await Promise.all([github.runs(r.owner,r.name),github.workflows(r.owner,r.name)]);status('');
+  const r=repo();status('Loading workflow runs…');const [runs,flows,on]=await Promise.all([github.runs(r.owner,r.name),github.workflows(r.owner,r.name),github.actionsEnabled(r.owner,r.name).catch(()=>null)]);status('');
   const pick=el('select',{id:'githubWorkflow'},...flows.map(w=>el('option',{value:String(w.id),text:w.name})));
-  panel(el('h3',{text:'Latest runs'}),runs.length?el('div',{class:'gh-list'},...runs.map(x=>el('button',{class:'gh-file gh-run gh-'+(x.conclusion||'running'),onclick:()=>go(()=>runView(x))},el('strong',{text:runLabel(x)+' · '+x.name}),el('span',{class:'gh-meta',text:` ${x.branch} · ${x.event} · ${when(x.created)}`})))):el('p',{text:'No runs yet.'}),
+  const toggle=on===null||!r.canPush?null:el('div',{class:'gh-row gh-switch'},el('strong',{id:'githubActionsState',text:'Automatic jobs (Actions): '+(on?'On':'Off')}),el('button',{id:'githubActionsToggle',class:on?'danger':'',text:on?'Switch off':'Switch on',onclick:async()=>{
+   const v=await ask({title:on?'Switch off Actions?':'Switch on Actions?',text:on?`No workflow in ${r.full} will run until you switch Actions on again. Nothing is deleted.`:`Workflows in ${r.full} will run again when their triggers happen. Make sure their secrets are in place first.`,ok:on?'Switch off':'Switch on',run:()=>github.setActionsEnabled(r.owner,r.name,!on)});
+   if(v)await task(async()=>{await actionsPanel();status(on?'Actions switched off.':'Actions switched on.')})}}));
+  panel(toggle,el('h3',{text:'Latest runs'}),runs.length?el('div',{class:'gh-list'},...runs.map(x=>el('button',{class:'gh-file gh-run gh-'+(x.conclusion||'running'),onclick:()=>go(()=>runView(x))},el('strong',{text:runLabel(x)+' · '+x.name}),el('span',{class:'gh-meta',text:` ${x.branch} · ${x.event} · ${when(x.created)}`})))):el('p',{text:'No runs yet.'}),
    flows.length&&r.canPush?el('details',{id:'githubStartBox'},el('summary',{text:'Start a workflow'}),el('label',{class:'gh-field'},'Workflow',pick),el('p',{text:`Runs on branch ${branch()}.`}),el('div',{class:'actions'},el('button',{id:'githubStartWorkflow',text:'Start',onclick:()=>task(async()=>{await github.startWorkflow(r.owner,r.name,pick.value,branch());await actionsPanel();status('Started. It can take a few seconds to appear; tap Actions to update.')})}))):null);
  }
  async function runView(x){
@@ -297,6 +373,7 @@ export function setupGitHub({github,workspace,opened,notice,isAdvanced=()=>true,
 
  // ---- New repository ----
  function newRepoPanel(){
+  if(view)return view();
   const name=el('input',{id:'githubRepoName',autocomplete:'off',autocapitalize:'off',spellcheck:'false',placeholder:'my-new-project'}),desc=el('input',{id:'githubRepoDesc',autocomplete:'off'}),priv=el('input',{type:'checkbox',id:'githubRepoPrivate',checked:true});
   panel(el('p',{text:'Creates a new repository in your GitHub account, starting with a README file.'}),el('label',{class:'gh-field'},'Name',name),el('label',{class:'gh-field'},'Description (optional)',desc),el('label',{class:'gh-check'},priv,' Private (only you can see it)'),
    el('div',{class:'actions'},el('button',{id:'githubCreateRepo',class:'primary',text:'Create repository',onclick:()=>task(async()=>{
@@ -308,7 +385,7 @@ export function setupGitHub({github,workspace,opened,notice,isAdvanced=()=>true,
  }
 
  return {
-  open(){showView();status('');$('githubDialog').showModal();if(github.signedIn)task(loadRepos);else $('githubSignIn').focus();},
+  open(){showView();status('');if(ensureAdvanced())notice('Switched to Advanced, so GitHub files get colours and syntax checks. You can switch back in the Menu.');$('githubDialog').showModal();if(github.signedIn)task(loadRepos);else $('githubSignIn').focus();},
   // Ask for a note, optionally show what changed, then save one tab. Resolves with the confirmed result.
   save(ref,name,text){
    if(!github.signedIn)return Promise.reject(Error('Sign in to GitHub first: Menu → GitHub. ATE stays signed in only while the page is open.'));
