@@ -88,7 +88,7 @@ export function createFakeGitHub({login='tester'}={}){
   if((m=rest.match(/^\/actions\/workflows\/(\d+)\/dispatches$/))){const w=r.workflows.find(w=>w.id==m[1]);if(!w.dispatch)return json(422,{message:"Workflow does not have 'workflow_dispatch' trigger"});r.runs.unshift({id:900+r.runs.length,name:w.name,display_title:w.name,head_branch:body.ref,event:'workflow_dispatch',status:'queued',conclusion:null,created_at:'2026-11-26T13:00:00Z'});return {status:204}}
   if((m=rest.match(/^\/actions\/runs\/(\d+)\/jobs$/))){const run=r.runs.find(x=>x.id==m[1]);return json(200,{jobs:run.jobs||[]})}
   if((m=rest.match(/^\/check-runs\/(\d+)\/annotations$/))){const job=r.runs.flatMap(x=>x.jobs||[]).find(j=>j.id==m[1]);return json(200,job?.annotations||[])}
-  if((m=rest.match(/^\/actions\/jobs\/(\d+)\/logs$/))){const job=r.runs.flatMap(x=>x.jobs||[]).find(j=>j.id==m[1]);return {status:200,text:job?.log||''}}
+  if((m=rest.match(/^\/actions\/jobs\/(\d+)\/logs$/))){const job=r.runs.flatMap(x=>x.jobs||[]).find(j=>j.id==m[1]);if(!job||job.log===undefined)return json(404,{message:'Not Found'});return {status:200,text:job.log}}
   return json(404,{message:'Not Found'});
  }
  // fetch-compatible function, for unit tests.

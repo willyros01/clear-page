@@ -302,9 +302,23 @@ export function createGitHub({fetchImpl=(...a)=>fetch(...a),config=GITHUB_CONFIG
      try{const a=await get(`${R(owner,repo)}/check-runs/${j.id}/annotations`);lines=a.filter(x=>x.annotation_level==='failure'||x.annotation_level==='warning').map(x=>x.message.split('\n')[0].slice(0,300))}catch{}
      try{const resp=await raw(`${config.api}${R(owner,repo)}/actions/jobs/${j.id}/logs`,{method:'GET'});if(resp.ok){const t=await resp.text();const all=t.split('\n').map(l=>l.replace(/^\S+Z /,'').replace(/\u001b\[[0-9;]*m/g,''));const errs=all.filter(l=>/##\[error\]|error|fail|assert/i.test(l)).slice(-15);lines=[...lines,...(errs.length?errs:all.slice(-15))].map(l=>l.replace('##[error]','').trim().slice(0,300)).filter(Boolean)}}catch{}
     }
-    out.push({name:j.name,status:j.status,conclusion:j.conclusion,failedSteps,lines:[...new Set(lines)].slice(0,25)});
+    out.push({id:j.id,url:j.html_url||'',name:j.name,status:j.status,conclusion:j.conclusion,failedSteps,lines:[...new Set(lines)].slice(0,25)});
    }
    return out;
+  },
+  // The whole log of one job, made readable: no time stamps or colour codes; GitHub's section markers become plain words.
+  async jobLog(owner,repo,jobId,{maxLines=20000}={}){
+   if(!token)throw new GitHubError('Sign in to GitHub first: Menu → GitHub.',0,'signed-out');
+   const resp=await raw(`${config.api}${R(owner,repo)}/actions/jobs/${jobId}/logs`,{method:'GET'});
+   if(resp.status===401){token='';login='';throw new GitHubError('Your GitHub sign-in has ended. Sign in again: Menu → GitHub.',401,'signed-out')}
+   if(resp.status===404||resp.status===410)throw new GitHubError('GitHub has no log for this job. Logs appear once a job has finished, and GitHub deletes them after a while (usually 90 days).',resp.status);
+   if(!resp.ok)throw new GitHubError('GitHub did not send the log (error '+resp.status+'). Try again, or open the job on GitHub.',resp.status);
+   let text;try{text=await resp.text()}catch{throw new GitHubError('This page could not read the log from GitHub. Open the job on GitHub instead.')}
+   let lines=text.replace(/^\uFEFF/,'').split(/\r?\n/).map(l=>l.replace(/^\d{4}-\d\d-\d\dT[\d:.]+Z ?/,'').replace(/\u001b\[[0-9;]*[A-Za-z]/g,''))
+    .filter(l=>!/^##\[endgroup\]/.test(l)).map(l=>l.replace(/^##\[group\]/,'▸ ').replace(/^##\[error\]/,'ERROR: ').replace(/^##\[warning\]/,'WARNING: ').replace(/^##\[(notice|debug)\]/,''));
+   while(lines.length&&lines[lines.length-1]==='')lines.pop();
+   const total=lines.length,cut=total>maxLines;if(cut)lines=lines.slice(-maxLines);
+   return {lines,total,cut};
   },
  };
  return api;

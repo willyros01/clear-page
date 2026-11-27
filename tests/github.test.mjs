@@ -169,3 +169,13 @@ test('delete repository: exact name required, then checked gone',async()=>{
 test('Actions on/off is confirmed',async()=>{
  const {fake,gh}=await setup();await gh.setActionsEnabled(O,N,false);assert.equal(fake.state.repos.get(N).actions,false);assert.equal(await gh.actionsEnabled(O,N),false);await gh.setActionsEnabled(O,N,true);assert.equal(await gh.actionsEnabled(O,N),true);
 });
+
+test('Actions: full job log is cleaned up, long logs keep the end, missing logs explained',async()=>{
+ const {fake,gh}=await setup();const r=fake.state.repos.get(N);
+ const log='\uFEFF2026-11-26T10:00:00.1Z ##[group]Run npm test\n2026-11-26T10:00:00.2Z \u001b[32mok\u001b[0m 1 adds\n2026-11-26T10:00:00.3Z ##[endgroup]\n2026-11-26T10:00:00.4Z ##[error]AssertionError: expected 2\n';
+ r.runs=[{id:5,name:'Build',head_branch:'main',event:'push',status:'completed',conclusion:'failure',created_at:'2026-11-26T10:00:00Z',jobs:[{id:77,name:'web',status:'completed',conclusion:'failure',steps:[],log},{id:78,name:'big',status:'completed',conclusion:'success',steps:[],log:Array.from({length:30},(_,i)=>'line '+i).join('\n')},{id:79,name:'running',status:'in_progress',conclusion:null,steps:[]}]}];
+ const a=await gh.jobLog(O,N,77);assert.deepEqual(a.lines,['▸ Run npm test','ok 1 adds','ERROR: AssertionError: expected 2']);assert.equal(a.cut,false);
+ const b=await gh.jobLog(O,N,78,{maxLines:10});assert.equal(b.cut,true);assert.equal(b.total,30);assert.equal(b.lines[0],'line 20');assert.equal(b.lines.at(-1),'line 29');
+ await assert.rejects(gh.jobLog(O,N,79),/no log for this job/);
+ const d=await gh.runDetail(O,N,5);assert.equal(d[0].id,77);
+});

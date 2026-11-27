@@ -120,6 +120,13 @@ await page.waitForSelector('#githubAsk[open]');assert.match(await $('githubAskBo
   await nav('Actions');assert.match(await $('githubPanel').innerText(),/✗ failed · Build[\s\S]*✓ passed · Build/);
   await page.getByRole('button',{name:/✗ failed · Build/}).click();await idle();
   assert.match(await $('githubPanel').innerText(),/Failed step: npm test[\s\S]*(AssertionError: expected 2|exit code 1)/);
+  // Full log, view only, with Find.
+  await page.locator('.gh-log-btn[data-job="77"]').click();await idle();
+  assert.match(await $('githubLogText').innerText(),/ERROR: AssertionError: expected 2/);assert.doesNotMatch(await $('githubLogText').innerText(),/2026-11-26T/);
+  assert.equal(await $('githubLogText').evaluate(e=>e.isContentEditable),false);
+  await $('githubLogFind').fill('assertion');await $('githubLogNext').click();assert.match(await $('githubLogCount').innerText(),/1 of 1/);
+  await $('githubLogFind').fill('nothing-like-this');await $('githubLogNext').click();assert.match(await $('githubLogCount').innerText(),/Not found/);
+  await page.locator('.gh-back',{hasText:'Run'}).click();await idle();assert.match(await $('githubPanel').innerText(),/Failed step: npm test/);
   await page.locator('.gh-back').click();await idle();await page.locator('#githubStartBox summary').click();await $('githubWorkflow').selectOption('1');await $('githubStartWorkflow').click();await idle();
   assert.match(await status(),/Started/);assert.equal(R.runs[0].event,'workflow_dispatch');
   await page.locator('#githubStartBox summary').click();await $('githubWorkflow').selectOption('2');await $('githubStartWorkflow').click();await idle();assert.match(await status(),/cannot be started by hand/);

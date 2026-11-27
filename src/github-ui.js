@@ -352,8 +352,31 @@ export function setupGitHub({github,workspace,opened,notice,roomFor=()=>'',isAdv
  async function runView(x){
   const r=repo();status('Loading run details…');const jobs=await github.runDetail(r.owner,r.name,x.id);status('');
   panel(back('Actions'),el('h3',{text:runLabel(x)+' · '+x.name}),el('p',{class:'gh-meta',text:`${x.branch} · ${when(x.created)}`}),
-   ...jobs.map(j=>el('div',{class:'gh-comment'},el('strong',{text:runLabel(j)+' · '+j.name}),j.failedSteps.length?el('p',{text:'Failed step: '+j.failedSteps.join(', ')}):null,j.lines.length?el('div',{class:'gh-diff'},...j.lines.map(l=>el('div',{class:'gh-line gh-del',text:l}))):null)),
+   ...jobs.map(j=>el('div',{class:'gh-comment'},el('strong',{text:runLabel(j)+' · '+j.name}),j.failedSteps.length?el('p',{text:'Failed step: '+j.failedSteps.join(', ')}):null,j.lines.length?el('div',{class:'gh-diff'},...j.lines.map(l=>el('div',{class:'gh-line gh-del',text:l}))):null,
+    el('div',{class:'actions'},el('button',{class:'gh-log-btn','data-job':String(j.id),text:'Show full log',onclick:()=>go(()=>logView(x,j))})))),
    jobs.length?null:el('p',{text:'No jobs yet.'}));
+ }
+
+ // View-only full log of one job, with Find.
+ async function logView(x,j){
+  const r=repo(),head=[back('Run',()=>runView(x)),el('h3',{text:'Log · '+j.name}),el('p',{class:'gh-meta',text:`${runLabel(j)} · ${x.name} · ${x.branch} · view only`})];
+  const onGitHub=j.url?el('p',{},el('a',{href:j.url,target:'_blank',rel:'noopener',text:'Open this job on GitHub'})):null;
+  status('Loading the log…');let log;
+  try{log=await github.jobLog(r.owner,r.name,j.id)}catch(e){if(e.code==='signed-out')throw e;status('');panel(...head,el('p',{id:'githubLogError',text:e.message}),onGitHub);return}
+  status('');
+  const box=el('div',{id:'githubLogText',class:'gh-diff gh-log',tabindex:'0'},...log.lines.map(l=>el('div',{class:'gh-line'+(/^ERROR: /.test(l)?' gh-del':/^▸ /.test(l)?' gh-log-step':''),text:l||' '})));
+  const find=el('input',{id:'githubLogFind',type:'search',autocomplete:'off',autocapitalize:'off',spellcheck:'false',placeholder:'Text to find'}),count=el('span',{id:'githubLogCount',class:'gh-meta'});
+  let hits=[],at=-1,last='';
+  function next(){const q=find.value.trim().toLowerCase();
+   if(q!==last){for(const h of hits)h.classList.remove('gh-log-hit','gh-log-here');hits=q?[...box.children].filter(d=>d.textContent.toLowerCase().includes(q)):[];for(const h of hits)h.classList.add('gh-log-hit');at=-1;last=q}
+   if(!q){count.textContent='';return}
+   if(!hits.length){count.textContent='Not found';return}
+   hits[at]?.classList.remove('gh-log-here');at=(at+1)%hits.length;hits[at].classList.add('gh-log-here');hits[at].scrollIntoView({block:'center'});count.textContent=`${at+1} of ${hits.length}`}
+  find.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();next()}};
+  panel(...head,
+   log.cut?el('p',{text:`This log is very long (${log.total.toLocaleString()} lines). Showing the last ${log.lines.length.toLocaleString()} lines, where errors usually are.`}):el('p',{class:'gh-meta',text:log.total?`${log.total.toLocaleString()} lines.`:'This log is empty.'}),
+   el('div',{class:'gh-log-find'},el('label',{class:'gh-field'},'Find in this log',find),el('button',{id:'githubLogNext',text:'Find next',onclick:next}),count),
+   box,el('div',{class:'actions'},el('button',{id:'githubLogTop',text:'Back to top',onclick:()=>{box.scrollTop=0;box.children[0]?.scrollIntoView({block:'start'})}}),el('button',{id:'githubLogEnd',text:'Go to end',onclick:()=>box.lastElementChild?.scrollIntoView({block:'end'})})),onGitHub);
  }
 
  // ---- Issues ----
