@@ -219,6 +219,8 @@ export function createGitHub({fetchImpl=(...a)=>fetch(...a),config=GITHUB_CONFIG
    for(const c of changes){const f=after.get(c.path);if(c.remove?f:!f)throw new GitHubError('GitHub did not confirm '+c.path+'. Check the repository before saving again.');if(!c.remove)blobCache.set(f.sha,c.text)}
    return {commit:newCommit.sha,files:Object.fromEntries(changes.filter(c=>!c.remove).map(c=>[c.path,after.get(c.path)]))};
   },
+  // Recent change ids of a branch, newest first (for the branch tree).
+  async branchHistory(owner,repo,branch,max=100){return (await get(`${R(owner,repo)}/commits?sha=${encodeURIComponent(branch)}&per_page=${max}`)).map(c=>c.sha).slice(0,max)},
   async history(owner,repo,branch,path){
    const list=await get(`${R(owner,repo)}/commits?sha=${encodeURIComponent(branch)}&path=${encodeURIComponent(path)}&per_page=30`);
    return list.map(c=>({sha:c.sha,message:c.commit.message,author:c.commit.author?.name||c.author?.login||'',date:c.commit.author?.date||''}));

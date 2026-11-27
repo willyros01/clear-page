@@ -38,6 +38,7 @@ try{for(const [engineName,engine] of Object.entries(engines)){
   const status=()=>$('githubStatus').innerText();
   const askOk=async()=>{await $('githubAskOk').click();await page.waitForSelector('#githubAsk',{state:'hidden'})};
   const nav=async name=>{await page.locator('#githubNav button',{hasText:name}).click();await idle()};
+  const repoMenu=async()=>{if(await $('githubRepoPanel').isHidden())await $('githubRepoMore').click();await page.waitForSelector('#githubRepoPanel:not([hidden])')};
   const fileBtn=p=>page.getByRole('button',{name:p,exact:true});
   const openFile=async p=>{await openGitHub();await nav('Files');await $('githubFilter').fill(p);await fileBtn(p).click();await page.waitForSelector('#githubDialog',{state:'hidden'})};
   const saveTab=async note=>{await $('save').click();await page.waitForSelector('#githubAsk[open]');if(note)await $('ghAsk_note').fill(note);await askOk()};
@@ -49,7 +50,7 @@ try{for(const [engineName,engine] of Object.entries(engines)){
   assert.equal(await $('githubDeviceLink').getAttribute('href'),'https://github.com/login/device');
   await page.waitForSelector('#githubSignedIn:not([hidden])',{timeout:20000});await idle();
   assert.match(await $('githubUser').innerText(),/tester/);assert.match(await $('githubRepoCount').innerText(),/ATE can use 1 repository/);
-  await $('githubMoreRepos').click();await page.waitForSelector('#githubAsk[open]');assert.match(await $('githubAskBody').innerText(),/Danger zone/);assert.equal(await $('githubAskOk').innerText(),'Continue to GitHub');await $('githubAskCancel').click();
+  await repoMenu();await $('githubMoreRepos').click();await page.waitForSelector('#githubAsk[open]');assert.match(await $('githubAskBody').innerText(),/Danger zone/);assert.equal(await $('githubAskOk').innerText(),'Continue to GitHub');await $('githubAskCancel').click();await $('githubRepoClose').click();
   const stored=await page.evaluate(()=>JSON.stringify({...localStorage})+JSON.stringify({...sessionStorage}));assert.ok(!stored.includes('ghu_fake'),'sign-in must not be stored');
 
   // A: open, edit, see changes before saving, save with a note.
@@ -96,24 +97,27 @@ await page.waitForSelector('#githubAsk[open]');assert.match(await $('githubAskBo
   await page.waitForSelector('#githubDialog',{state:'hidden'});await editor.fill('fresh\n');await saveTab();assert.equal(S.filesAt('ate-test','main')['docs/new.md'],'fresh\n');
 
   // B: create a branch, change it, merge it back, delete it.
-  await openGitHub();await nav('Branches');assert.equal(await page.locator('[data-branch-more]').count(),1,'only the branch you work on has ⋯');
-  await page.locator('[data-branch-more="main"]').click();await idle();assert.equal(await page.locator('#githubBranchDelete').count(),0,'the main branch cannot be deleted');
+  await openGitHub();await nav('Branches');assert.equal(await page.locator('.gh-current-box #githubBranchNew').count(),1,'the choices sit under the branch you work on');
+  assert.equal(await page.locator('#githubBranchDelete').count(),0,'the main branch cannot be deleted');
   await $('githubBranchNew').click();await idle();await $('githubNewBranch').fill('fairpot');await $('githubCreateBranch').click();await idle();
-  assert.equal(await $('githubBranch').inputValue(),'fairpot');assert.match(await status(),/Created branch fairpot/);assert.match(await $('githubPanel').innerText(),/✓ fairpot · you are working here/);
+  assert.equal(await $('githubBranch').inputValue(),'fairpot');assert.match(await status(),/Created branch fairpot/);assert.match(await $('githubPanel').innerText(),/✓ fairpot \(same as main\) · you are working here/);
   await nav('Files');await $('githubFilter').fill('new.md');await fileBtn('docs/new.md').click();await page.waitForSelector('#githubDialog',{state:'hidden'});
   await editor.fill('from fairpot\n');await saveTab('On fairpot');assert.equal(S.filesAt('ate-test','fairpot')['docs/new.md'],'from fairpot\n');assert.equal(S.filesAt('ate-test','main')['docs/new.md'],'fresh\n');
   // Tapping a branch makes it the one you work on, and you stay on the Branches screen.
+  await openGitHub();await nav('Branches');
+  assert.match(await page.locator('[data-current="fairpot"]').innerText(),/fairpot \(made from main\)/);assert.equal(await page.locator('.gh-tree-row.gh-depth-1 [data-current="fairpot"]').count(),1,'fairpot is drawn under main');
+  assert.equal(await page.locator('[data-current="fairpot"] .gh-branch-note').first().evaluate(e=>getComputedStyle(e).fontSize<getComputedStyle(e.parentElement).fontSize||parseFloat(getComputedStyle(e).fontSize)<parseFloat(getComputedStyle(e.parentElement).fontSize)),true,'the note is smaller than the branch name');
   await openGitHub();await nav('Branches');await page.locator('[data-switch="main"]').click();await idle();
-  assert.equal(await $('githubBranch').inputValue(),'main');assert.match(await status(),/Now working on branch main/);assert.match(await $('githubPanel').innerText(),/✓ main · you are working here/);
-  await page.locator('[data-switch="fairpot"]').click();await idle();await page.locator('[data-branch-more="fairpot"]').click();await idle();
-  assert.match(await $('githubBranchMerge').innerText(),/Merge: add fairpot's changes to another branch/);await $('githubBranchMerge').click();await idle();
+  assert.equal(await $('githubBranch').inputValue(),'main');assert.match(await status(),/Now working on branch main/);assert.match(await $('githubPanel').innerText(),/✓ main \(main branch\) · you are working here/);
+  await page.locator('[data-switch="fairpot"]').click();await idle();
+  assert.match(await $('githubBranchMerge').innerText(),/Merge fairpot into another branch/);await $('githubBranchMerge').click();await idle();
   await page.locator('[data-merge-into="main"]').click();await page.waitForSelector('#githubAsk[open]');await askOk();await idle();
   assert.match(await status(),/Added fairpot's changes to main/);assert.equal(S.filesAt('ate-test','main')['docs/new.md'],'from fairpot\n');assert.equal(await $('githubBranch').inputValue(),'fairpot');
-  await page.locator('[data-branch-more="fairpot"]').click();await idle();await $('githubBranchDelete').click();await page.waitForSelector('#githubAsk[open]');await askOk();await idle();
+  await $('githubBranchDelete').click();await page.waitForSelector('#githubAsk[open]');await askOk();await idle();
   assert.equal(S.head('ate-test','fairpot'),undefined);assert.equal(await $('githubBranch').inputValue(),'main');assert.match(await status(),/now working on main/);
 
   // C: pull request: open, see changes, comment, merge.
-  await nav('Branches');await page.locator('[data-branch-more]').click();await idle();await $('githubBranchNew').click();await idle();await $('githubNewBranch').fill('fix');await $('githubCreateBranch').click();await idle();
+  await nav('Branches');await $('githubBranchNew').click();await idle();await $('githubNewBranch').fill('fix');await $('githubCreateBranch').click();await idle();
   S.pushElsewhere('ate-test','fix',{'README.md':'# Fixed\n'});
   await nav('Pull requests');await page.locator('#githubNewPr summary').click();await $('githubPrHead').selectOption('fix');await $('githubPrBase').selectOption('main');
   await $('githubPrTitle').fill('Fix readme');await $('githubCreatePr').click();await idle();
@@ -138,11 +142,11 @@ await page.waitForSelector('#githubAsk[open]');assert.match(await $('githubAskBo
   await page.locator('#githubStartBox summary').click();await $('githubWorkflow').selectOption('2');await $('githubStartWorkflow').click();await idle();assert.match(await status(),/cannot be started by hand/);
 
   // Actions on/off.
-  await nav('Actions');assert.match(await $('githubActionsState').innerText(),/On/);await $('githubActionsToggle').click();await page.waitForSelector('#githubAsk[open]');await askOk();await idle();
-  assert.equal(R.actions,false);assert.match(await $('githubActionsState').innerText(),/Off/);
-  await $('githubActionsToggle').click();await page.waitForSelector('#githubAsk[open]');await askOk();await idle();assert.equal(R.actions,true);
+  await repoMenu();await page.waitForSelector('#githubActionsToggle');assert.match(await $('githubActionsState').innerText(),/On/);await $('githubActionsToggle').click();await page.waitForSelector('#githubAsk[open]');await askOk();await idle();
+  assert.equal(R.actions,false);await page.waitForFunction(()=>/Off/.test(document.getElementById('githubActionsState')?.textContent));
+  await page.waitForSelector('#githubActionsToggle');await $('githubActionsToggle').click();await page.waitForSelector('#githubAsk[open]');await askOk();await idle();assert.equal(R.actions,true);
   // Copy: explanation page first, then copy all branches into a new repository.
-  await $('githubRepoMore').click();await idle();await $('githubCopyRepo').click();await idle();
+  await repoMenu();await $('githubCopyRepo').click();await idle();
   const explain=await $('githubPanel').innerText();for(const w of [/Not copied/,/history of past changes/,/Secrets/,/never writes into a branch that already exists/,/switched off in a new repository/])assert.match(explain,w);
   assert.equal(await page.locator('#githubCopyNow').count(),0,'no Copy button before the explanation is accepted');
   await $('githubCopyNext').click();await idle();await $('githubCopyAll').check();await $('githubCopyName').fill('ate-test-copy');slowMs=120;await $('githubCopyNow').click();
@@ -153,7 +157,7 @@ await page.waitForSelector('#githubAsk[open]');assert.match(await $('githubAskBo
   assert.deepEqual(S.filesAt('ate-test-copy','main'),S.filesAt('ate-test','main'));assert.equal(S.repos.get('ate-test-copy').actions,false);assert.equal(S.repos.get('ate-test-copy').pushesWithActionsOn||0,0);
   assert.match(await $('githubCopyOpened').innerText(),/opened tester\/ate-test-copy/);assert.match(await $('githubRepo').locator('option:checked').innerText(),/ate-test-copy/);
   // Delete repository: warning, exact name, 5-second wait.
-  await $('githubRepoMore').click();await idle();await $('githubDeleteRepo').click();await idle();assert.match(await $('githubPanel').innerText(),/every file[\s\S]*history[\s\S]*90 days/);
+  await repoMenu();await $('githubDeleteRepo').click();await idle();assert.match(await $('githubPanel').innerText(),/every file[\s\S]*history[\s\S]*90 days/);
   await $('githubDeleteNext').click();await idle();assert.equal(await $('githubDeleteForever').isDisabled(),true);
   await $('githubDeleteName').fill('ate-test-cop');await page.waitForTimeout(5500);assert.equal(await $('githubDeleteForever').isDisabled(),true,'wrong name keeps the button off');
   await $('githubDeleteName').fill('ate-test-copy');assert.equal(await $('githubDeleteForever').isDisabled(),false);await $('githubDeleteForever').click();await idle();
@@ -164,7 +168,7 @@ await page.waitForSelector('#githubAsk[open]');assert.match(await $('githubAskBo
   await $('githubIssueState').click();await idle();assert.match(await status(),/Issue closed/);assert.equal(R.issues.find(i=>i.title==='Buy golf balls').state,'closed');
 
   // F: new repository.
-  await nav('New repository');await $('githubRepoName').fill('brand-new');await $('githubCreateRepo').click();await idle();
+  await repoMenu();await $('githubNewRepoOpen').click();await idle();await $('githubRepoName').fill('brand-new');await $('githubCreateRepo').click();await idle();
   assert.match(await status(),/Created tester\/brand-new/);assert.ok(S.repos.has('brand-new'));assert.match(await $('githubRepo').locator('option:checked').innerText(),/brand-new/);
 
   // Super tabs: files grouped under repository + branch; the ⋯ menu saves a group's changes together and closes it.
