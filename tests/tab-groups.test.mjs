@@ -4,7 +4,7 @@ const gh=(repo,branch,path)=>({id:path,projectRef:{kind:'github',owner:'w',repo,
 test('super tabs group files by repository and branch, Project, or device, in first-seen order',()=>{
  const items=[gh('a','main','x'),{id:'d1',projectRef:null},gh('a','dev','y'),gh('a','main','z'),{id:'p',projectRef:{id:'P1',projectName:'Notes'}}];
  const g=groupTabs(items);assert.deepEqual(g.map(x=>x.key),['gh:w/a@main','device','gh:w/a@dev','pr:P1']);
- assert.equal(g[0].tabs.length,2);assert.equal(g[3].branch,'Notes');assert.equal(groupOf(null).repo,'This device');
+ assert.equal(g[0].tabs.length,2);assert.equal(g[3].branch,'Notes');assert.equal(groupOf(null).repo,'My files');
 });
 test('limits: 30 tabs in all, 12 per group',()=>{
  const twelve=Array.from({length:12},(_,i)=>gh('a','main','f'+i));

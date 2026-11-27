@@ -6,7 +6,7 @@ import {MAX_PER_GROUP} from './document-tabs.js';
 export function groupOf(ref){
  if(ref?.kind==='github')return {key:`gh:${ref.owner}/${ref.repo}@${ref.branch}`,kind:'github',repo:ref.repo,owner:ref.owner,branch:ref.branch,title:`${ref.owner}/${ref.repo} · branch ${ref.branch}`};
  if(ref&&ref.id)return {key:'pr:'+ref.id,kind:'project',repo:'Project',branch:ref.projectName||'files',title:'Project '+(ref.projectName||'')};
- return {key:'device',kind:'device',repo:'This device',branch:'',title:'Files on this device'};
+ return {key:'device',kind:'device',repo:'My files',branch:'',title:'My files'};
 }
 // Groups in the order their first tab appears.
 export function groupTabs(items){
