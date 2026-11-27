@@ -19,6 +19,8 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+      # GitHub's machine lists a Microsoft package source that sometimes refuses downloads (403); ATE needs nothing from it.
+      - run: sudo find /etc/apt/sources.list.d -iname '*microsoft*' -print -delete || true
       - run: npx playwright install --with-deps chromium webkit
       - name: GitHub proof of concept (Chromium and WebKit/Safari engine)
         run: node tests/browser/github-poc.mjs
