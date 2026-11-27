@@ -54,6 +54,12 @@ final class ATEFunctionalTests: XCTestCase {
         XCTAssertTrue(button.isHittable, app.debugDescription)
         menuSafeTop = max(0, button.frame.minY)
         button.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        // Right after a rotation the first tap can land while iOS is still settling the layout.
+        // Tap once more if the menu did not open, and say so in the log (never silently).
+        if !app.staticTexts["Editor menu"].waitForExistence(timeout: 5) {
+            print("NOTE native UI: Menu needed a second tap")
+            button.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        }
         XCTAssertTrue(app.staticTexts["Editor menu"].waitForExistence(timeout: 10), app.debugDescription)
     }
     func rename(_ name: String) {
@@ -278,9 +284,10 @@ final class ATEFunctionalTests: XCTestCase {
     func assertCText(file: StaticString = #filePath, line: UInt = #line) {
         // WKWebView's value may contain only the first syntax-highlighted span.
         // Inspect the rendered descendants; the in-webview suite verifies exact bytes.
+        // After resume the webview can take a moment to expose its text again: wait, don't just look once.
         let text = editor()
-        XCTAssertTrue(text.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "main")).firstMatch.exists, app.debugDescription, file: file, line: line)
-        XCTAssertTrue(text.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "return")).firstMatch.exists, app.debugDescription, file: file, line: line)
+        XCTAssertTrue(text.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "main")).firstMatch.waitForExistence(timeout: 10), app.debugDescription, file: file, line: line)
+        XCTAssertTrue(text.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "return")).firstMatch.waitForExistence(timeout: 10), app.debugDescription, file: file, line: line)
     }
     func assertToolbarVisible() {
         let buttons = [app.buttons["Menu"], app.buttons["Close current tab"], app.buttons["Save file"]]
@@ -527,7 +534,8 @@ final class ATEFunctionalTests: XCTestCase {
         XCTAssertTrue(app.buttons["Menu"].waitForExistence(timeout: 30), "Accepted terms survive a native restart")
         menu(); app.buttons["Help"].tap()
         let show = app.buttons["Terms of Use"]
-        for _ in 0..<10 { if show.isHittable { break }; app.webViews.firstMatch.swipeUp() }
+        // Help grew in 0.8.9 (GitHub topic): allow more swipes to reach Terms of Use on a phone.
+        for _ in 0..<30 { if show.isHittable { break }; app.webViews.firstMatch.swipeUp() }
         XCTAssertTrue(show.isHittable, app.debugDescription); show.tap()
         XCTAssertTrue(app.staticTexts["ATE Terms of Use"].waitForExistence(timeout: 10))
         let back = app.buttons["Back to editor"]
