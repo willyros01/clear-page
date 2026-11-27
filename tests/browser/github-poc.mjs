@@ -135,7 +135,7 @@ await page.waitForSelector('#githubAsk[open]');assert.match(await $('githubAskBo
   await $('githubCopyNext').click();await idle();await $('githubCopyAll').check();await $('githubCopyName').fill('ate-test-copy');await $('githubCopyNow').click();await idle();
   assert.match(await $('githubPanel').innerText(),/Copy finished[\s\S]*Copied 2 branches into tester\/ate-test-copy[\s\S]*Actions are switched off/);
   assert.deepEqual(S.filesAt('ate-test-copy','main'),S.filesAt('ate-test','main'));assert.equal(S.repos.get('ate-test-copy').actions,false);assert.equal(S.repos.get('ate-test-copy').pushesWithActionsOn||0,0);
-  await $('githubOpenCopy').click();await idle();assert.match(await $('githubRepo').locator('option:checked').innerText(),/ate-test-copy/);
+  assert.match(await $('githubCopyOpened').innerText(),/opened tester\/ate-test-copy/);assert.match(await $('githubRepo').locator('option:checked').innerText(),/ate-test-copy/);
   // Delete repository: warning, exact name, 5-second wait.
   await $('githubRepoMore').click();await idle();await $('githubDeleteRepo').click();await idle();assert.match(await $('githubPanel').innerText(),/every file[\s\S]*history[\s\S]*90 days/);
   await $('githubDeleteNext').click();await idle();assert.equal(await $('githubDeleteForever').isDisabled(),true);
@@ -151,8 +151,27 @@ await page.waitForSelector('#githubAsk[open]');assert.match(await $('githubAskBo
   await nav('New repository');await $('githubRepoName').fill('brand-new');await $('githubCreateRepo').click();await idle();
   assert.match(await status(),/Created tester\/brand-new/);assert.ok(S.repos.has('brand-new'));assert.match(await $('githubRepo').locator('option:checked').innerText(),/brand-new/);
 
+  // Super tabs: files grouped under repository + branch; the ⋯ menu saves a group's changes together and closes it.
+  await $('githubRepo').selectOption({label:'tester/ate-test'});await idle();
+  const grp=page.locator('.tg-group[data-group="gh:tester/ate-test@main"]');await $('githubClose').click();
+  // Earlier steps left ate-test files open with unsaved edits: closing the whole group asks first.
+  await grp.locator('.tg-menu').click();await page.waitForSelector('#tabGroupMenu[open]');await page.locator('#tabGroupActions button',{hasText:/^Close all/}).click();
+  await page.waitForSelector('#tabCloseGroup[open]');assert.match(await $('tabCloseGroupText').innerText(),/not saved/);await $('tabCloseGroupOk').click();assert.equal(await grp.count(),0);
+  await openFile('src/app.js');await editor.fill('let a = 2;\n');await openFile('README.md');await editor.fill('# Grouped\n');
+  assert.match(await grp.locator('.tg-chip').innerText(),/ate-test[\s\S]*main[\s\S]*·\s*\d+[\s\S]*●2/);
+  assert.equal(await grp.locator('.tg-current').count(),1,'the file being worked on is marked inside its group');
+  assert.ok(await page.locator('.tg-group[data-group="device"]').count()<=1);
+  await grp.locator('.tg-menu').click();await page.waitForSelector('#tabGroupMenu[open]');
+  await page.locator('#tabGroupActions button',{hasText:'Save the 2 changed files together'}).click();await page.waitForSelector('#githubAsk[open]');await askOk();
+  await notice(/Saved 2 files to GitHub in one change/);assert.equal(S.filesAt('ate-test','main')['src/app.js'],'let a = 2;\n');assert.equal(S.filesAt('ate-test','main')['README.md'],'# Grouped\n');
+  assert.equal(await grp.locator('.tg-unsaved').count(),0);
+  await grp.locator('.tg-chip').click();assert.equal(await grp.locator('.tg-file').count(),0,'tapping the group name folds it');
+  await grp.locator('.tg-chip').click();assert.ok(await grp.locator('.tg-file').count()>=2);
+  await grp.locator('.tg-menu').click();await page.waitForSelector('#tabGroupMenu[open]');await page.locator('#tabGroupActions button',{hasText:/^Close all/}).click();
+  assert.equal(await grp.count(),0,'closing the group closes all its files');
+  const blue=await page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--accent').trim());assert.equal(blue.toLowerCase(),'#1f5c99');
   // Sign-in ended on GitHub's side: plain message, back to the sign-in screen.
-  S.tokenValid=false;await $('githubRefresh').click();await idle();assert.match(await status(),/sign-in has ended/);assert.equal(await $('githubSignedOut').isVisible(),true);
+  await openGitHub();S.tokenValid=false;await $('githubRefresh').click();await idle();assert.match(await status(),/sign-in has ended/);assert.equal(await $('githubSignedOut').isVisible(),true);
   S.tokenValid=true;
   // Reload forgets the sign-in; saving a GitHub tab asks to sign in and keeps the draft.
   await $('githubClose').click();await page.reload();await page.waitForSelector('.cm-content');

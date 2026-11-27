@@ -61,7 +61,11 @@ test('iOS tabs preserve independent documents, undo, overrides, close cancellati
   const before=tabs().length;$('new').click();assert.equal(tabs().length,before);
   view.dispatch({changes:{from:0,insert:'// during save\n'}});finishShare();await saving;
   assert.equal(tabs().length,before,'Save and close must not discard edits made while sharing');assert.match(tabs().at(-1).textContent,/•/);holdShare=false;
-  for(let i=0;i<10;i++)$('new').click();assert.equal(tabs().length,12);$('new').click();assert.equal(tabs().length,12);assert.match($('notice').textContent,/12 tabs/);
+  const inGroup=()=>Number(document.querySelector('.tg-count').textContent.replace(/\D/g,''));
+  for(let i=0;i<10;i++)$('new').click();assert.equal(inGroup(),12);$('new').click();assert.equal(inGroup(),12);assert.match($('notice').textContent,/12 files per group/);
+  // Super tabs: a long group shows 5 files plus the current one, and lists the rest behind "+N more".
+  assert.equal(tabs().length,6);assert.ok(tabs().at(-1).getAttribute('aria-selected')==='true');const more=document.querySelector('.tg-more');assert.match(more.textContent,/\+6 more/);
+  more.click();assert.equal($('tabMore').open,true);assert.equal($('tabMoreList').children.length,12);$('tabMoreList').children[6].click();assert.equal($('tabMore').open,false);assert.equal(tabs().length,6);
   // Failed recovery writes must be visible, and must not erase the previous workspace.
   const original=window.Storage.prototype.setItem;window.Storage.prototype.setItem=function(){throw Error('quota')};
   view.dispatch({changes:{from:0,insert:'keep me'}});assert.equal($('recoveryWarning').hidden,false);assert.match($('status').textContent,/Draft not saved/);

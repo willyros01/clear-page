@@ -25,6 +25,12 @@ for(const [w,h,tag] of [[1194,834,'ipad'],[390,844,'phone']]){
  await $('githubRepoMore').click();await idle();await $('githubCopyRepo').click();await idle();await page.screenshot({path:`${out}/gh-${tag}-6-copy.png`,fullPage:true});
  await $('githubCopyNext').click();await idle();await page.screenshot({path:`${out}/gh-${tag}-7-copyform.png`});
  await page.locator('.gh-back').click();await idle();await page.locator('.gh-back').click();await idle();await $('githubDeleteRepo').click();await idle();await $('githubDeleteNext').click();await idle();await page.screenshot({path:`${out}/gh-${tag}-8-delete.png`});
+ // Super tabs: two branches of one repository plus files on this device.
+ await $('githubClose').click();await $('new').evaluate(b=>b.click());await page.locator('.cm-content').fill('notes');
+ const openGh=async(branch,path)=>{await $('menuButton').click();await $('githubButton').click();await idle();await page.locator('#githubNav button',{hasText:'Files'}).click();await idle();await $('githubBranch').selectOption(branch);await idle();await page.locator('#githubFilter').fill(path);await page.getByRole('button',{name:path,exact:true}).click();await page.waitForSelector('#githubDialog',{state:'hidden'})};
+ await openGh('main','README.md');await openGh('main','www/index.html');await openGh('main','www/app.js');await page.locator('.cm-content').fill('let total = 1;\n');await openGh('fairpot','README.md');
+ await page.screenshot({path:`${out}/gh-${tag}-9-supertabs.png`});
+ await page.locator('.tg-menu').nth(1).click();await page.screenshot({path:`${out}/gh-${tag}-10-groupmenu.png`});
  await page.close();
 }
 await browser.close();server.close();

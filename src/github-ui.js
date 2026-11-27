@@ -36,7 +36,7 @@ const html=`
  <div class="actions"><button id="githubAskCancel">Cancel</button><button id="githubAskOk" class="primary"></button></div>
 </dialog>`;
 
-export function setupGitHub({github,workspace,opened,notice,isAdvanced=()=>true,ensureAdvanced=()=>false,markSaved,replaceText}){
+export function setupGitHub({github,workspace,opened,notice,roomFor=()=>'',isAdvanced=()=>true,ensureAdvanced=()=>false,markSaved,replaceText}){
  document.body.insertAdjacentHTML('beforeend',html);
  const $=id=>document.getElementById(id);
  let repos=[],branches=[],files=[],section='files',busy=false,signInCancelled=false,view=null;
@@ -95,7 +95,7 @@ export function setupGitHub({github,workspace,opened,notice,isAdvanced=()=>true,
  async function loadRepos(){
   const was=repo()?.full,b=branch();status('Loading repositories…');repos=await github.repos();
   $('githubRepo').replaceChildren(...repos.map((r,i)=>el('option',{value:String(i),text:r.full+(r.canPush?'':' (read only)')})));
-  if(!repos.length){status('ATE has not been given any repositories yet. Tap "Choose repositories", pick some on GitHub, then tap Refresh.');$('githubBranch').replaceChildren();panel();return}
+  if(!repos.length){status('ATE has not been given any repositories yet. Tap "Give ATE more repositories…", pick some, then tap Refresh.');$('githubBranch').replaceChildren();panel();return}
   $('githubRepoCount').textContent=repos.length===1?'ATE can use 1 repository. To add more, tap "Give ATE more repositories…".':`ATE can use ${repos.length} repositories.`;
   const i=repos.findIndex(r=>r.full===was);if(i>=0)$('githubRepo').value=String(i);
   await loadBranches(i>=0?b:'');
@@ -141,7 +141,7 @@ export function setupGitHub({github,workspace,opened,notice,isAdvanced=()=>true,
    searchOut.replaceChildren(...results.map(x=>el('button',{class:'gh-file',onclick:()=>openFile(x.file,x.line)},el('strong',{text:`${x.file.path}:${x.line}`}),' '+x.text)));});
   searchInput.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();runSearch()}};
   panel(
-   dirty.length&&r.canPush?el('div',{class:'actions'},el('button',{id:'githubSaveAll',class:'primary',text:`Save ${dirty.length} changed ${dirty.length===1?'file':'files'} together…`,onclick:saveAll})):null,
+   dirty.length&&r.canPush?el('div',{class:'actions'},el('button',{id:'githubSaveAll',class:'primary',text:`Save ${dirty.length} changed ${dirty.length===1?'file':'files'} together…`,onclick:()=>saveAll()})):null,
    el('details',{id:'githubSearchBox'},el('summary',{text:'Search inside files'}),el('label',{class:'gh-field'},'Find text in this branch',searchInput),el('div',{class:'actions'},el('button',{id:'githubSearchGo',text:'Search',onclick:runSearch})),searchOut),
    el('label',{class:'gh-field'},'Find a file',q),count,list,
    r.canPush?el('details',{id:'githubNew'},el('summary',{text:'New file'}),el('label',{class:'gh-field'},'File path in the repository',el('input',{id:'githubNewPath',autocomplete:'off',autocapitalize:'off',spellcheck:'false',placeholder:'folder/notes.md'})),el('div',{class:'actions'},el('button',{id:'githubCreate',text:'Open new file',onclick:newFile}))):null);
@@ -149,14 +149,14 @@ export function setupGitHub({github,workspace,opened,notice,isAdvanced=()=>true,
  function newFile(){task(async()=>{const r=repo(),path=$('githubNewPath').value.trim();
   if(!validPath(path))throw Error('Type a path such as folder/notes.md, without a leading slash.');
   if(files.some(f=>f.path===path))throw Error('That file already exists. Choose it from the list instead.');
-  if(workspace.list().length>=12)throw Error('Close a tab before opening another (12 tabs maximum).');
+  {const full=roomFor({kind:'github',owner:r.owner,repo:r.name,branch:branch()});if(full)throw Error(full)}
   $('githubDialog').close();opened('',path.split('/').pop(),{kind:'github',owner:r.owner,repo:r.name,branch:branch(),path,sha:null,mode:'100644'});notice('New GitHub file '+path+'. Save to create it on GitHub.');})}
  function openTab(f){return workspace.documents().find(t=>sameBranch(t.projectRef)&&t.projectRef.path===f.path)}
  function openFile(f,line){return task(async()=>{
   const r=repo(),b=branch(),existing=openTab(f);
   if(existing&&existing.projectRef.sha!==f.sha){if(existing.dirty)throw Error('This file changed on GitHub, and its tab has unsaved edits. Copy your edits, close that tab, then open the file again.');workspace.closeMany([existing.id],{focus:false});}
   else if(existing){$('githubDialog').close();workspace.activate(existing.id);notice(f.path+' is already open'+(line?' (match on line '+line+')':'')+'.');return}
-  if(workspace.list().length>=12)throw Error('Close a tab before opening another (12 tabs maximum).');
+  {const full=roomFor({kind:'github',owner:r.owner,repo:r.name,branch:b});if(full)throw Error(full)}
   status('Opening '+f.path+'…');const result=await github.read(r.owner,r.name,b,f);
   $('githubDialog').close();opened(result.text,f.path.split('/').pop(),result.ref);
   notice('Opened from GitHub: '+r.full+' · '+b+' · '+f.path+(line?' (match on line '+line+')':'')+(isAdvanced()?'':'. For colours and syntax checks: Menu → Advanced.'));
@@ -184,7 +184,7 @@ export function setupGitHub({github,workspace,opened,notice,isAdvanced=()=>true,
   if(!current)throw Error('This file is no longer on the branch. Refresh first.');
   const existing=openTab(current);if(existing?.dirty)throw Error('This file has unsaved edits in a tab. Save or close that tab first.');
   if(existing)workspace.closeMany([existing.id],{focus:false});
-  if(workspace.list().length>=12)throw Error('Close a tab before opening another (12 tabs maximum).');
+  {const full=roomFor({kind:'github',owner:r.owner,repo:r.name,branch:b});if(full)throw Error(full)}
   status('Loading that version…');const old=await github.fileAt(r.owner,r.name,c.sha,f.path),now=await github.read(r.owner,r.name,b,current);
   view=null;$('githubDialog').close();opened(now.text,f.path.split('/').pop(),now.ref);replaceText(old.replace(/\r\n?/g,'\n'));
   notice(`The version from ${when(c.date)} is in the tab, not yet saved. Check it, then Save to put it back on GitHub.`);
@@ -206,8 +206,10 @@ export function setupGitHub({github,workspace,opened,notice,isAdvanced=()=>true,
    run:v=>github.commit(r.owner,r.name,b,[{path:f.path,remove:true,baseSha:f.sha}],v.note.trim()||'Delete '+f.path)});
   if(v){if(tab)workspace.closeMany([tab.id],{focus:false});view=null;notice('Deleted from GitHub: '+f.path);await task(loadFiles)}
  }
- async function saveAll(){
-  const r=repo(),b=branch(),dirty=dirtyHere();
+ async function saveAll(target){
+  const r=target?repos.find(x=>x.owner===target.owner&&x.name===target.repo)||{owner:target.owner,name:target.repo,full:target.owner+'/'+target.repo}:repo(),b=target?target.branch:branch();
+  const dirty=target?workspace.documents().filter(t=>t.dirty&&t.projectRef?.kind==='github'&&t.projectRef.owner===r.owner&&t.projectRef.repo===r.name&&t.projectRef.branch===b):dirtyHere();
+  if(!dirty.length)return;
   const boxes=dirty.map(t=>{const folder=t.projectRef.path.includes('/')?t.projectRef.path.slice(0,t.projectRef.path.lastIndexOf('/')+1):'';return {t,path:folder+t.name,input:el('input',{type:'checkbox',checked:true})}});
   const extra=el('div',{class:'gh-list'},...boxes.map(x=>el('label',{class:'gh-check'},x.input,' '+x.path+(x.path!==x.t.projectRef.path?' (new name)':''))));
   const v=await ask({title:'Save changed files together',text:`One change on ${r.full} · branch ${b}.`,extra,ok:'Save to GitHub',fields:[{id:'note',label:'Note for this change',value:'Update '+boxes.length+' files'}],
@@ -215,7 +217,7 @@ export function setupGitHub({github,workspace,opened,notice,isAdvanced=()=>true,
     const paths=chosen.map(x=>x.path);if(new Set(paths).size!==paths.length)throw Error('Two tabs would save to the same file name. Rename one first.');
     const res=await github.commit(r.owner,r.name,b,chosen.map(x=>({path:x.path,text:x.t.text,baseSha:x.path===x.t.projectRef.path?x.t.projectRef.sha:null,mode:x.t.projectRef.mode})),v.note);
     for(const x of chosen)markSaved(x.t.id,x.t.text,x.t.name,{...x.t.projectRef,path:x.path,sha:res.files[x.path].sha});return {count:chosen.length,commit:res.commit}}});
-  if(v){notice(`Saved ${v.count} ${v.count===1?'file':'files'} to GitHub in one change (${v.commit.slice(0,7)}).`);await task(loadFiles)}
+  if(v){notice(`Saved ${v.count} ${v.count===1?'file':'files'} to GitHub in one change (${v.commit.slice(0,7)}).`);if(!target)await task(loadFiles)}
  }
 
  // ---- Branches ----
@@ -289,7 +291,8 @@ export function setupGitHub({github,workspace,opened,notice,isAdvanced=()=>true,
     view=()=>panel(el('h3',{text:'Copy finished'}),el('p',{text:`Copied ${res.branches.length} ${res.branches.length===1?'branch':'branches'} into ${res.to.full}: ${res.branches.join(', ')}. Every file was checked.`}),
      el('p',{text:'Not copied: history of past changes, secrets, GitHub Pages setup, branch locks, people with access, issues, pull requests and past Actions runs.'+(target.kind==='new'||offBox.checked?' Actions are switched off in '+res.to.full+'.':'')}),
      res.skipped.length?el('p',{text:'Skipped links to other repositories (submodules): '+res.skipped.join(', ')}):null,
-     i<0?el('p',{text:'ATE cannot open the new repository yet. Tap "Give ATE more repositories…", tick it, then Refresh.'}):el('div',{class:'actions'},el('button',{id:'githubOpenCopy',text:'Open '+res.to.full,onclick:()=>task(async()=>{view=null;$('githubRepo').value=String(i);await loadBranches()})})));
+     i<0?el('p',{text:'GitHub has not let ATE into '+res.to.full+' yet. Tap "Give ATE more repositories…", tick it, then Refresh.'}):el('p',{id:'githubCopyOpened',text:'ATE has opened '+res.to.full+' for you: it is now in the Repository box above.'}));
+    if(i>=0){const keep=view;$('githubRepo').value=String(i);await loadBranches();view=keep}
     await showSection(section);status('Copy finished.')})})));
  }
  function deleteRepoStep1(){clearNav();const r=repo();
@@ -381,11 +384,15 @@ export function setupGitHub({github,workspace,opened,notice,isAdvanced=()=>true,
     repos=await github.repos();$('githubRepo').replaceChildren(...repos.map((x,i)=>el('option',{value:String(i),text:x.full+(x.canPush?'':' (read only)')})));
     const i=repos.findIndex(x=>x.full===made.full);
     if(i>=0){$('githubRepo').value=String(i);section='files';await loadBranches();status('Created '+made.full+'.')}
-    else{const was=repos.findIndex(x=>x.full!==made.full);if(was>=0)$('githubRepo').value=String(was);status('Created '+made.full+'. To work on it in ATE, tap "Choose repositories", add it, then tap Refresh.')}})})));
+    else{const was=repos.findIndex(x=>x.full!==made.full);if(was>=0)$('githubRepo').value=String(was);status('Created '+made.full+'. GitHub has not let ATE into it yet. Tap "Give ATE more repositories…", tick it, then Refresh.')}})})));
  }
 
  return {
-  open(){showView();status('');if(ensureAdvanced())notice('Switched to Advanced, so GitHub files get colours and syntax checks. You can switch back in the Menu.');$('githubDialog').showModal();if(github.signedIn)task(loadRepos);else $('githubSignIn').focus();},
+  open(target){showView();status('');if(ensureAdvanced())notice('Switched to Advanced, so GitHub files get colours and syntax checks. You can switch back in the Menu.');$('githubDialog').showModal();
+   if(!github.signedIn){$('githubSignIn').focus();return}
+   task(async()=>{await loadRepos();if(target){const i=repos.findIndex(x=>x.owner===target.owner&&x.name===target.repo);if(i>=0){view=null;section='files';$('githubRepo').value=String(i);await loadBranches(target.branch)}}});},
+  // Save every changed tab of one repository branch together (from the tab group's ⋯ menu).
+  saveTabs(owner,repoName,branchName){if(!github.signedIn){notice('Sign in to GitHub first: Menu → GitHub.');return}return saveAll({owner,repo:repoName,branch:branchName})},
   // Ask for a note, optionally show what changed, then save one tab. Resolves with the confirmed result.
   save(ref,name,text){
    if(!github.signedIn)return Promise.reject(Error('Sign in to GitHub first: Menu → GitHub. ATE stays signed in only while the page is open.'));

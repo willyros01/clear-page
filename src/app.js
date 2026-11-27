@@ -7,7 +7,8 @@ import {setupLegal} from './legal.js';
 import {setupPreview} from './preview.js';
 import {setupIOSViewport} from './ios-viewport.js';
 import {setupProjects} from './project-ui.js';
-import {createDocumentTabs} from './document-tabs.js';
+import {createDocumentTabs,MAX_TABS} from './document-tabs.js';
+import {createTabBar,roomFor,groupOf} from './tab-groups.js';
 import {createGitHub} from './github.js';
 import {setupGitHub} from './github-ui.js';
 import {Capacitor} from '@capacitor/core';
@@ -50,7 +51,7 @@ $('language').onchange=()=>{languageManual=true;editor.setLanguage(advanced?$('l
 $('indent').onclick=()=>editor.indent();$('unindent').onclick=()=>editor.unindent();
 $('smaller').onclick=()=>setFont(font-1);$('larger').onclick=()=>setFont(font+1);$('fontSize').oninput=()=>{const value=$('fontSize').valueAsNumber;if(Number.isFinite(value)&&value>=10&&value<=54){font=value;$('editor').style.fontSize=font+'pt';$('smaller').disabled=font<=10;$('larger').disabled=font>=54;persistPreferences();persist()}};$('fontSize').onchange=()=>setFont($('fontSize').valueAsNumber);$('buttonStyle').onchange=()=>{applyButtonStyle();persistPreferences()};$('theme').onclick=()=>{document.body.classList.toggle('dark');themeLabel();persistPreferences();persist()};
 let saving=false;
-async function save(){if(legal.required())return false;if(saving)return false;saving=true;try{let name=$('name').value||'Untitled';const text=editor.value,tabId=workspace?.current.id,ref=workspace?.current.projectRef;const result=ref?.kind==='github'?await githubUi.save(ref,name,text):ref?await projects.save(ref,name,text):await saveText(text,name);notice(typeof result==='string'?result:result.message);if(result?.name&&(!workspace||workspace.current.id===tabId)&&$('name').value===name&&result.name!==name){$('name').value=result.name;if(!languageManual)setLanguage(languageForDocument(result.name,editor.value));}dirty=editor.value!==text;if(workspace)workspace.saved(tabId,text,result?.name||name,result?.projectRef);else persist();return true}catch(e){notice((workspace?.current.projectRef?e.message+' ':'Save was cancelled or could not complete. ')+'Your draft is kept.');return false}finally{saving=false}}
+async function save(){if(legal.required())return false;if(saving)return false;saving=true;try{let name=$('name').value||'Untitled';const text=editor.value,tabId=workspace?.current.id,ref=workspace?.current.projectRef;const result=ref?.kind==='github'?await githubUi.save(ref,name,text):ref?await projects.save(ref,name,text):await saveText(text,name);notice(typeof result==='string'?result:result.message);if(result?.name&&(!workspace||workspace.current.id===tabId)&&$('name').value===name&&result.name!==name){$('name').value=result.name;if(!languageManual)setLanguage(languageForDocument(result.name,editor.value));}dirty=editor.value!==text;if(workspace)workspace.saved(tabId,text,result?.name||name,result?.projectRef&&ref?.projectName?{...result.projectRef,projectName:ref.projectName}:result?.projectRef);else persist();return true}catch(e){notice((workspace?.current.projectRef?e.message+' ':'Save was cancelled or could not complete. ')+'Your draft is kept.');return false}finally{saving=false}}
 $('save').onclick=save;
 $('menuButton').onclick=()=>{previewUi.update();$('menu').showModal();$('menu').scrollTop=0;iosViewport?.restore()};
 $('closeMenu').onclick=()=>leaveMenu();
@@ -86,8 +87,8 @@ $('saveExit').onclick=async()=>{
 
 function guard(action,title){if(editor.value){pending=action;$('dialogTitle').textContent=title;$('confirm').showModal()}else action()}
 $('cancel').onclick=()=>{$('confirm').close();pending=null};$('proceed').onclick=()=>{const fn=pending;pending=null;$('confirm').close();if(fn)fn()};
-$('new').onclick=()=>{if(saving)return;closingApplication=false;$('menu').close();if(workspace){if(!workspace.add())notice('Close a tab before opening another (12 tabs maximum).');return}guard(()=>{editor.value='';$('name').value='Untitled';setLanguage('plain');dirty=false;counts();persist();notice('');editor.focus()},'Start a new document?')};
-function opened(text,name,projectRef=null){closingApplication=false;text=text.replace(/\r\n?/g,'\n');if(workspace){if(!workspace.add(text,name,languageForDocument(name,text),projectRef))notice('Close a tab before opening another (12 tabs maximum).');else notice('Opened '+name);return}editor.value=text;$('name').value=name;setLanguage(languageForDocument(name,text));dirty=false;counts();persist();notice('Opened '+name);editor.focus()}
+$('new').onclick=()=>{if(saving)return;closingApplication=false;$('menu').close();if(workspace){const full=roomFor(workspace.list(),null,MAX_TABS);if(full||!workspace.add())notice(full||'Close a tab before opening another.');return}guard(()=>{editor.value='';$('name').value='Untitled';setLanguage('plain');dirty=false;counts();persist();notice('');editor.focus()},'Start a new document?')};
+function opened(text,name,projectRef=null){closingApplication=false;text=text.replace(/\r\n?/g,'\n');if(workspace){const full=roomFor(workspace.list(),projectRef,MAX_TABS);if(full||!workspace.add(text,name,languageForDocument(name,text),projectRef))notice(full||'Close a tab before opening another.');else notice('Opened '+name);return}editor.value=text;$('name').value=name;setLanguage(languageForDocument(name,text));dirty=false;counts();persist();notice('Opened '+name);editor.focus()}
 async function chooseOpen(){if(Capacitor.getPlatform()==='android'){try{const result=await openAndroid();opened(result.text,result.name)}catch(error){notice(error.message||'Open was cancelled. Your draft is kept.')}}else $('file').click()}
 $('open').onclick=()=>{if(saving)return;$('menu').close();workspace?chooseOpen():guard(chooseOpen,'Open another document?')};$('file').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{if(f.size>10*1024*1024)throw new Error('Please choose a text file smaller than 10 MB.');const text=typeof f.arrayBuffer==='function'?new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(await f.arrayBuffer()):await f.text();if(text.includes('\u0000'))throw new Error('This does not look like a plain-text file.');opened(text,f.name)}catch(err){notice(err.message||'Could not open this file.')}finally{e.target.value=''}};
 $('focus').onclick=async()=>{$('menu').close();document.body.classList.add('focus');try{if(document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen()}catch(e){}editor.focus()};
@@ -119,7 +120,31 @@ function requestClose(id){
  if(workspace.current.dirty){$('exitTitle').textContent='Close '+workspace.current.name+'?';$('exitDialog').showModal()}
  else {workspace.close(id);closingTabId=null;}
 }
+// ---- Super tabs: group menu and the "+N more" list ----
+let tabBar=null;
+function groupMenu(g,ctl){
+ const docs=workspace.documents().filter(t=>groupOf(t.projectRef).key===g.key),changed=docs.filter(t=>t.dirty);
+ $('tabGroupTitle').textContent=g.title;$('tabGroupInfo').textContent=`${docs.length} ${docs.length===1?'file':'files'} open`+(changed.length?`, ${changed.length} not saved yet`:'');
+ const acts=$('tabGroupActions');acts.textContent='';
+ const add=(text,fn,cls='')=>{const b=document.createElement('button');b.type='button';b.textContent=text;if(cls)b.className=cls;b.onclick=()=>{$('tabGroupMenu').close();fn()};acts.append(b)};
+ if(changed.length&&g.kind==='github')add(`Save the ${changed.length} changed ${changed.length===1?'file':'files'} together…`,()=>githubUi.saveTabs(g.owner,g.repo,g.branch),'primary');
+ if(changed.length&&g.kind==='project')add(`Save the ${changed.length} changed ${changed.length===1?'file':'files'}`,async()=>{if(saving)return;saving=true;let ok=0;try{for(const t of changed){const r=await projects.save(t.projectRef,t.name,t.text);workspace.saved(t.id,t.text,r.name,{...r.projectRef,projectName:t.projectRef.projectName});ok++}notice(`Saved ${ok} ${ok===1?'file':'files'} in the project.`)}catch(e){notice(e.message+` ${ok} saved; the rest are kept unsaved.`)}finally{saving=false;dirty=workspace.current.dirty}},'primary');
+ add(ctl.folded?'Open this group':'Fold this group',ctl.folded?ctl.open:ctl.fold);
+ if(g.kind==='github')add('Open the GitHub screen for this branch',()=>{$('menu').close();githubUi.open({owner:g.owner,repo:g.repo,branch:g.branch})});
+ add(`Close all ${docs.length} ${docs.length===1?'file':'files'}…`,()=>{
+  if(!changed.length){workspace.closeMany(docs.map(t=>t.id));return}
+  $('tabCloseGroupText').textContent=`${changed.length} of these files ${changed.length===1?'has':'have'} changes that are not saved. Closing without saving throws those changes away. To keep them, cancel and use "Save" first.`;
+  $('tabCloseGroupOk').onclick=()=>{$('tabCloseGroup').close();workspace.closeMany(docs.map(t=>t.id))};$('tabCloseGroup').showModal()},'danger');
+ $('tabGroupMenu').showModal();
+}
+function moreList(g){
+ $('tabMoreTitle').textContent=g.title;const list=$('tabMoreList');list.textContent='';
+ for(const t of g.tabs){const b=document.createElement('button');b.type='button';b.className='tg-file-pick'+(t.active?' tg-current':'');b.textContent=(t.name||'Untitled')+(t.dirty?' •':'');b.onclick=()=>{$('tabMore').close();workspace.activate(t.id)};list.append(b)}
+ $('tabMore').showModal();
+}
 if(tabbed){
+ tabBar=createTabBar({row:$('tabs'),filesRow:$('tabFiles'),workspace:{activate:id=>workspace.activate(id)},isBusy:()=>saving,requestClose,openMenu:groupMenu,openMore:moreList});
+ $('tabGroupCancel').onclick=()=>$('tabGroupMenu').close();$('tabMoreClose').onclick=()=>$('tabMore').close();$('tabCloseGroupCancel').onclick=()=>$('tabCloseGroup').close();
  $('tabs').hidden=false;$('documentBar').hidden=false;if(ios)$('exit').setAttribute('aria-label','Close current tab');
  $('exitDialog').querySelector('p').textContent='Save a copy before closing, or discard this tab’s unsaved changes. Other tabs and existing files are kept.';
  workspace=createDocumentTabs({editor,storage:localStorage,preserveScroll:Capacitor.getPlatform()==='android',
@@ -127,13 +152,7 @@ if(tabbed){
  setMeta:t=>{loading=true;$('name').value=t.name;const id=!t.manual&&!t.state?languageForDocument(t.name,t.text):t.language;$('language').value=languages[id]?id:'plain';t.language=$('language').value;languageManual=!!t.manual;editor.setLanguage(advanced?$('language').value:'plain');editor.setDark(document.body.classList.contains('dark'));editor.setVim(advanced&&$('editingMode').value==='vim');dirty=!!t.dirty;},
  changed:()=>{loading=false;counts();syntax?.changed()},
  status:ok=>{$('status').textContent=ok?'Tabs recovered on this device':'Draft not saved — use Save file';$('recoveryWarning').hidden=ok},
- render:items=>{
-  $('tabs').textContent='';
-  for(const t of items){const group=document.createElement('div'),button=document.createElement('button'),close=document.createElement('button');
-   group.className='document-tab';group.setAttribute('role','presentation');button.type=close.type='button';button.setAttribute('role','tab');button.setAttribute('aria-selected',String(t.active));button.tabIndex=t.active?0:-1;button.onkeydown=e=>{const keys=['ArrowLeft','ArrowRight','Home','End'];if(!keys.includes(e.key)||saving)return;e.preventDefault();const index=items.findIndex(x=>x.id===t.id);const next=e.key==='Home'?0:e.key==='End'?items.length-1:(index+(e.key==='ArrowRight'?1:-1)+items.length)%items.length;workspace.activate(items[next].id);$('tabs').querySelector('[aria-selected=true]').focus()};const full=t.name||'Untitled';button.title=full;button.textContent=(full.length>24?full.slice(0,9)+'…'+full.slice(-12):full)+(t.dirty?' •':'');button.setAttribute('aria-label',(t.name||'Untitled')+(t.dirty?', unsaved changes':''));button.onclick=()=>{if(!saving)workspace.activate(t.id)};
-   close.textContent='×';close.setAttribute('aria-label','Close '+t.name);close.onclick=()=>requestClose(t.id);group.append(button,close);$('tabs').append(group);if(t.active)requestAnimationFrame(()=>group.scrollIntoView({block:'nearest',inline:'nearest'}));
-  }
- }
+ render:items=>tabBar.render(items)
  });
  workspace.init({text:editor.value,name:$('name').value,language:$('language').value,manual:languageManual});
  // Convert legacy recovery only after the complete workspace is durably stored.
@@ -149,7 +168,7 @@ function applyExperience(){
 if(tabbed){
  $('experienceModes').hidden=false;$('projectsButton').hidden=false;$('exportCopy').hidden=false;
  projects=setupProjects({workspace,openDocument:opened,canChange:()=>!saving,notice,exclusive:async fn=>{if(saving)throw Error('Finish the current save first.');saving=true;try{return await fn()}finally{saving=false}}});
- githubUi=setupGitHub({github:createGitHub(),workspace,opened,notice,isAdvanced:()=>advanced,ensureAdvanced:()=>{if(advanced)return false;advanced=true;applyExperience();persistPreferences();return true},markSaved:(id,text,name,ref)=>{const active=workspace.current.id===id;if(active)$('name').value=name;workspace.saved(id,text,name,ref);if(active)dirty=editor.value!==text},replaceText:text=>editor.replace(text)});
+ githubUi=setupGitHub({github:createGitHub(),workspace,opened,notice,roomFor:ref=>roomFor(workspace.list(),ref,MAX_TABS),isAdvanced:()=>advanced,ensureAdvanced:()=>{if(advanced)return false;advanced=true;applyExperience();persistPreferences();return true},markSaved:(id,text,name,ref)=>{const active=workspace.current.id===id;if(active)$('name').value=name;workspace.saved(id,text,name,ref);if(active)dirty=editor.value!==text},replaceText:text=>editor.replace(text)});
  $('githubButton').onclick=()=>{if(saving)return;$('menu').close();githubUi.open()};
  $('basicMode').onclick=()=>{advanced=false;applyExperience();persistPreferences()};
  $('advancedMode').onclick=()=>{advanced=true;applyExperience();persistPreferences()};
