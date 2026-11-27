@@ -23,7 +23,7 @@ for(const [w,h,tag] of [[1194,834,'ipad'],[390,844,'phone']]){
  S.approveAfter=99;await $('githubSignIn').click();await page.waitForFunction(()=>document.getElementById('githubCode').textContent);await page.screenshot({path:`${out}/gh-${tag}-2-code.png`});
  S.approveAfter=0;await page.waitForSelector('#githubSignedIn:not([hidden])',{timeout:20000});await idle();await page.screenshot({path:`${out}/gh-${tag}-3-files.png`});
  await page.getByRole('button',{name:'More for www/app.js'}).click();await idle();await $('githubFileHistory').click();await idle();await page.getByRole('button',{name:/^Fix adding/}).click();await idle();await page.screenshot({path:`${out}/gh-${tag}-4-change.png`});
- await page.locator('#githubNav button',{hasText:'Branches'}).click();await idle();await page.screenshot({path:`${out}/gh-${tag}-5-branches.png`});
+ await page.locator('#githubNav button',{hasText:'Branches'}).click();await idle();await page.screenshot({path:`${out}/gh-${tag}-5-branches.png`});await page.locator('[data-branch-more]').click();await idle();await page.screenshot({path:`${out}/gh-${tag}-5b-branchmenu.png`});await page.locator('.gh-back').click();await idle();
  await $('githubRepoMore').click();await idle();await $('githubCopyRepo').click();await idle();await page.screenshot({path:`${out}/gh-${tag}-6-copy.png`,fullPage:true});
  await $('githubCopyNext').click();await idle();await page.screenshot({path:`${out}/gh-${tag}-7-copyform.png`});
  await page.locator('.gh-back').click();await idle();await page.locator('.gh-back').click();await idle();await $('githubDeleteRepo').click();await idle();await $('githubDeleteNext').click();await idle();await page.screenshot({path:`${out}/gh-${tag}-8-delete.png`});

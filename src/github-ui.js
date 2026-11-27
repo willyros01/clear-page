@@ -231,31 +231,40 @@ export function setupGitHub({github,workspace,opened,notice,roomFor=()=>'',isAdv
  }
 
  // ---- Branches ----
- async function switchBranch(name){$('githubBranch').value=name;view=null;section='files';await loadFiles();status('Now working on branch '+name+'.')}
  function branchesPanel(){
   if(view)return view();
-  const r=repo(),b=branch(),name=el('input',{id:'githubNewBranch',autocomplete:'off',autocapitalize:'off',spellcheck:'false',placeholder:'new-branch-name'});
-  panel(el('p',{text:'Tap a branch to work on it.'}),
+  const r=repo(),b=branch();
+  panel(el('p',{text:'Tap a branch to work on it. Then use ⋯ to copy, merge or delete it.'}),
    el('div',{class:'gh-list'},...branches.map(x=>el('div',{class:'gh-item'},
-    x.name===b?el('div',{class:'gh-file gh-current',text:'✓ '+x.name+' · you are working here'}):el('button',{class:'gh-file','data-switch':x.name,text:x.name+(x.name===r.branch?' (main branch)':''),onclick:()=>task(()=>switchBranch(x.name))}),
-    r.canPush&&x.name!==b?el('button',{class:'gh-more','data-branch-more':x.name,'aria-label':'More for branch '+x.name,text:'⋯',onclick:()=>go(()=>branchActions(x))}):null))),
-   r.canPush?el('details',{id:'githubNewBranchBox'},el('summary',{text:`New branch from ${b}`}),el('label',{class:'gh-field'},'Branch name',name),el('div',{class:'actions'},el('button',{id:'githubCreateBranch',text:'Create branch',onclick:()=>task(async()=>{
-    const nb=name.value.trim(),from=branches.find(x=>x.name===b);await github.createBranch(r.owner,r.name,nb,from.sha);await loadBranches(nb);status('Created branch '+nb+'. You are now working on it.')})}))):null);
+    x.name===b?el('div',{class:'gh-file gh-current',text:'✓ '+x.name+' · you are working here'}):el('button',{class:'gh-file','data-switch':x.name,text:x.name+(x.name===r.branch?' (main branch)':''),onclick:()=>task(async()=>{$('githubBranch').value=x.name;view=null;await loadFiles();status('Now working on branch '+x.name+'.')})}),
+    r.canPush&&x.name===b?el('button',{class:'gh-more','data-branch-more':x.name,'aria-label':'More for branch '+x.name,text:'⋯',onclick:()=>go(()=>branchActions(x))}):null))));
  }
- function branchActions(x){const r=repo(),b=branch();
-  panel(back('Branches'),el('h3',{text:'Branch '+x.name}),el('div',{class:'actions gh-stack'},
-   el('button',{id:'githubBranchSwitch',text:'Work on this branch',onclick:()=>task(()=>switchBranch(x.name))}),
-   el('button',{id:'githubBranchMerge',text:`Copy ${x.name}'s changes into ${b}`,onclick:()=>mergeBranch(x.name,b)}),
-   x.name!==r.branch&&!x.protected?el('button',{id:'githubBranchDelete',class:'danger',text:'Delete branch '+x.name,onclick:()=>deleteBranch(x.name)}):null))}
+ // Choices for the branch you are working on.
+ function branchActions(x){const r=repo(),others=branches.filter(o=>o.name!==x.name);
+  panel(back('Branches'),el('h3',{text:'Branch '+x.name+' (you are working on it)'}),el('div',{class:'actions gh-stack'},
+   el('button',{id:'githubBranchNew',text:`New branch: a copy of ${x.name} under a new name…`,onclick:()=>go(()=>newBranchView(x))}),
+   el('button',{id:'githubBranchToRepo',text:`Copy ${x.name} to another repository…`,onclick:()=>go(()=>copyExplain(()=>branchActions(x)))}),
+   others.length?el('button',{id:'githubBranchMerge',text:`Merge: add ${x.name}'s changes to another branch…`,onclick:()=>go(()=>mergeTargetView(x))}):null,
+   x.name!==r.branch&&!x.protected?el('button',{id:'githubBranchDelete',class:'danger',text:'Delete branch '+x.name+'…',onclick:()=>deleteBranch(x.name)}):null))}
+ function newBranchView(x){const r=repo(),name=el('input',{id:'githubNewBranch',autocomplete:'off',autocapitalize:'off',spellcheck:'false',placeholder:'new-branch-name'});
+  panel(back('Back',()=>branchActions(x)),el('h3',{text:'New branch from '+x.name}),el('p',{text:`The new branch starts as an exact copy of ${x.name}. ${x.name} itself does not change.`}),el('label',{class:'gh-field'},'Name of the new branch',name),
+   el('div',{class:'actions'},el('button',{id:'githubCreateBranch',class:'primary',text:'Create branch',onclick:()=>task(async()=>{
+    const nb=name.value.trim(),from=branches.find(o=>o.name===x.name);await github.createBranch(r.owner,r.name,nb,from.sha);view=null;section='branches';await loadBranches(nb);status('Created branch '+nb+'. You are now working on it.')})})));
+  name.focus();
+ }
+ function mergeTargetView(x){
+  panel(back('Back',()=>branchActions(x)),el('h3',{text:`Add ${x.name}'s changes to which branch?`}),el('p',{text:'The branch you pick keeps its own changes too. '+x.name+' itself does not change.'}),
+   el('div',{class:'gh-list'},...branches.filter(o=>o.name!==x.name).map(o=>el('button',{class:'gh-file','data-merge-into':o.name,text:o.name,onclick:()=>mergeBranch(x.name,o.name)}))));
+ }
  async function mergeBranch(head,base){
   const r=repo();
-  const v=await ask({title:`Copy ${head}'s changes into ${base}?`,text:`Everything changed on ${head} is added to ${base} (this is called a merge). ${head} itself stays as it is.`,ok:'Copy changes',working:'Copying the changes on GitHub…',long:true,fields:[{id:'note',label:'Note for this change',value:`Merge ${head} into ${base}`}],
+  const v=await ask({title:`Merge: add ${head}'s changes to ${base}?`,text:`Everything changed on ${head} is added to ${base}. ${base} keeps its own changes too, and ${head} itself stays as it is.`,ok:'Merge',working:'Merging on GitHub…',long:true,fields:[{id:'note',label:'Note for this change',value:`Merge ${head} into ${base}`}],
    run:async v=>{const res=await github.merge(r.owner,r.name,base,head,v.note.trim());if(res.result==='conflict')throw Error(`The same lines were changed on both branches, so GitHub cannot combine them automatically. Nothing was changed. Open a pull request to see the differences.`);return res}});
-  if(v)await task(async()=>{view=null;await loadBranches(base);section='branches';await showSection('branches');status(v.result==='nothing'?`${base} already has everything from ${head}. Nothing to copy.`:`Copied ${head}'s changes into ${base}.`)})
+  if(v)await task(async()=>{view=null;section='branches';await loadBranches(branch());status(v.result==='nothing'?`${base} already has everything from ${head}. Nothing was changed.`:`Added ${head}'s changes to ${base}.`)})
  }
  async function deleteBranch(name){
   const r=repo();const v=await ask({title:`Delete branch ${name}?`,text:'Changes that were only on this branch will no longer be listed. This cannot be undone from ATE.',ok:'Delete branch',working:'Deleting the branch…',run:()=>github.deleteBranch(r.owner,r.name,name)});
-  if(v)await task(async()=>{view=null;await loadBranches(branch());section='branches';await showSection('branches');status('Deleted branch '+name+'.')})
+  if(v)await task(async()=>{view=null;section='branches';await loadBranches(branch());status('Deleted branch '+name+'. You are now working on '+branch()+'.')})
  }
 
  // ---- Repository: more repositories, copy, delete ----
@@ -266,9 +275,9 @@ export function setupGitHub({github,workspace,opened,notice,roomFor=()=>'',isAdv
   panel(back('Back'),el('h3',{text:r.full}),el('div',{class:'actions gh-stack'},
    el('button',{id:'githubCopyRepo',text:'Copy branches to another repository…',onclick:()=>go(()=>copyExplain())}),
    el('button',{id:'githubDeleteRepo',class:'danger',text:'Delete this repository…',onclick:()=>go(()=>deleteRepoStep1())})))}
- function copyExplain(){clearNav();const r=repo();
+ function copyExplain(backTo=repoActions){clearNav();const r=repo();
   const section=(h,lines)=>el('div',{},el('h4',{text:h}),...lines.map(t=>el('p',{text:'• '+t})));
-  panel(back('Back',()=>repoActions()),el('h3',{text:'Copy branches of '+r.full}),
+  panel(back('Back',()=>backTo()),el('h3',{text:'Copy branches of '+r.full}),
    el('p',{text:'Read this first. It explains exactly what a copy does.'}),
    section('Copied',['The files of the branch or branches you choose, as they are right now.','Into a new repository: its description, website address, topics, which features are on (Issues, Wiki, Projects) and the main branch name.']),
    section('You choose',['One branch, or all branches.','A new repository, or new branches in an existing repository.','For a new repository: public or private (the original\'s setting is pre-selected; nothing becomes public unless you choose it).']),

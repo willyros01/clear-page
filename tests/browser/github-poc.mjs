@@ -96,19 +96,24 @@ await page.waitForSelector('#githubAsk[open]');assert.match(await $('githubAskBo
   await page.waitForSelector('#githubDialog',{state:'hidden'});await editor.fill('fresh\n');await saveTab();assert.equal(S.filesAt('ate-test','main')['docs/new.md'],'fresh\n');
 
   // B: create a branch, change it, merge it back, delete it.
-  await openGitHub();await nav('Branches');await page.locator('#githubNewBranchBox summary').click();await $('githubNewBranch').fill('fairpot');await $('githubCreateBranch').click();await idle();
-  assert.equal(await $('githubBranch').inputValue(),'fairpot');assert.match(await status(),/Created branch fairpot/);
+  await openGitHub();await nav('Branches');assert.equal(await page.locator('[data-branch-more]').count(),1,'only the branch you work on has ⋯');
+  await page.locator('[data-branch-more="main"]').click();await idle();assert.equal(await page.locator('#githubBranchDelete').count(),0,'the main branch cannot be deleted');
+  await $('githubBranchNew').click();await idle();await $('githubNewBranch').fill('fairpot');await $('githubCreateBranch').click();await idle();
+  assert.equal(await $('githubBranch').inputValue(),'fairpot');assert.match(await status(),/Created branch fairpot/);assert.match(await $('githubPanel').innerText(),/✓ fairpot · you are working here/);
   await nav('Files');await $('githubFilter').fill('new.md');await fileBtn('docs/new.md').click();await page.waitForSelector('#githubDialog',{state:'hidden'});
   await editor.fill('from fairpot\n');await saveTab('On fairpot');assert.equal(S.filesAt('ate-test','fairpot')['docs/new.md'],'from fairpot\n');assert.equal(S.filesAt('ate-test','main')['docs/new.md'],'fresh\n');
-  await openGitHub();await nav('Branches');assert.match(await $('githubPanel').innerText(),/✓ fairpot · you are working here/);
-  await page.locator('[data-switch="main"]').click();await idle();assert.equal(await $('githubBranch').inputValue(),'main');assert.match(await status(),/Now working on branch main/);
-  await nav('Branches');assert.equal(await page.locator('[data-switch]').count(),1);await page.locator('[data-branch-more="fairpot"]').click();await idle();
-  assert.match(await $('githubBranchMerge').innerText(),/Copy fairpot's changes into main/);await $('githubBranchMerge').click();await page.waitForSelector('#githubAsk[open]');await askOk();await idle();
-  assert.match(await status(),/Copied fairpot's changes into main/);assert.equal(S.filesAt('ate-test','main')['docs/new.md'],'from fairpot\n');
-  await page.locator('[data-branch-more="fairpot"]').click();await idle();await $('githubBranchDelete').click();await page.waitForSelector('#githubAsk[open]');await askOk();await idle();assert.equal(S.head('ate-test','fairpot'),undefined);
+  // Tapping a branch makes it the one you work on, and you stay on the Branches screen.
+  await openGitHub();await nav('Branches');await page.locator('[data-switch="main"]').click();await idle();
+  assert.equal(await $('githubBranch').inputValue(),'main');assert.match(await status(),/Now working on branch main/);assert.match(await $('githubPanel').innerText(),/✓ main · you are working here/);
+  await page.locator('[data-switch="fairpot"]').click();await idle();await page.locator('[data-branch-more="fairpot"]').click();await idle();
+  assert.match(await $('githubBranchMerge').innerText(),/Merge: add fairpot's changes to another branch/);await $('githubBranchMerge').click();await idle();
+  await page.locator('[data-merge-into="main"]').click();await page.waitForSelector('#githubAsk[open]');await askOk();await idle();
+  assert.match(await status(),/Added fairpot's changes to main/);assert.equal(S.filesAt('ate-test','main')['docs/new.md'],'from fairpot\n');assert.equal(await $('githubBranch').inputValue(),'fairpot');
+  await page.locator('[data-branch-more="fairpot"]').click();await idle();await $('githubBranchDelete').click();await page.waitForSelector('#githubAsk[open]');await askOk();await idle();
+  assert.equal(S.head('ate-test','fairpot'),undefined);assert.equal(await $('githubBranch').inputValue(),'main');assert.match(await status(),/now working on main/);
 
   // C: pull request: open, see changes, comment, merge.
-  await nav('Branches');await page.locator('#githubNewBranchBox summary').click();await $('githubNewBranch').fill('fix');await $('githubCreateBranch').click();await idle();
+  await nav('Branches');await page.locator('[data-branch-more]').click();await idle();await $('githubBranchNew').click();await idle();await $('githubNewBranch').fill('fix');await $('githubCreateBranch').click();await idle();
   S.pushElsewhere('ate-test','fix',{'README.md':'# Fixed\n'});
   await nav('Pull requests');await page.locator('#githubNewPr summary').click();await $('githubPrHead').selectOption('fix');await $('githubPrBase').selectOption('main');
   await $('githubPrTitle').fill('Fix readme');await $('githubCreatePr').click();await idle();
