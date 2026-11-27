@@ -9,6 +9,7 @@ Feature backlog: [ATE features to-do list](FEATURES-TODO.md), recorded 15 Novemb
 1. Bottom line too tall on a phone-sized screen: "Opened from GitHub: owner/repo · branch · full path" wraps to three lines. Shorten to "Opened <file name> from GitHub" (repository and branch are already in the tab) and keep the bottom line to one line on narrow screens, long messages cut with "…" and shown in full on tap.
 2. Fire 8: the bottom line stays visible while the on-screen keyboard is up (it hides on iPhone, iPad and other Android devices). Find why the Fire's keyboard is not detected, fix it, and add a Fire-sized check to the Android emulator tests.
 3. Fire 8 (phone-sized screen): tapping a super-tab group's name does not fold/open its files; only the ⋯ menu does. Make tapping the name fold/open on phones too, consistently with iPad/desktop.
+4. Owner request (27 November 2026): one-step "Save a copy to GitHub…" in the ⋯ menu of a My files group/tab — pick repository, branch and path (suggesting the file's own name), save with the usual GitHub-confirmed commit; ask before replacing an existing file of that name; the local file stays untouched.
 
 ## 0.8.8 (29) — Preview, Java checking, 14 more languages — released to all channels (22 November 2026)
 
