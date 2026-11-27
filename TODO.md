@@ -4,6 +4,12 @@ Last updated: 12 November 2026 (UTC).
 
 Feature backlog: [ATE features to-do list](FEATURES-TODO.md), recorded 15 November 2026, with six planned features in the agreed priority order.
 
+## Next build batch — owner's testing of 0.8.9 (30) on the Fire 8 (27 November 2026). Build only when the owner says so.
+
+1. Bottom line too tall on a phone-sized screen: "Opened from GitHub: owner/repo · branch · full path" wraps to three lines. Shorten to "Opened <file name> from GitHub" (repository and branch are already in the tab) and keep the bottom line to one line on narrow screens, long messages cut with "…" and shown in full on tap.
+2. Fire 8: the bottom line stays visible while the on-screen keyboard is up (it hides on iPhone, iPad and other Android devices). Find why the Fire's keyboard is not detected, fix it, and add a Fire-sized check to the Android emulator tests.
+3. Fire 8 (phone-sized screen): tapping a super-tab group's name does not fold/open its files; only the ⋯ menu does. Make tapping the name fold/open on phones too, consistently with iPad/desktop.
+
 ## 0.8.8 (29) — Preview, Java checking, 14 more languages — released to all channels (22 November 2026)
 
 | Channel | Result |
