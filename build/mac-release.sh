@@ -28,7 +28,7 @@ export APP="$RELEASE_DIR/ATE.xcarchive/Products/Applications/ATE.app"
 mkdir -p "$(dirname "$APP")"
 ditto "$RELEASE_DIR/input/ATE.app" "$APP"
 EXECUTABLE=$(/usr/libexec/PlistBuddy -c "Print :CFBundleExecutable" "$APP/Contents/Info.plist")
-lipo "$APP/Contents/MacOS/$EXECUTABLE" -verify_arch arm64 x86_64
+ARCHS=$(lipo -archs "$APP/Contents/MacOS/$EXECUTABLE"); echo "Architectures: $ARCHS"; case " $ARCHS " in *" arm64 "*) ;; *) echo "arm64 missing"; exit 1;; esac; case " $ARCHS " in *" x86_64 "*) ;; *) echo "x86_64 missing"; exit 1;; esac
 cp resources/PrivacyInfo.xcprivacy "$APP/Contents/Resources/PrivacyInfo.xcprivacy"
 python3 - <<'PY'
 import os,plistlib,pathlib,datetime

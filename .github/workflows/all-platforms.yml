@@ -102,7 +102,7 @@ jobs:
           set -euo pipefail
           APP=src-tauri/target/universal-apple-darwin/release/bundle/macos/ATE.app
           EXECUTABLE=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP/Contents/Info.plist")
-          lipo "$APP/Contents/MacOS/$EXECUTABLE" -verify_arch arm64 x86_64
+          ARCHS=$(lipo -archs "$APP/Contents/MacOS/$EXECUTABLE"); echo "Architectures: $ARCHS"; case " $ARCHS " in *" arm64 "*) ;; *) echo "arm64 missing"; exit 1;; esac; case " $ARCHS " in *" x86_64 "*) ;; *) echo "x86_64 missing"; exit 1;; esac
           codesign --verify --deep --strict "$APP"
           mkdir -p mac-input
           ditto -c -k --keepParent "$APP" mac-input/ate-mac-app.zip
