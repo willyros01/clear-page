@@ -44,7 +44,7 @@ export function createTabBar({row,filesRow,workspace,isBusy=()=>false,requestClo
  function fileTab(t,items){
   const wrap=el('div','document-tab tg-file'+(t.active?' tg-current':'')),button=el('button'),close=el('button','tg-close','×');
   wrap.setAttribute('role','presentation');button.type=close.type='button';
-  button.setAttribute('role','tab');button.setAttribute('aria-selected',String(t.active));button.tabIndex=t.active?0:-1;
+  button.setAttribute('role','tab');button.dataset.order=String(items.findIndex(x=>x.id===t.id));button.setAttribute('aria-selected',String(t.active));button.tabIndex=t.active?0:-1;
   const full=t.name||'Untitled';button.title=full;button.append(icon('file'),el('span','tg-name',short(full)+(t.dirty?' •':'')));
   button.setAttribute('aria-label',full+(t.dirty?', unsaved changes':''));
   button.onclick=()=>{if(!isBusy())workspace.activate(t.id)};
@@ -73,12 +73,17 @@ export function createTabBar({row,filesRow,workspace,isBusy=()=>false,requestClo
    const more=el('button','tg-menu','⋯');more.type='button';more.setAttribute('aria-label','More for '+g.title);more.onclick=()=>{if(!isBusy())openMenu(g,{fold:()=>{folded.add(g.key);render(last)},open:()=>{folded.delete(g.key);render(last)},folded:!open})};
    box.append(chip,more);row.append(box);
    const target=isNarrow?(current?filesRow:null):(open?box:null);
+   let shown=[];
    if(target){
     // Long groups: show up to 5 files plus the current one, and a "+N more" list for the rest.
-    let shown=g.tabs;if(g.tabs.length>6){shown=g.tabs.slice(0,5);const cur=g.tabs.find(t=>t.active);if(cur&&!shown.includes(cur))shown=[...shown,cur]}
+    shown=g.tabs;if(g.tabs.length>6){shown=g.tabs.slice(0,5);const cur=g.tabs.find(t=>t.active);if(cur&&!shown.includes(cur))shown=[...shown,cur]}
     for(const t of shown)target.append(fileTab(t,flat));
     if(shown.length<g.tabs.length){const m=el('button','tg-more','+'+(g.tabs.length-shown.length)+' more');m.type='button';m.setAttribute('aria-label',`Show all ${g.tabs.length} files in ${g.title}`);m.onclick=()=>openMore(g);target.append(m)}
    }
+   // Files not on show (folded group, another group on a phone, or behind "+N more") stay in the page,
+   // hidden, so the tab list keeps every open file in order (keyboard order, tests).
+   const rest=g.tabs.filter(t=>!shown.includes(t));
+   if(rest.length){const hold=el('div','tg-hidden');hold.hidden=true;for(const t of rest)hold.append(fileTab(t,flat));box.append(hold)}
   }
   filesRow.hidden=!isNarrow||!filesRow.children.length;
   requestAnimationFrame(()=>{(filesRow.hidden?row:filesRow).querySelector('.tg-current')?.scrollIntoView?.({block:'nearest',inline:'nearest'});row.querySelector('.tg-active')?.scrollIntoView?.({block:'nearest',inline:'nearest'})});

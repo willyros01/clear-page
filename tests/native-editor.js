@@ -25,7 +25,7 @@
   }};
   $('advancedMode').click();
   const open=async(value,name='native-fixture.js')=>{
-   const close=document.querySelector('#tabs [role=tab][aria-selected=true]')?.nextElementSibling;if(close){close.click();if($('exitDialog').open)$('discardExit').click();}
+   const close=document.querySelector('#tabs [role=tab][aria-selected=true], #tabFiles [role=tab][aria-selected=true]')?.nextElementSibling;if(close){close.click();if($('exitDialog').open)$('discardExit').click();}
    const transfer=new DataTransfer();transfer.items.add(new File([value],name,{type:'text/javascript'}));
    $('file').files=transfer.files;$('file').dispatchEvent(new Event('change'));
    for(let i=0;i<50&&text()!==value;i++)await wait(50);

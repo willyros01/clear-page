@@ -2,6 +2,9 @@
 
 Work in small, reviewable steps. Keep one shared editor for all platforms.
 
+## 0.8.9 (30) — GitHub, super tabs and ATE blue
+Owner tested the web test page (cuberoot-systems.com/ate/github-test/) on 26 November 2026 and approved building every platform: GitHub groups A–F with Sign in with GitHub, super tabs, the blue main colour, the rearranged GitHub page (prototype approved), branch tree. Apple builds on Xcode 27.0. Linux built from the same commit as the other platforms.
+
 ## 0.8.8 (29) — Preview, Java checking and 14 more languages
 Owner approved the real-screen preview (ATE.v0.8.8.preview-mockup.pdf) on 22 November 2026: Preview for HTML/Markdown, Java checker (syntax only; C++ colour-only by owner decision), XML/TOML/INI checks. Desktop first, then iPhone/iPad, then App Store Connect drafts updated to build 29 after testing.
 

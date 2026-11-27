@@ -37,10 +37,13 @@ const html=`
  <div class="actions"><button id="githubAskCancel">Cancel</button><button id="githubAskOk" class="primary"></button></div>
 </dialog>`;
 
-export function setupGitHub({github,workspace,opened,notice,roomFor=()=>'',isAdvanced=()=>true,ensureAdvanced=()=>false,markSaved,replaceText}){
+export function setupGitHub({github,workspace,opened,notice,openLink=null,roomFor=()=>'',isAdvanced=()=>true,ensureAdvanced=()=>false,markSaved,replaceText}){
  document.body.insertAdjacentHTML('beforeend',html);
  const $=id=>document.getElementById(id);
  let repos=[],branches=[],files=[],section='files',busy=false,signInCancelled=false,view=null;
+ // Opens a GitHub page outside ATE: the desktop apps hand it to the system browser; elsewhere a normal new-tab link
+ // (the iPhone/iPad and Android apps open such links in the system browser).
+ function openOutside(url){if(openLink){openLink(url).catch(()=>status('Could not open the browser. Visit '+url));return}const a=document.createElement('a');a.href=url;a.target='_blank';a.rel='noopener';document.body.append(a);a.click();a.remove()}
  const status=t=>{$('githubStatus').textContent=t||'';if(t&&!$('githubBusy').hidden)$('githubBusyText').textContent=t};
  // Spinning wheel with words while GitHub works. Shown after a short moment (quick jobs don't flash it);
  // the "might take a while" line comes at once for long jobs, or after a few seconds for any job.
@@ -97,6 +100,7 @@ export function setupGitHub({github,workspace,opened,notice,roomFor=()=>'',isAdv
   showView();status('Signed in as '+github.login+'.');await loadRepos();
  });
  $('githubCancelSignIn').onclick=()=>{signInCancelled=true;status('Cancelling…')};
+ $('githubDeviceLink').onclick=e=>{if(openLink){e.preventDefault();openOutside($('githubDeviceLink').href)}};
  $('githubCopyCode').onclick=async()=>{try{await navigator.clipboard.writeText($('githubCode').textContent);status('Code copied.')}catch{status('Copy did not work here; type the code instead.')}};
  $('githubClose').onclick=()=>$('githubDialog').close();
  $('githubSignOut').onclick=()=>{closeRepoPanel();github.signOut();repos=[];files=[];view=null;showView();status('Signed out. ATE no longer has access to your GitHub.')};
@@ -283,7 +287,7 @@ export function setupGitHub({github,workspace,opened,notice,roomFor=()=>'',isAdv
  }
 
  // ---- Repository: more repositories, copy, delete ----
- const moreRepos=()=>ask({title:'Give ATE more repositories',text:'This opens GitHub\'s page for ATE in a new tab. There, tick the repositories ATE may use, then tap Save. Do not change anything else on that page, especially the red "Danger zone" buttons. Then come back here and tap Refresh.',ok:'Continue to GitHub',run:()=>{window.open(github.chooseReposUrl(),'_blank','noopener')}});
+ const moreRepos=()=>ask({title:'Give ATE more repositories',text:'This opens GitHub\'s page for ATE in a new tab. There, tick the repositories ATE may use, then tap Save. Do not change anything else on that page, especially the red "Danger zone" buttons. Then come back here and tap Refresh.',ok:'Continue to GitHub',run:()=>{openOutside(github.chooseReposUrl())}});
  const clearNav=()=>{for(const b of $('githubNav').querySelectorAll('button'))b.setAttribute('aria-pressed','false')};
  // Repository choices: opened by ⋯ right beside the repository picker.
  function closeRepoPanel(){$('githubRepoPanel').hidden=true;$('githubRepoPanel').textContent='';$('githubRepoMore').setAttribute('aria-expanded','false')}
@@ -413,7 +417,7 @@ export function setupGitHub({github,workspace,opened,notice,roomFor=()=>'',isAdv
  // View-only full log of one job, with Find.
  async function logView(x,j){
   const r=repo(),head=[back('Run',()=>runView(x)),el('h3',{text:'Log · '+j.name}),el('p',{class:'gh-meta',text:`${runLabel(j)} · ${x.name} · ${x.branch} · view only`})];
-  const onGitHub=j.url?el('p',{},el('a',{href:j.url,target:'_blank',rel:'noopener',text:'Open this job on GitHub'})):null;
+  const onGitHub=j.url?el('p',{},el('a',{href:j.url,target:'_blank',rel:'noopener',text:'Open this job on GitHub',onclick:e=>{if(openLink){e.preventDefault();openOutside(j.url)}}})):null;
   status('Loading the log…');let log;
   try{log=await github.jobLog(r.owner,r.name,j.id)}catch(e){if(e.code==='signed-out')throw e;status('');panel(...head,el('p',{id:'githubLogError',text:e.message}),onGitHub);return}
   status('');

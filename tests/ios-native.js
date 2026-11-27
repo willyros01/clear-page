@@ -27,8 +27,9 @@ import {Filesystem,Directory,Encoding} from '@capacitor/filesystem';
   const content=document.querySelector('.cm-content');
   const view=EditorView.findFromDOM(document.querySelector('.cm-editor'));
   for(const scale of [1,2,3])for(const icons of [false,true])assert(!!checkToolbarLayout([scale,icons]),`Native toolbar/save reflow at ${scale*100}% ${icons?'icons':'text'}`);
-  const tabs=()=>[...document.querySelectorAll('#tabs [role=tab]')];
-  const askClose=()=>document.querySelector('#tabs [aria-selected=true]')?.nextElementSibling.click();
+  // Super tabs: every open file has one tab button, on show or kept hidden (folded group, other group on a phone).
+  const tabs=()=>[...document.querySelectorAll('#tabs [role=tab], #tabFiles [role=tab]')].sort((a,b)=>Number(a.dataset.order)-Number(b.dataset.order));
+  const askClose=()=>document.querySelector('#tabs [aria-selected=true], #tabFiles [aria-selected=true]')?.nextElementSibling.click();
   const closeCurrent=()=>{askClose();if($('exitDialog').open)$('discardExit').click();};
   let restart=null;
   if(android){try{restart=JSON.parse((await Filesystem.readFile({path:'ate-ipad-restart-state.json',directory:Directory.Data,encoding:Encoding.UTF8})).data)}catch{}}

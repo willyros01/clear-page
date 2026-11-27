@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.8.9 (30) — GitHub, super tabs and ATE blue
+- GitHub (Menu → GitHub, every platform): Sign in with GitHub (code on GitHub's own page; no keys; never stored, ends after about 8 hours). Files: open, edit, save with conflict refusal, several files in one change, rename/move, delete, new file, history with changes and restore, search inside files. Branches as a tree with "(made from …)" notes; the working branch's choices under it: new branch, copy to another repository, merge into another branch, delete. Pull requests (open, see changes, comment, merge), Actions (runs, why a job failed, full job log view-only with Find, start by hand), Issues, new repository. Repository choices beside the repository picker: new repository, copy branches to another repository (with an explanation page first), Actions on/off, delete (exact name plus a 5-second wait). Never transfers a repository. A spinning wheel with words shows while GitHub works.
+- Super tabs: open files grouped by GitHub repository and branch, Project, or My files; fold a group, ⋯ group menu (save the group's changes together, open its GitHub screen, close all), "+N more" for long groups. Up to 30 open files, 12 per group.
+- Main colour changes from green to the darker blue used by The Marker and The Scorecard.
+- Terms: the Contact section points to the Support link instead of an email address (Terms version unchanged).
+- Apple builds use Xcode 27.0 (iOS 27 SDK). Build machines skip a Microsoft package source that started refusing downloads.
+- Sign-in relay (Cloudflare Worker) also accepts the installed apps; desktop apps open the GitHub sign-in, repository-access and job pages in the system browser (fixed GitHub addresses only).
+
 ## 0.8.8 (29) — Preview, Java checking and 14 more languages
 - Preview (Menu, shown for HTML and Markdown files): a full-screen, read-only view of the current text with Back to editor. Runs no scripts, forms or pop-ups and loads nothing from the internet; Markdown raw HTML is shown as text. The rendered copy is removed when Preview closes.
 - Syntax colours for Java, C++, C#, Go, Rust, PHP, Ruby, Swift, Kotlin, XML, TOML, INI, PowerShell and Lua, chosen by file extension or in Menu → Language. XML declarations and Java package files are also recognised by content.

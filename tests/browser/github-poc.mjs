@@ -185,8 +185,8 @@ await page.waitForSelector('#githubAsk[open]');assert.match(await $('githubAskBo
   await page.locator('#tabGroupActions button',{hasText:'Save the 2 changed files together'}).click();await page.waitForSelector('#githubAsk[open]');await askOk();
   await notice(/Saved 2 files to GitHub in one change/);assert.equal(S.filesAt('ate-test','main')['src/app.js'],'let a = 2;\n');assert.equal(S.filesAt('ate-test','main')['README.md'],'# Grouped\n');
   assert.equal(await grp.locator('.tg-unsaved').count(),0);
-  await grp.locator('.tg-chip').click();assert.equal(await grp.locator('.tg-file').count(),0,'tapping the group name folds it');
-  await grp.locator('.tg-chip').click();assert.ok(await grp.locator('.tg-file').count()>=2);
+  await grp.locator('.tg-chip').click();assert.equal(await grp.locator(':scope > .tg-file').count(),0,'tapping the group name folds it');
+  await grp.locator('.tg-chip').click();assert.ok(await grp.locator(':scope > .tg-file').count()>=2);
   await grp.locator('.tg-menu').click();await page.waitForSelector('#tabGroupMenu[open]');await page.locator('#tabGroupActions button',{hasText:/^Close all/}).click();
   assert.equal(await grp.count(),0,'closing the group closes all its files');
   const blue=await page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--accent').trim());assert.equal(blue.toLowerCase(),'#1f5c99');

@@ -9,6 +9,17 @@ use projects::{project_io,save_project_zip};
 mod compiler_setup;
 use compiler_setup::{compiler_setup_info,install_c_compiler,cancel_compiler_setup};
 
+// GitHub pages ATE's GitHub screen links to: the sign-in code page, the page that gives ATE
+// repositories, and one Actions job page. Nothing else on github.com, and never a command.
+fn github_link_ok(url: &str) -> bool {
+    if url == "https://github.com/login/device" || url == "https://github.com/apps/ate-another-text-editor/installations/new" { return true; }
+    let Some(path) = url.strip_prefix("https://github.com/") else { return false };
+    let parts: Vec<&str> = path.split('/').collect();
+    let name_ok = |s: &str, max: usize| !s.is_empty() && s.len() <= max && s.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.') && s != "." && s != "..";
+    let digits = |s: &str| !s.is_empty() && s.len() <= 20 && s.chars().all(|c| c.is_ascii_digit());
+    parts.len() == 7 && name_ok(parts[0], 39) && name_ok(parts[1], 100) && parts[2] == "actions" && parts[3] == "runs" && digits(parts[4]) && parts[5] == "job" && digits(parts[6])
+}
+
 // Open only the fixed public help/legal destinations, never a user-supplied command.
 #[tauri::command]
 fn open_public_link(url: String) -> Result<(), String> {
@@ -19,7 +30,7 @@ fn open_public_link(url: String) -> Result<(), String> {
         "https://www.cuberoot-systems.com/ate/guide/",
         "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/",
     ];
-    if !allowed.contains(&url.as_str()) { return Err("Unsupported help link".into()); }
+    if !allowed.contains(&url.as_str()) && !github_link_ok(&url) { return Err("Unsupported help link".into()); }
     #[cfg(target_os = "macos")]
     let result = std::process::Command::new("/usr/bin/open").arg(&url).spawn();
     #[cfg(target_os = "windows")]

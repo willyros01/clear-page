@@ -23,6 +23,7 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+      - run: sudo find /etc/apt/sources.list.d -iname '*microsoft*' -print -delete || true
       - run: npx playwright install --with-deps chromium webkit
       - run: npm run test:browser
       - uses: actions/upload-artifact@v4

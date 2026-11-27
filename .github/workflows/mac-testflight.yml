@@ -16,7 +16,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   release:
-    runs-on: macos-26
+    runs-on: xcode-27
     timeout-minutes: 45
     env:
       ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
@@ -45,9 +45,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: latest-stable
+      - name: Use Xcode 27.0 (iOS 27 SDK)
+        run: |
+          X=$(ls -d /Applications/Xcode_27.0*.app 2>/dev/null | sort -V | tail -1)
+          [ -n "$X" ] || X=$(ls -d /Applications/Xcode_27*.app | sort -V | tail -1)
+          sudo xcode-select -s "$X/Contents/Developer"
+          xcodebuild -version
+          xcodebuild -version | grep -q '^Xcode 27' || { echo 'Xcode 27 is required for new Apple builds.'; exit 1; }
       - uses: actions/download-artifact@v4
         with:
           name: ate-mac-universal-preview

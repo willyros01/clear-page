@@ -9,7 +9,7 @@ concurrency:
   group: ate-ios-tabs
   cancel-in-progress: true
 env:
-  ATE_BUILD_NUMBER: "29"
+  ATE_BUILD_NUMBER: "30"
 jobs:
   regression:
     runs-on: ubuntu-latest
@@ -23,6 +23,7 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+      - run: sudo find /etc/apt/sources.list.d -iname '*microsoft*' -print -delete || true
       - run: npx playwright install --with-deps chromium webkit
       - run: npm run test:browser
       - uses: actions/upload-artifact@v4
@@ -32,7 +33,7 @@ jobs:
           path: editor-evidence/*
   simulator:
     needs: regression
-    runs-on: macos-26
+    runs-on: xcode-27
     timeout-minutes: 60
     strategy:
       fail-fast: false
@@ -40,9 +41,13 @@ jobs:
         device: [iPhone, iPad]
     steps:
       - uses: actions/checkout@v4
-      - uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: latest-stable
+      - name: Use Xcode 27.0 (iOS 27 SDK)
+        run: |
+          X=$(ls -d /Applications/Xcode_27.0*.app 2>/dev/null | sort -V | tail -1)
+          [ -n "$X" ] || X=$(ls -d /Applications/Xcode_27*.app | sort -V | tail -1)
+          sudo xcode-select -s "$X/Contents/Developer"
+          xcodebuild -version
+          xcodebuild -version | grep -q '^Xcode 27' || { echo 'Xcode 27 is required for new Apple builds.'; exit 1; }
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -128,7 +133,7 @@ jobs:
             ${{ runner.temp }}/large-text-tests.log
   testflight:
     needs: [regression, simulator]
-    runs-on: macos-26
+    runs-on: xcode-27
     timeout-minutes: 60
     env:
       ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
@@ -137,9 +142,13 @@ jobs:
       APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
     steps:
       - uses: actions/checkout@v4
-      - uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: latest-stable
+      - name: Use Xcode 27.0 (iOS 27 SDK)
+        run: |
+          X=$(ls -d /Applications/Xcode_27.0*.app 2>/dev/null | sort -V | tail -1)
+          [ -n "$X" ] || X=$(ls -d /Applications/Xcode_27*.app | sort -V | tail -1)
+          sudo xcode-select -s "$X/Contents/Developer"
+          xcodebuild -version
+          xcodebuild -version | grep -q '^Xcode 27' || { echo 'Xcode 27 is required for new Apple builds.'; exit 1; }
       - uses: actions/setup-node@v4
         with:
           node-version: 22
