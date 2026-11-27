@@ -7,6 +7,7 @@ const SECTIONS=[['files','Files'],['branches','Branches'],['pulls','Pull request
 const html=`
 <dialog id="githubDialog" aria-labelledby="githubTitle">
  <div class="gh-toolbar"><h2 id="githubTitle">GitHub</h2><button id="githubClose">Back to editor</button></div>
+ <div id="githubBusy" class="gh-busy" role="status" aria-live="polite" hidden><span class="gh-spinner" aria-hidden="true"></span><span class="gh-busy-words"><strong id="githubBusyText">Working…</strong><span id="githubBusyHint" class="gh-busy-hint"></span></span></div>
  <p id="githubStatus" role="status" aria-live="polite"></p>
  <section id="githubSignedOut">
   <p>Sign in with your GitHub account. ATE stays signed in only while this page is open.</p>
@@ -16,7 +17,7 @@ const html=`
    <p>2. Type this code there, then approve ATE:</p>
    <p id="githubCode" class="gh-code" aria-live="polite"></p>
    <div class="actions"><button id="githubCopyCode">Copy code</button><button id="githubCancelSignIn">Cancel</button></div>
-   <p>Waiting for you to approve on GitHub…</p>
+   <p class="gh-waiting"><span class="gh-spinner" aria-hidden="true"></span> Waiting for you to approve on GitHub…</p>
   </div>
  </section>
  <section id="githubSignedIn" hidden>
@@ -32,7 +33,7 @@ const html=`
  </section>
 </dialog>
 <dialog id="githubAsk" aria-labelledby="githubAskTitle">
- <h2 id="githubAskTitle"></h2><div id="githubAskBody"></div><p id="githubAskStatus" role="status" aria-live="polite"></p>
+ <h2 id="githubAskTitle"></h2><div id="githubAskBody"></div><div id="githubAskBusy" class="gh-busy" role="status" aria-live="polite" hidden><span class="gh-spinner" aria-hidden="true"></span><span class="gh-busy-words"><strong id="githubAskBusyText">Working…</strong><span id="githubAskBusyHint" class="gh-busy-hint"></span></span></div><p id="githubAskStatus" role="status" aria-live="polite"></p>
  <div class="actions"><button id="githubAskCancel">Cancel</button><button id="githubAskOk" class="primary"></button></div>
 </dialog>`;
 
@@ -40,7 +41,16 @@ export function setupGitHub({github,workspace,opened,notice,roomFor=()=>'',isAdv
  document.body.insertAdjacentHTML('beforeend',html);
  const $=id=>document.getElementById(id);
  let repos=[],branches=[],files=[],section='files',busy=false,signInCancelled=false,view=null;
- const status=t=>{$('githubStatus').textContent=t||''};
+ const status=t=>{$('githubStatus').textContent=t||'';if(t&&!$('githubBusy').hidden)$('githubBusyText').textContent=t};
+ // Spinning wheel with words while GitHub works. Shown after a short moment (quick jobs don't flash it);
+ // the "might take a while" line comes at once for long jobs, or after a few seconds for any job.
+ const LONG_HINT='This might take a while. Please keep this page open.';
+ function spinner(pre,{long=false,text}={}){
+  const box=$(pre+'Busy'),words=$(pre+'BusyText'),hint=$(pre+'BusyHint'),dlg=box.closest('dialog');let on=true;
+  const show=()=>{if(!on)return;words.textContent=text||(pre==='github'?$('githubStatus').textContent:'')||'Working…';hint.textContent=long?LONG_HINT:'';box.hidden=false;dlg.classList.add('gh-is-busy')};
+  const t1=setTimeout(show,long?0:400),t2=setTimeout(()=>{if(on)hint.textContent=LONG_HINT},long?0:4000);
+  return ()=>{on=false;clearTimeout(t1);clearTimeout(t2);box.hidden=true;hint.textContent='';dlg.classList.remove('gh-is-busy')};
+ }
  const repo=()=>repos[Number($('githubRepo').value)];
  const branch=()=>$('githubBranch').value;
  const sameBranch=ref=>{const r=repo();return !!(r&&ref?.kind==='github'&&ref.owner===r.owner&&ref.repo===r.name&&ref.branch===branch())};
@@ -49,7 +59,7 @@ export function setupGitHub({github,workspace,opened,notice,roomFor=()=>'',isAdv
  // While GitHub is working, controls are switched off; afterwards only those this switched off come back on
  // (a control that was already off, such as the 5-second delete button, stays off).
  function lockControls(){const list=[...$('githubDialog').querySelectorAll('button,input,select,textarea')].filter(e=>!e.disabled&&!['githubClose','githubCancelSignIn','githubCopyCode'].includes(e.id));for(const e of list)e.disabled=true;return ()=>{for(const e of list)if(e.isConnected)e.disabled=false}}
- async function task(work,{lock=true}={}){if(busy)return;busy=true;const unlock=lock?lockControls():()=>{};try{await work()}catch(e){status(e.message);if(e.code==='signed-out')showView()}finally{busy=false;unlock()}}
+ async function task(work,{lock=true,long=false,text}={}){if(busy)return;busy=true;const unlock=lock?lockControls():()=>{},stop=spinner('github',{long,text});try{await work()}catch(e){stop();status(e.message);if(e.code==='signed-out')showView()}finally{stop();busy=false;unlock()}}
  const when=iso=>{if(!iso)return '';const d=new Date(iso);return isNaN(d)?'':d.toLocaleString([],{dateStyle:'medium',timeStyle:'short'})};
  function diffView(lines,label){
   const box=el('div',{class:'gh-diff',role:'group','aria-label':label||'Changes'});
@@ -62,7 +72,7 @@ export function setupGitHub({github,workspace,opened,notice,roomFor=()=>'',isAdv
   return box;
  }
  // A small question box. fields: [{id,label,value,type,placeholder,rows}]; resolves with the values (or run's result), or null when cancelled.
- function ask({title,text,fields=[],ok='OK',run,extra}){return new Promise(resolve=>{
+ function ask({title,text,fields=[],ok='OK',run,extra,long=false,working='Working…'}){return new Promise(resolve=>{
   $('githubAskTitle').textContent=title;$('githubAskOk').textContent=ok;$('githubAskStatus').textContent='';
   const body=[];if(text)body.push(el('p',{text}));if(extra)body.push(extra);
   for(const f of fields){const input=f.rows?el('textarea',{id:'ghAsk_'+f.id,rows:f.rows,placeholder:f.placeholder||''}):el('input',{id:'ghAsk_'+f.id,autocomplete:'off',autocapitalize:'off',spellcheck:'false',placeholder:f.placeholder||''});
@@ -73,8 +83,8 @@ export function setupGitHub({github,workspace,opened,notice,roomFor=()=>'',isAdv
   $('githubAskCancel').onclick=()=>finish(null);
   $('githubAsk').oncancel=e=>{e.preventDefault();if(!$('githubAskOk').disabled)finish(null)};
   $('githubAskOk').onclick=async()=>{const v=values();if(!run){finish(v);return}
-   $('githubAskOk').disabled=$('githubAskCancel').disabled=true;$('githubAskStatus').textContent='Working…';
-   try{const r=await run(v);finish(r===undefined?v:r)}catch(e){$('githubAskStatus').textContent=e.message}finally{$('githubAskOk').disabled=$('githubAskCancel').disabled=false}};
+   $('githubAskOk').disabled=$('githubAskCancel').disabled=true;$('githubAskStatus').textContent='';const stop=spinner('githubAsk',{long,text:working});
+   try{const r=await run(v);stop();finish(r===undefined?v:r)}catch(e){stop();$('githubAskStatus').textContent=e.message}finally{stop();$('githubAskOk').disabled=$('githubAskCancel').disabled=false}};
   $('githubAsk').showModal();($('githubAskBody').querySelector('input,textarea')||$('githubAskOk')).focus();
  })}
 
@@ -138,7 +148,7 @@ export function setupGitHub({github,workspace,opened,notice,roomFor=()=>'',isAdv
   const searchOut=el('div',{id:'githubSearchResults',class:'gh-list'});
   const runSearch=()=>task(async()=>{status('Searching…');const {results,skipped}=await github.search(r.owner,r.name,branch(),searchInput.value,{onProgress:n=>status(`Searching… ${n} files read`)});
    status(`${results.length} ${results.length===1?'match':'matches'}`+(skipped?`. ${skipped} large or extra files were not searched.`:'.'));
-   searchOut.replaceChildren(...results.map(x=>el('button',{class:'gh-file',onclick:()=>openFile(x.file,x.line)},el('strong',{text:`${x.file.path}:${x.line}`}),' '+x.text)));});
+   searchOut.replaceChildren(...results.map(x=>el('button',{class:'gh-file',onclick:()=>openFile(x.file,x.line)},el('strong',{text:`${x.file.path}:${x.line}`}),' '+x.text)));},{long:true,text:'Searching…'});
   searchInput.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();runSearch()}};
   panel(
    dirty.length&&r.canPush?el('div',{class:'actions'},el('button',{id:'githubSaveAll',class:'primary',text:`Save ${dirty.length} changed ${dirty.length===1?'file':'files'} together…`,onclick:()=>saveAll()})):null,
@@ -191,7 +201,7 @@ export function setupGitHub({github,workspace,opened,notice,roomFor=()=>'',isAdv
  })}
  async function renameFile(f){
   const r=repo(),b=branch();
-  const v=await ask({title:'Rename or move',text:'Type the new path. Use folder/name to move it into a folder.',ok:'Rename on GitHub',fields:[{id:'path',label:'New path',value:f.path},{id:'note',label:'Note for this change',value:'Rename '+f.path}],
+  const v=await ask({title:'Rename or move',text:'Type the new path. Use folder/name to move it into a folder.',ok:'Rename on GitHub',working:'Renaming on GitHub…',fields:[{id:'path',label:'New path',value:f.path},{id:'note',label:'Note for this change',value:'Rename '+f.path}],
    run:async v=>{const path=v.path.trim();if(path===f.path)throw Error('Type a different path.');if(!validPath(path))throw Error('That path cannot be used on GitHub.');if(files.some(x=>x.path===path))throw Error('A file with that path already exists.');
     const tab=openTab(f);if(tab?.dirty)throw Error('This file has unsaved edits in a tab. Save or close that tab first.');
     const text=await github.blobText(r.owner,r.name,f.sha,f.size);
@@ -202,7 +212,7 @@ export function setupGitHub({github,workspace,opened,notice,roomFor=()=>'',isAdv
  async function deleteFile(f){
   const r=repo(),b=branch(),tab=openTab(f);
   if(tab?.dirty){status('This file has unsaved edits in a tab. Save or close that tab first.');return}
-  const v=await ask({title:'Delete '+f.path+'?',text:'The file is removed from branch '+b+'. Its history stays on GitHub, so it can be restored later.',ok:'Delete from GitHub',fields:[{id:'note',label:'Note for this change',value:'Delete '+f.path}],
+  const v=await ask({title:'Delete '+f.path+'?',text:'The file is removed from branch '+b+'. Its history stays on GitHub, so it can be restored later.',ok:'Delete from GitHub',working:'Deleting on GitHub…',fields:[{id:'note',label:'Note for this change',value:'Delete '+f.path}],
    run:v=>github.commit(r.owner,r.name,b,[{path:f.path,remove:true,baseSha:f.sha}],v.note.trim()||'Delete '+f.path)});
   if(v){if(tab)workspace.closeMany([tab.id],{focus:false});view=null;notice('Deleted from GitHub: '+f.path);await task(loadFiles)}
  }
@@ -212,7 +222,7 @@ export function setupGitHub({github,workspace,opened,notice,roomFor=()=>'',isAdv
   if(!dirty.length)return;
   const boxes=dirty.map(t=>{const folder=t.projectRef.path.includes('/')?t.projectRef.path.slice(0,t.projectRef.path.lastIndexOf('/')+1):'';return {t,path:folder+t.name,input:el('input',{type:'checkbox',checked:true})}});
   const extra=el('div',{class:'gh-list'},...boxes.map(x=>el('label',{class:'gh-check'},x.input,' '+x.path+(x.path!==x.t.projectRef.path?' (new name)':''))));
-  const v=await ask({title:'Save changed files together',text:`One change on ${r.full} · branch ${b}.`,extra,ok:'Save to GitHub',fields:[{id:'note',label:'Note for this change',value:'Update '+boxes.length+' files'}],
+  const v=await ask({title:'Save changed files together',long:true,text:`One change on ${r.full} · branch ${b}.`,extra,ok:'Save to GitHub',working:'Saving to GitHub…',fields:[{id:'note',label:'Note for this change',value:'Update '+boxes.length+' files'}],
    run:async v=>{const chosen=boxes.filter(x=>x.input.checked);if(!chosen.length)throw Error('Tick at least one file.');
     const paths=chosen.map(x=>x.path);if(new Set(paths).size!==paths.length)throw Error('Two tabs would save to the same file name. Rename one first.');
     const res=await github.commit(r.owner,r.name,b,chosen.map(x=>({path:x.path,text:x.t.text,baseSha:x.path===x.t.projectRef.path?x.t.projectRef.sha:null,mode:x.t.projectRef.mode})),v.note);
@@ -239,12 +249,12 @@ export function setupGitHub({github,workspace,opened,notice,roomFor=()=>'',isAdv
    x.name!==r.branch&&!x.protected?el('button',{id:'githubBranchDelete',class:'danger',text:'Delete branch '+x.name,onclick:()=>deleteBranch(x.name)}):null))}
  async function mergeBranch(head,base){
   const r=repo();
-  const v=await ask({title:`Copy ${head}'s changes into ${base}?`,text:`Everything changed on ${head} is added to ${base} (this is called a merge). ${head} itself stays as it is.`,ok:'Copy changes',fields:[{id:'note',label:'Note for this change',value:`Merge ${head} into ${base}`}],
+  const v=await ask({title:`Copy ${head}'s changes into ${base}?`,text:`Everything changed on ${head} is added to ${base} (this is called a merge). ${head} itself stays as it is.`,ok:'Copy changes',working:'Copying the changes on GitHub…',long:true,fields:[{id:'note',label:'Note for this change',value:`Merge ${head} into ${base}`}],
    run:async v=>{const res=await github.merge(r.owner,r.name,base,head,v.note.trim());if(res.result==='conflict')throw Error(`The same lines were changed on both branches, so GitHub cannot combine them automatically. Nothing was changed. Open a pull request to see the differences.`);return res}});
   if(v)await task(async()=>{view=null;await loadBranches(base);section='branches';await showSection('branches');status(v.result==='nothing'?`${base} already has everything from ${head}. Nothing to copy.`:`Copied ${head}'s changes into ${base}.`)})
  }
  async function deleteBranch(name){
-  const r=repo();const v=await ask({title:`Delete branch ${name}?`,text:'Changes that were only on this branch will no longer be listed. This cannot be undone from ATE.',ok:'Delete branch',run:()=>github.deleteBranch(r.owner,r.name,name)});
+  const r=repo();const v=await ask({title:`Delete branch ${name}?`,text:'Changes that were only on this branch will no longer be listed. This cannot be undone from ATE.',ok:'Delete branch',working:'Deleting the branch…',run:()=>github.deleteBranch(r.owner,r.name,name)});
   if(v)await task(async()=>{view=null;await loadBranches(branch());section='branches';await showSection('branches');status('Deleted branch '+name+'.')})
  }
 
@@ -293,7 +303,7 @@ export function setupGitHub({github,workspace,opened,notice,roomFor=()=>'',isAdv
      res.skipped.length?el('p',{text:'Skipped links to other repositories (submodules): '+res.skipped.join(', ')}):null,
      i<0?el('p',{text:'GitHub has not let ATE into '+res.to.full+' yet. Tap "Give ATE more repositories…", tick it, then Refresh.'}):el('p',{id:'githubCopyOpened',text:'ATE has opened '+res.to.full+' for you: it is now in the Repository box above.'}));
     if(i>=0){const keep=view;$('githubRepo').value=String(i);await loadBranches();view=keep}
-    await showSection(section);status('Copy finished.')})})));
+    await showSection(section);status('Copy finished.')},{long:true,text:'Copying…'})})));
  }
  function deleteRepoStep1(){clearNav();const r=repo();
   panel(back('Back',()=>repoActions()),el('h3',{class:'gh-danger-title',text:'Delete '+r.full+'?'}),
@@ -307,7 +317,7 @@ export function setupGitHub({github,workspace,opened,notice,roomFor=()=>'',isAdv
   const final=el('button',{id:'githubDeleteForever',class:'danger',disabled:true,text:'Delete forever (wait 5)'});
   let left=5,ready=false;const tick=setInterval(()=>{left--;if(left<=0){clearInterval(tick);ready=true;final.textContent='Delete forever';update()}else final.textContent=`Delete forever (wait ${left})`},1000);
   const update=()=>{final.disabled=!(ready&&typed.value===r.name)};typed.oninput=update;
-  final.onclick=()=>task(async()=>{if(typed.value!==r.name)throw Error('Type the exact name first.');status('Deleting '+r.full+'…');await github.deleteRepo(r.owner,r.name,typed.value);view=null;await loadRepos();status(`${r.full} has been deleted from GitHub.`)});
+  final.onclick=()=>task(async()=>{if(typed.value!==r.name)throw Error('Type the exact name first.');status('Deleting '+r.full+'…');await github.deleteRepo(r.owner,r.name,typed.value);view=null;await loadRepos();status(`${r.full} has been deleted from GitHub.`)},{long:true,text:'Deleting the repository…'});
   panel(back('Back',()=>{clearInterval(tick);return deleteRepoStep1()}),el('h3',{class:'gh-danger-title',text:'Last check'}),el('p',{text:`To confirm, type the repository's name exactly: ${r.name}`}),el('label',{class:'gh-field'},'Repository name',typed),
    el('div',{class:'actions'},el('button',{text:'Cancel',onclick:()=>{clearInterval(tick);go(null)}}),final));
  }
@@ -333,7 +343,7 @@ export function setupGitHub({github,workspace,opened,notice,roomFor=()=>'',isAdv
     p.state==='open'&&r.canPush?el('button',{id:'githubPrMerge',class:'primary',text:`Merge into ${p.base}`,onclick:()=>mergePull(p)}):null));
  }
  async function mergePull(p){
-  const r=repo();const v=await ask({title:`Merge pull request #${p.number}?`,text:`Copies the changes from ${p.head} into ${p.base}.`,ok:'Merge',run:()=>github.mergePull(r.owner,r.name,p.number,p.headSha)});
+  const r=repo();const v=await ask({title:`Merge pull request #${p.number}?`,text:`Copies the changes from ${p.head} into ${p.base}.`,ok:'Merge',working:'Merging on GitHub…',long:true,run:()=>github.mergePull(r.owner,r.name,p.number,p.headSha)});
   if(v)await task(async()=>{view=()=>pullView(p.number);await loadBranches(branch());status(`Merged #${p.number} into ${p.base}.`)})
  }
 
@@ -423,7 +433,7 @@ export function setupGitHub({github,workspace,opened,notice,roomFor=()=>'',isAdv
    if(name.includes('/')||!validPath(path))return Promise.reject(Error('Choose a file name without slashes.'));
    const changes=el('div',{id:'githubSaveChanges'});
    const show=el('button',{id:'githubShowChanges',text:'Show changes',onclick:async()=>{show.disabled=true;try{const old=isNew?'':await github.blobText(ref.owner,ref.repo,ref.sha);changes.replaceChildren(diffView(withContext(lineDiff(old,text)),'Your changes'))}catch(e){changes.replaceChildren(el('p',{text:e.message}))}finally{show.disabled=false}}});
-   return ask({title:'Save to GitHub',text:`${ref.owner}/${ref.repo} · branch ${ref.branch} · ${path}`,extra:el('div',{},el('div',{class:'actions'},show),changes),ok:'Save to GitHub',fields:[{id:'note',label:'Note for this change',value:(isNew?'Create ':'Update ')+path}],
+   return ask({title:'Save to GitHub',text:`${ref.owner}/${ref.repo} · branch ${ref.branch} · ${path}`,extra:el('div',{},el('div',{class:'actions'},show),changes),ok:'Save to GitHub',working:'Saving to GitHub…',fields:[{id:'note',label:'Note for this change',value:(isNew?'Create ':'Update ')+path}],
     run:async v=>{const res=await github.commit(ref.owner,ref.repo,ref.branch,[{path,text,baseSha:path===ref.path?ref.sha:null,mode:ref.mode}],v.note.trim()||((isNew?'Create ':'Update ')+path));
      const f=res.files[path];if(sameBranch(ref)){const i=files.findIndex(x=>x.path===path);if(i>=0)files[i]=f;else{files.push(f);files.sort((a,b)=>a.path.localeCompare(b.path))}}
      return {name,projectRef:{...ref,path,sha:f.sha,mode:f.mode},message:(path!==ref.path&&ref.sha?'Saved a new GitHub file ':'Saved to GitHub: ')+ref.owner+'/'+ref.repo+' · '+ref.branch+' · '+path+(path!==ref.path&&ref.sha?'. The original file is kept.':'')+' (change '+res.commit.slice(0,7)+')'}}})

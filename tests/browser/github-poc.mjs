@@ -21,7 +21,8 @@ try{for(const [engineName,engine] of Object.entries(engines)){
   R.runs=[{id:5,name:'Build',display_title:'Build',head_branch:'main',event:'push',status:'completed',conclusion:'failure',created_at:'2026-11-26T10:00:00Z',jobs:[{id:77,name:'web',status:'completed',conclusion:'failure',steps:[{name:'npm test',conclusion:'failure'}],annotations:[{annotation_level:'failure',message:'Process completed with exit code 1.'}],log:'2026-11-26T10:00:01.0Z ##[error]AssertionError: expected 2'}]},
    {id:4,name:'Build',display_title:'Build',head_branch:'main',event:'push',status:'completed',conclusion:'success',created_at:'2026-11-25T10:00:00Z',jobs:[]}];
   const page=await browser.newPage({viewport:{width:1194,height:834}});const errors=[];page.on('pageerror',e=>errors.push(e.message));
-  const route=async(route,base)=>{const req=route.request(),u=new URL(req.url());
+  let slowMs=0;
+  const route=async(route,base)=>{const req=route.request(),u=new URL(req.url());if(slowMs)await new Promise(r=>setTimeout(r,slowMs));
    const cors={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'*','Access-Control-Allow-Methods':'GET,POST,PUT,PATCH,DELETE'};
    if(req.method()==='OPTIONS')return route.fulfill({status:204,headers:cors});
    if(base===fake.API)assert.equal(req.headers().authorization,'Bearer ghu_fake','API call without the sign-in pass: '+u.pathname);
@@ -139,7 +140,10 @@ await page.waitForSelector('#githubAsk[open]');assert.match(await $('githubAskBo
   await $('githubRepoMore').click();await idle();await $('githubCopyRepo').click();await idle();
   const explain=await $('githubPanel').innerText();for(const w of [/Not copied/,/history of past changes/,/Secrets/,/never writes into a branch that already exists/,/switched off in a new repository/])assert.match(explain,w);
   assert.equal(await page.locator('#githubCopyNow').count(),0,'no Copy button before the explanation is accepted');
-  await $('githubCopyNext').click();await idle();await $('githubCopyAll').check();await $('githubCopyName').fill('ate-test-copy');await $('githubCopyNow').click();await idle();
+  await $('githubCopyNext').click();await idle();await $('githubCopyAll').check();await $('githubCopyName').fill('ate-test-copy');slowMs=120;await $('githubCopyNow').click();
+  // Long job: spinning wheel with words and the "might take a while" line straight away.
+  await page.waitForSelector('#githubBusy:not([hidden])');assert.match(await $('githubBusyHint').innerText(),/might take a while/);assert.equal(await page.locator('#githubBusy .gh-spinner').count(),1);
+  await idle();slowMs=0;assert.equal(await $('githubBusy').isHidden(),true,'the wheel goes away when the job ends');
   assert.match(await $('githubPanel').innerText(),/Copy finished[\s\S]*Copied 2 branches into tester\/ate-test-copy[\s\S]*Actions are switched off/);
   assert.deepEqual(S.filesAt('ate-test-copy','main'),S.filesAt('ate-test','main'));assert.equal(S.repos.get('ate-test-copy').actions,false);assert.equal(S.repos.get('ate-test-copy').pushesWithActionsOn||0,0);
   assert.match(await $('githubCopyOpened').innerText(),/opened tester\/ate-test-copy/);assert.match(await $('githubRepo').locator('option:checked').innerText(),/ate-test-copy/);
