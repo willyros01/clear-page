@@ -17,11 +17,13 @@ concurrency:
 jobs:
   release:
     runs-on: xcode-27
-    timeout-minutes: 45
+    # Apple's processing of a Mac build has taken over an hour; wait for it here so the run ends green.
+    timeout-minutes: 180
     env:
       ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
       ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
       ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+      APPLE_WAIT_MINUTES: "150"
       APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
       GH_TOKEN: ${{ github.token }}
       SOURCE_RUN: ${{ inputs.source_run }}
