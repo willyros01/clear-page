@@ -214,11 +214,18 @@ final class ATEFunctionalTests: XCTestCase {
             // Large-text iPhone sheets can cover the former outside-tap point.
             app.swipeDown()
         }
-        if !waitForGone(sheet, timeout: 5) {
-            if tablet {
+        // A person closes it again if the first swipe or tap did not take: up to three more tries,
+        // preferring the sheet's own Close button when iOS shows one.
+        for attempt in 0..<3 where !waitForGone(sheet, timeout: 5) {
+            print("NOTE native UI: Share screen needed another close (try \(attempt + 2))")
+            if close.exists && close.isHittable {
+                close.tap()
+            } else if tablet {
                 app.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.1)).tap()
             } else {
-                app.swipeDown()
+                // Swipe from the sheet's own top edge, where iOS expects the drag to start.
+                let top = sheet.exists ? sheet.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.02)) : app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.45))
+                top.press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.98)))
             }
         }
         XCTAssertTrue(waitForGone(copy, timeout: 10), app.debugDescription)
