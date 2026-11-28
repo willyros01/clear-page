@@ -2,12 +2,12 @@
   "workflow": "ATE Apple and Desktop",
   "branch": "desktop",
   "outcome": "success",
-  "run_id": 45944744818,
-  "run_number": 30,
-  "source_sha": "a44550f3df481f40feb2b6bee2bf7bbb433eabad",
-  "artifact_id": 15174547603,
+  "run_id": 46117055485,
+  "run_number": 31,
+  "source_sha": "2b4b6b870cd2867ff82905b9da5d438d6bffc54d",
+  "artifact_id": 15252850923,
   "apk_name": "ate.v0.8.9.apk",
   "version": "0.8.9",
   "signer_sha256": "ef654829950fdf9d59f061c7b0fdc80358373a619fc02fa10480816e0665d6e4",
-  "reported_at": "2026-11-27T05:29:10.332Z"
+  "reported_at": "2026-11-28T06:44:33.472Z"
 }
