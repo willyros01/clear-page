@@ -14,3 +14,9 @@ test('orientation is read from the screen',()=>{
  assert.equal(screenIsLandscape({orientation:90,screen:{}}),true);
  assert.equal(screenIsLandscape({screen:{width:1280,height:800}}),true);
 });
+test('a smaller window with nothing being typed (another screen coming and going) is not the keyboard',()=>{
+ let h=900,typing=false,up=null;const w=createKeyboardWatch({height:()=>h,landscape:()=>false,editing:()=>typing,onChange:v=>{up=v}});w();
+ h=500;w();assert.equal(up,null,'no change reported while nothing is focused');
+ typing=true;w();assert.equal(up,true,'editor focused and window smaller: keyboard up');
+ typing=false;w();assert.equal(up,false,'focus left: bottom line comes back');
+});

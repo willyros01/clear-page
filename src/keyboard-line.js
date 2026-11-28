@@ -9,13 +9,15 @@ export function screenIsLandscape(win=globalThis){
   if(typeof win.orientation==='number')return Math.abs(win.orientation)===90;
   return (win.screen?.width||0)>(win.screen?.height||0);
 }
-export function createKeyboardWatch({height,landscape,onChange,log=null}){
+// editing(): is a text field or the editor focused? The keyboard only comes up for one, so a smaller
+// window with nothing to type in (another app's screen coming and going) never hides the bottom line.
+export function createKeyboardWatch({height,landscape,onChange,log=null,editing=()=>true}){
   let base=0,land=landscape(),up=false;
   return ()=>{
     const now=landscape();
     if(now!==land){land=now;base=0}
     const h=height();base=Math.max(base,h);
-    const next=h<base*0.75;
+    const next=h<base*0.75&&!!editing();
     log?.(`h=${Math.round(h)} base=${Math.round(base)} landscape=${land} keyboard=${next}`);
     if(next!==up){up=next;onChange(up)}
     return up;

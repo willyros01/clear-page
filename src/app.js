@@ -182,7 +182,7 @@ if(tabbed){
 
 // Touch devices: hide the bottom line while the on-screen keyboard takes the screen.
 // Phones and tablets: a touch screen, or ATE's own iPhone/iPad/Android app (some Android tablets report a fine pointer).
-if(window.visualViewport&&(matchMedia('(pointer:coarse)').matches||['ios','android'].includes(window.Capacitor?.getPlatform?.()))){const vv=window.visualViewport;const keyboard=createKeyboardWatch({height:()=>vv.height,landscape:()=>screenIsLandscape(window),onChange:up=>document.documentElement.classList.toggle('keyboard-up',up),log:window.Capacitor?.getPlatform?.()==='android'?m=>console.info('ATE_KEYBOARD '+m):null});vv.addEventListener('resize',keyboard);addEventListener('resize',keyboard);screen.orientation?.addEventListener?.('change',keyboard);keyboard()}
+if(window.visualViewport&&(matchMedia('(pointer:coarse)').matches||['ios','android'].includes(window.Capacitor?.getPlatform?.()))){const vv=window.visualViewport;const keyboard=createKeyboardWatch({height:()=>vv.height,landscape:()=>screenIsLandscape(window),editing:()=>{const a=document.activeElement;return !!a&&(a.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))},onChange:up=>document.documentElement.classList.toggle('keyboard-up',up),log:window.Capacitor?.getPlatform?.()==='android'?m=>console.info('ATE_KEYBOARD '+m):null});vv.addEventListener('resize',keyboard);addEventListener('resize',keyboard);screen.orientation?.addEventListener?.('change',keyboard);addEventListener('focusin',keyboard);addEventListener('focusout',()=>setTimeout(keyboard,0));keyboard()}
 
 // Vim: show the mode (NORMAL, INSERT…) in the bottom line instead of a separate strip;
 // the strip still appears while a Vim command (:w, /search) or message is shown.

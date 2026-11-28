@@ -66,7 +66,7 @@ public class DocumentSaveTest {
         // Android's Files screen sometimes opens on another place (Recent): look in Downloads, where it was saved.
         if(saved==null&&device.hasObject(By.desc("Show roots"))){clickSelector(device,By.desc("Show roots"),"Show roots");device.waitForIdle();clickSelector(device,By.text("Downloads"),"Downloads");device.waitForIdle();saved=device.wait(Until.findObject(By.text("ate-storage-check.c")),10000);}
         assertNotNull("Saved document missing from file manager",saved);saved.click();
-        assertTrue("Native file open did not complete",device.wait(Until.hasObject(By.textContains("Opened ate-storage-check.c")),15000));
+        if(!device.wait(Until.hasObject(By.textContains("Opened ate-storage-check.c")),15000))fail("Native file open did not complete. On screen: "+screenTexts(device)+" | ATE saw: "+keyboardReadings(device));
         openSavePicker(device,context);
         assertTrue(device.wait(Until.hasObject(By.pkg(DOCUMENTS)),15000));
         filename=device.wait(Until.findObject(By.clazz("android.widget.EditText")),10000);
@@ -153,6 +153,17 @@ public class DocumentSaveTest {
             if(!device.hasObject(By.pkg(context.getPackageName())))return;
             device.waitForIdle();
         }
+    }
+    // Words on screen and ATE's keyboard readings, so a failure explains itself on the test run's page.
+    private String screenTexts(UiDevice device){
+        StringBuilder out=new StringBuilder();
+        try{for(UiObject2 o:device.findObjects(By.text(Pattern.compile(".+")))){String t=o.getText();if(t!=null&&out.length()<700)out.append(t).append(" / ");}}catch(Exception ignored){}
+        return out.length()==0?"(nothing readable)":out.toString();
+    }
+    private String keyboardReadings(UiDevice device){
+        try{String seen=device.executeShellCommand("logcat -d -s Capacitor/Console:I");StringBuilder lines=new StringBuilder();
+            for(String l:seen.split("\n"))if(l.contains("ATE_KEYBOARD"))lines.append(l.substring(l.indexOf("ATE_KEYBOARD"))).append(" | ");
+            return lines.length()==0?"no keyboard readings":lines.substring(Math.max(0,lines.length()-500));}catch(Exception e){return "readings unavailable";}
     }
     private void click(UiDevice device,String text){
         long end=System.currentTimeMillis()+15000;
