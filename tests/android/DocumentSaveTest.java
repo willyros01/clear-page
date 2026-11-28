@@ -63,6 +63,8 @@ public class DocumentSaveTest {
         click(device,"Menu");click(device,"Open");
         assertTrue("Open must launch DocumentsUI",device.wait(Until.hasObject(By.pkg(DOCUMENTS)),15000));
         UiObject2 saved=device.wait(Until.findObject(By.text("ate-storage-check.c")),10000);
+        // Android's Files screen sometimes opens on another place (Recent): look in Downloads, where it was saved.
+        if(saved==null&&device.hasObject(By.desc("Show roots"))){clickSelector(device,By.desc("Show roots"),"Show roots");device.waitForIdle();clickSelector(device,By.text("Downloads"),"Downloads");device.waitForIdle();saved=device.wait(Until.findObject(By.text("ate-storage-check.c")),10000);}
         assertNotNull("Saved document missing from file manager",saved);saved.click();
         assertTrue("Native file open did not complete",device.wait(Until.hasObject(By.textContains("Opened ate-storage-check.c")),15000));
         openSavePicker(device,context);
@@ -99,7 +101,11 @@ public class DocumentSaveTest {
                 for(int i=0;i<20&&!shown;i++){shown=device.executeShellCommand("dumpsys input_method").contains("mInputShown=true");if(!shown)Thread.sleep(250);}
             }
             assertTrue("On-screen keyboard did not open when tapping the editor",shown);
-            assertTrue("Fire-sized screen: the bottom line stayed up while the keyboard was up",device.wait(Until.gone(counts),10000));
+            if(!device.wait(Until.gone(counts),10000)){
+                String seen=device.executeShellCommand("logcat -d -s Capacitor/Console:I");StringBuilder lines=new StringBuilder();
+                for(String l:seen.split("\n"))if(l.contains("ATE_KEYBOARD"))lines.append(l.substring(Math.max(0,l.indexOf("ATE_KEYBOARD")))).append(" | ");
+                fail("Fire-sized screen: the bottom line stayed up while the keyboard was up. What ATE saw: "+(lines.length()==0?"no keyboard readings at all":lines.substring(Math.max(0,lines.length()-600))));
+            }
             device.pressBack();device.waitForIdle();
             assertTrue("Bottom line did not come back after the keyboard closed",device.wait(Until.hasObject(counts),10000));
         } finally {

@@ -9,13 +9,14 @@ export function screenIsLandscape(win=globalThis){
   if(typeof win.orientation==='number')return Math.abs(win.orientation)===90;
   return (win.screen?.width||0)>(win.screen?.height||0);
 }
-export function createKeyboardWatch({height,landscape,onChange}){
+export function createKeyboardWatch({height,landscape,onChange,log=null}){
   let base=0,land=landscape(),up=false;
   return ()=>{
     const now=landscape();
     if(now!==land){land=now;base=0}
     const h=height();base=Math.max(base,h);
     const next=h<base*0.75;
+    log?.(`h=${Math.round(h)} base=${Math.round(base)} landscape=${land} keyboard=${next}`);
     if(next!==up){up=next;onChange(up)}
     return up;
   };
