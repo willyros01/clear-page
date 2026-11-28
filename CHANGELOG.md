@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.9 (31) — fixes from the owner's Fire HD 8 testing
+- Phone-sized screens: the bottom line keeps to one line (tap it to read a long message); "Opened … from GitHub" now names just the file (repository and branch are in the tab).
+- The bottom line steps aside while the on-screen keyboard is up on tablets such as the Fire HD 8 (the keyboard made the page wider than tall, which ATE mistook for turning the device). Checked on a Fire-sized Android emulator screen.
+- Phone-sized screens: tapping the name of the group you are in folds or opens its files; tapping another group's name switches to it.
+- New: ⋯ beside My files → Save a copy to GitHub: choose repository, branch and path; asks before replacing; the file on the device is unchanged.
+- Simulator and emulator results are listed in plain words on each GitHub test run's page.
+
 ## 0.8.9 (30) — GitHub, super tabs and ATE blue
 - GitHub (Menu → GitHub, every platform): Sign in with GitHub (code on GitHub's own page; no keys; never stored, ends after about 8 hours). Files: open, edit, save with conflict refusal, several files in one change, rename/move, delete, new file, history with changes and restore, search inside files. Branches as a tree with "(made from …)" notes; the working branch's choices under it: new branch, copy to another repository, merge into another branch, delete. Pull requests (open, see changes, comment, merge), Actions (runs, why a job failed, full job log view-only with Find, start by hand), Issues, new repository. Repository choices beside the repository picker: new repository, copy branches to another repository (with an explanation page first), Actions on/off, delete (exact name plus a 5-second wait). Never transfers a repository. A spinning wheel with words shows while GitHub works.
 - Super tabs: open files grouped by GitHub repository and branch, Project, or My files; fold a group, ⋯ group menu (save the group's changes together, open its GitHub screen, close all), "+N more" for long groups. Up to 30 open files, 12 per group.

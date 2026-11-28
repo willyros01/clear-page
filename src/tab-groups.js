@@ -69,10 +69,11 @@ export function createTabBar({row,filesRow,workspace,isBusy=()=>false,requestClo
    if(g.branch)chip.append(icon(g.kind==='github'?'branch':'folder'),el('span','tg-branch',g.branch));
    chip.append(el('span','tg-count','· '+g.tabs.length));
    if(changed)chip.append(el('span','tg-unsaved','●'+changed));
-   chip.onclick=()=>{if(isBusy())return;if(isNarrow){if(!current)workspace.activate(g.tabs[0].id);return}if(open)folded.add(g.key);else folded.delete(g.key);render(last)};
+   // Phone-sized screens: tapping another group switches to it; tapping the group you are in folds/opens its files row.
+   chip.onclick=()=>{if(isBusy())return;if(isNarrow&&!current){folded.delete(g.key);workspace.activate(g.tabs[0].id);return}if(open)folded.add(g.key);else folded.delete(g.key);render(last)};
    const more=el('button','tg-menu','⋯');more.type='button';more.setAttribute('aria-label','More for '+g.title);more.onclick=()=>{if(!isBusy())openMenu(g,{fold:()=>{folded.add(g.key);render(last)},open:()=>{folded.delete(g.key);render(last)},folded:!open})};
    box.append(chip,more);row.append(box);
-   const target=isNarrow?(current?filesRow:null):(open?box:null);
+   const target=isNarrow?(current&&open?filesRow:null):(open?box:null);
    let shown=[];
    if(target){
     // Long groups: show up to 5 files plus the current one, and a "+N more" list for the rest.

@@ -80,6 +80,32 @@ public class DocumentSaveTest {
         assertTrue(device.wait(Until.hasObject(By.textContains("Opened ate-no-extension")),15000));
         System.out.println("PASS: ACTION_CREATE_DOCUMENT picker, cancel preserves draft, filename/destination save and reopen succeed");
     }
+    // Fire HD 8 sized screen (800 x 1280 pixels, about 600 x 960 in the page): with the on-screen keyboard up,
+    // the page is wider than it is tall. The bottom line (word count) must still step aside while typing.
+    @Test public void tabletSizedKeyboardHidesBottomLine() throws Exception {
+        UiDevice device=UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());
+        Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();
+        try {
+            device.executeShellCommand("wm size 800x1280");device.executeShellCommand("wm density 213");
+            device.executeShellCommand("settings put secure show_ime_with_hard_keyboard 1");device.waitForIdle();
+            Intent launch=context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
+            launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TASK);context.startActivity(launch);
+            assertTrue("ATE did not open on the Fire-sized screen",device.wait(Until.hasObject(By.pkg(context.getPackageName())),15000));
+            BySelector counts=By.text(Pattern.compile(".*\\d+ words? · .*characters?.*"));
+            assertTrue("Bottom line (word count) not shown before typing",device.wait(Until.hasObject(counts),15000));
+            boolean shown=false;
+            for(int attempt=0;attempt<3&&!shown;attempt++){
+                device.click(device.getDisplayWidth()/2,device.getDisplayHeight()*45/100);device.waitForIdle();
+                for(int i=0;i<20&&!shown;i++){shown=device.executeShellCommand("dumpsys input_method").contains("mInputShown=true");if(!shown)Thread.sleep(250);}
+            }
+            assertTrue("On-screen keyboard did not open when tapping the editor",shown);
+            assertTrue("Fire-sized screen: the bottom line stayed up while the keyboard was up",device.wait(Until.gone(counts),10000));
+            device.pressBack();device.waitForIdle();
+            assertTrue("Bottom line did not come back after the keyboard closed",device.wait(Until.hasObject(counts),10000));
+        } finally {
+            device.executeShellCommand("wm size reset");device.executeShellCommand("wm density reset");device.waitForIdle();
+        }
+    }
     @Test public void toolbarAndProjectsAtLargeText() throws Exception {
         UiDevice device=UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());
         Context context=InstrumentationRegistry.getInstrumentation().getTargetContext();

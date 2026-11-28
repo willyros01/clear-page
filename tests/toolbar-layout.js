@@ -20,7 +20,9 @@ export function checkToolbarLayout([scale, icons]) {
    const a=rect(buttons[i]),b=rect(buttons[j]);
    if(Math.min(a.right,b.right)>Math.max(a.left,b.left)+1&&Math.min(a.bottom,b.bottom)>Math.max(a.top,b.top)+1)throw Error('Overlapping toolbar buttons');
   }
-  if(document.documentElement.scrollWidth>width+1||notice.scrollWidth>notice.clientWidth+1)throw Error('Toolbar or save message widens the screen');
+  // On phone-sized screens a long message is deliberately cut to one line with "…" (tap shows it all); that is not widening.
+  const ns=getComputedStyle(notice),cutOnPurpose=ns.textOverflow==='ellipsis'&&ns.overflowX==='hidden'&&!notice.classList.contains('expanded');
+  if(document.documentElement.scrollWidth>width+1||(!cutOnPurpose&&notice.scrollWidth>notice.clientWidth+1))throw Error('Toolbar or save message widens the screen');
   const h=rect(header),n=rect(notice);
   if(n.top<h.bottom-1)throw Error('Save message overlaps the toolbar');
   return `Toolbar visible at ${width}px, ${scale*100}% controls, ${icons?'icons':'text'}; wrapped notice, 44px targets and no horizontal overflow`;

@@ -9,7 +9,7 @@ concurrency:
   group: ate-ios-tabs
   cancel-in-progress: true
 env:
-  ATE_BUILD_NUMBER: "30"
+  ATE_BUILD_NUMBER: "31"
 jobs:
   regression:
     runs-on: ubuntu-latest
@@ -117,6 +117,9 @@ jobs:
           DEVICE=$(cat "$RUNNER_TEMP/ipad-device.txt")
           xcrun simctl ui "$DEVICE" content_size accessibility-extra-extra-extra-large
           xcodebuild test -project ios/App/App.xcodeproj -scheme ATEFunctional -configuration Debug -destination "platform=iOS Simulator,id=$DEVICE" -derivedDataPath "$RUNNER_TEMP/DerivedData" -only-testing:ATEFunctionalTests/ATEFunctionalTests/testToolbarAndSaveVisibility -only-testing:ATEFunctionalTests/ATEFunctionalTests/testProjectLayoutAccessibility -resultBundlePath "$RUNNER_TEMP/ATELargeText.xcresult" CODE_SIGNING_ALLOWED=NO -test-timeouts-enabled YES -default-test-execution-time-allowance 600 -maximum-test-execution-time-allowance 900 2>&1 | tee "$RUNNER_TEMP/large-text-tests.log" | awk '/Test Case|PASS native|error:|failed|App animations|TEST SUCCEEDED/ { print; fflush() }' || { tail -80 "$RUNNER_TEMP/large-text-tests.log"; exit 1; }
+      - name: Results in plain words
+        if: always()
+        run: bash build/ios-plain-results.sh "${{ matrix.device }}" "$RUNNER_TEMP/project-focus-tests.log" "$RUNNER_TEMP/ui-tests.log" "$RUNNER_TEMP/large-text-tests.log"
       - uses: actions/upload-artifact@v4
         if: always()
         with:

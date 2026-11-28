@@ -126,8 +126,9 @@ export function setupGitHub({github,workspace,opened,notice,openLink=null,roomFo
   status(result.truncated?'This repository is very large; GitHub sent only part of the file list.':r.canPush?'':'You can read this repository but not change it.');
   await showSection(section);
  }
- $('githubRepo').onchange=()=>{view=null;closeRepoPanel();task(()=>loadBranches())};
- $('githubBranch').onchange=()=>{view=null;task(loadFiles)};
+ // A view marked keep (Save a copy) stays while you pick the repository and branch.
+ $('githubRepo').onchange=()=>{if(!view?.keep)view=null;closeRepoPanel();task(()=>loadBranches())};
+ $('githubBranch').onchange=()=>{if(!view?.keep)view=null;task(loadFiles)};
  $('githubRefresh').onclick=()=>task(async()=>{await loadRepos();if(!$('githubStatus').textContent)status('Up to date with GitHub.')});
  $('githubNav').append(...SECTIONS.filter(([id])=>id!=='newrepo').map(([id,label])=>el('button',{'data-section':id,'aria-pressed':'false',text:label,onclick:()=>{view=null;status('');task(()=>showSection(id))}})));
  async function showSection(id){
@@ -173,7 +174,7 @@ export function setupGitHub({github,workspace,opened,notice,openLink=null,roomFo
   {const full=roomFor({kind:'github',owner:r.owner,repo:r.name,branch:b});if(full)throw Error(full)}
   status('Opening '+f.path+'…');const result=await github.read(r.owner,r.name,b,f);
   $('githubDialog').close();opened(result.text,f.path.split('/').pop(),result.ref);
-  notice('Opened from GitHub: '+r.full+' · '+b+' · '+f.path+(line?' (match on line '+line+')':'')+(isAdvanced()?'':'. For colours and syntax checks: Menu → Advanced.'));
+  notice('Opened '+f.path.split('/').pop()+' from GitHub'+(line?' (line '+line+')':'')+(isAdvanced()?'':'. For colours and syntax checks: Menu → Advanced.'));
  })}
  function fileActions(f){const r=repo();panel(back('All files'),el('h3',{text:f.path}),el('div',{class:'actions gh-stack'},
    el('button',{id:'githubFileOpen',text:'Open',onclick:()=>openFile(f)}),
@@ -414,6 +415,26 @@ export function setupGitHub({github,workspace,opened,notice,openLink=null,roomFo
    jobs.length?null:el('p',{text:'No jobs yet.'}));
  }
 
+ // Save a copy of a file from this device into the chosen repository and branch.
+ function copyToGitHubView(doc){clearNav();
+  const path=el('input',{id:'githubCopyPath',autocomplete:'off',autocapitalize:'off',spellcheck:'false',value:doc.path??(doc.name||'notes.txt'),oninput:()=>{doc.path=path.value}});
+  const note=el('input',{id:'githubCopyNote',autocomplete:'off',value:doc.note??('Add '+(doc.name||'a file')+' from ATE'),oninput:()=>{doc.note=note.value}});
+  panel(back('Back'),el('h3',{text:'Save a copy of '+(doc.name||'this file')+' to GitHub'}),
+   el('p',{text:'Pick the repository (1) and the branch (2) above. The file on your device stays as it is.'}),
+   el('label',{class:'gh-field'},'File path in the repository',path),el('label',{class:'gh-field'},'Note for this change',note),
+   el('div',{class:'actions'},el('button',{id:'githubCopySave',class:'primary',text:'Save to GitHub',onclick:()=>task(async()=>{
+    const r=repo(),b=branch(),p=path.value.trim(),msg=note.value.trim();
+    if(!r?.canPush)throw Error('ATE may only read '+(r?r.full:'this repository')+'. Choose a repository you can change.');
+    if(!validPath(p))throw Error('Type a path such as folder/notes.md, without a leading slash.');
+    status('Saving to GitHub…');
+    try{await github.commit(r.owner,r.name,b,[{path:p,text:doc.text,baseSha:null}],msg)}
+    catch(e){if(e.code!=='exists')throw e;status('');
+     const f=(await github.files(r.owner,r.name,b)).files.find(x=>x.path===p);if(!f)throw e;
+     const v=await ask({title:'Replace '+p+'?',text:`${p} is already on GitHub in ${r.full} · branch ${b}. Replacing it saves your copy over it as a new change; the old version stays in its History.`,ok:'Replace',working:'Saving to GitHub…',run:()=>github.commit(r.owner,r.name,b,[{path:p,text:doc.text,baseSha:f.sha}],msg)});
+     if(!v){status('Nothing was saved.');return}}
+    status(`Saved a copy to ${r.full} · ${b} · ${p}. The file on your device is unchanged.`)},{long:true,text:'Saving to GitHub…'})})));
+  path.focus();
+ }
  // View-only full log of one job, with Find.
  async function logView(x,j){
   const r=repo(),head=[back('Run',()=>runView(x)),el('h3',{text:'Log · '+j.name}),el('p',{class:'gh-meta',text:`${runLabel(j)} · ${x.name} · ${x.branch} · view only`})];
@@ -471,6 +492,10 @@ export function setupGitHub({github,workspace,opened,notice,openLink=null,roomFo
   open(target){showView();status('');if(ensureAdvanced())notice('Switched to Advanced, so GitHub files get colours and syntax checks. You can switch back in the Menu.');$('githubDialog').showModal();
    if(!github.signedIn){$('githubSignIn').focus();return}
    task(async()=>{await loadRepos();if(target){const i=repos.findIndex(x=>x.owner===target.owner&&x.name===target.repo);if(i>=0){view=null;section='files';$('githubRepo').value=String(i);await loadBranches(target.branch)}}});},
+  // Save a copy of one of your own files (My files) into a repository. The file on the device is left as it is.
+  saveCopy(doc){showView();status('');if(ensureAdvanced())notice('Switched to Advanced, so GitHub files get colours and syntax checks. You can switch back in the Menu.');$('githubDialog').showModal();
+   if(!github.signedIn){status('Sign in first. Then choose ⋯ → Save a copy to GitHub again.');$('githubSignIn').focus();return}
+   const v=()=>copyToGitHubView(doc);v.keep=true;task(async()=>{if(!repos.length)await loadRepos();view=v;await showSection(section)});},
   // Save every changed tab of one repository branch together (from the tab group's ⋯ menu).
   saveTabs(owner,repoName,branchName){if(!github.signedIn){notice('Sign in to GitHub first: Menu → GitHub.');return}return saveAll({owner,repo:repoName,branch:branchName})},
   // Ask for a note, optionally show what changed, then save one tab. Resolves with the confirmed result.

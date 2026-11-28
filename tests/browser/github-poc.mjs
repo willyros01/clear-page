@@ -190,6 +190,31 @@ await page.waitForSelector('#githubAsk[open]');assert.match(await $('githubAskBo
   await grp.locator('.tg-menu').click();await page.waitForSelector('#tabGroupMenu[open]');await page.locator('#tabGroupActions button',{hasText:/^Close all/}).click();
   assert.equal(await grp.count(),0,'closing the group closes all its files');
   const blue=await page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--accent').trim());assert.equal(blue.toLowerCase(),'#1f5c99');
+  // Save a copy of one of your own files to GitHub (⋯ of My files); the file on the device is left as it is.
+  if(await $('githubDialog').evaluate(d=>d.open))await $('githubClose').click();
+  await $('menuButton').click();await $('new').click();await editor.fill('copied from my device\n');
+  await $('menuButton').click();await $('name').fill('my-note.md');await $('closeMenu').click();
+  const mine=page.locator('.tg-group[data-group="device"]');await mine.locator('.tg-menu').click();await page.waitForSelector('#tabGroupMenu[open]');
+  await page.locator('#tabGroupActions button',{hasText:'Save a copy of my-note.md to GitHub'}).click();await page.waitForSelector('#githubDialog[open]');await idle();
+  await $('githubRepo').selectOption({label:'tester/ate-test'});await idle();await page.waitForSelector('#githubCopyPath');
+  assert.equal(await $('githubCopyPath').inputValue(),'my-note.md');await $('githubCopyPath').fill('notes/my-note.md');
+  await $('githubCopySave').click();await idle();assert.match(await status(),/Saved a copy to tester\/ate-test · main · notes\/my-note.md\. The file on your device is unchanged/);
+  assert.equal(S.filesAt('ate-test','main')['notes/my-note.md'],'copied from my device\n');
+  // Same name again: ATE asks before replacing, and the old version stays in the history.
+await $('githubClose').click();await editor.fill('copied again\n');
+  await mine.locator('.tg-menu').click();await page.waitForSelector('#tabGroupMenu[open]');await page.locator('#tabGroupActions button',{hasText:'Save a copy of my-note.md to GitHub'}).click();await idle();
+  await page.waitForSelector('#githubCopyPath');await $('githubCopyPath').fill('notes/my-note.md');await $('githubCopySave').click();
+  await page.waitForSelector('#githubAsk[open]');assert.match(await $('githubAskTitle').innerText(),/Replace notes\/my-note.md\?/);await askOk();await idle();
+  assert.equal(S.filesAt('ate-test','main')['notes/my-note.md'],'copied again\n');assert.equal(await mine.count(),1,'the file on the device stays open in My files');
+  // Shorter "opened" message.
+  await openFile('README.md');await notice(/^Opened README\.md from GitHub/);
+  // Phone-sized screen (Fire HD 8 in portrait): one-line bottom message (tap to see it all), and tapping the group you are in folds its files row.
+  await page.setViewportSize({width:600,height:960});await page.waitForTimeout(300);
+  assert.equal(await $('notice').evaluate(e=>getComputedStyle(e).whiteSpace),'nowrap');await $('notice').click();assert.equal(await $('notice').evaluate(e=>getComputedStyle(e).whiteSpace),'normal');
+  const here=page.locator('#tabs .tg-active .tg-chip');assert.equal(await $('tabFiles').isVisible(),true);
+  await here.click();assert.equal(await $('tabFiles').isVisible(),false,'tapping the group name folds its files');
+  await here.click();assert.equal(await $('tabFiles').isVisible(),true,'tapping it again opens them');
+  await page.setViewportSize({width:1194,height:834});await page.waitForTimeout(300);
   // Sign-in ended on GitHub's side: plain message, back to the sign-in screen.
   await openGitHub();S.tokenValid=false;await $('githubRefresh').click();await idle();assert.match(await status(),/sign-in has ended/);assert.equal(await $('githubSignedOut').isVisible(),true);
   S.tokenValid=true;

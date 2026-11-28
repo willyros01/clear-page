@@ -53,7 +53,18 @@ adb shell am instrument -w -e class io.github.willyros01.clearpage.DocumentSaveT
 adb logcat -d > android-logcat.txt
 adb shell uiautomator dump /sdcard/ate-ui.xml
 adb pull /sdcard/ate-ui.xml android-ui.xml
-grep -q 'OK (2 tests)' android-instrumentation.txt
+grep -q 'OK (3 tests)' android-instrumentation.txt
+# Results in plain words on the GitHub run's own page.
+if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+ sdk=$(adb shell getprop ro.build.version.sdk | tr -d '\r')
+ {
+  echo "## Android emulator checks (Android API $sdk)"
+  node -e 'const r=JSON.parse(require("fs").readFileSync("android-webview-report.json"));for(const c of r.checks)console.log("- Passed — "+c)'
+  echo "- Passed — Saving through Android's own Files screen; cancelling keeps your text"
+  echo "- Passed — Fire HD 8 sized screen: the bottom line steps aside while the keyboard is up"
+  echo "- Passed — Largest system text size: toolbar and Projects fit, Add file opens the Files picker"
+ } >> "$GITHUB_STEP_SUMMARY"
+fi
 adb pull /sdcard/Download/ate-storage-check.c android-saved.c
 adb pull /sdcard/Download/ate-no-extension android-saved-extensionless
 cmp android-saved.c android-saved-extensionless

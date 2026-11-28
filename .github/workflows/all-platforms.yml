@@ -20,7 +20,7 @@ concurrency:
   group: ate-coordinated-release
   cancel-in-progress: false
 env:
-  ATE_BUILD_NUMBER: "30"
+  ATE_BUILD_NUMBER: "31"
 jobs:
   browser:
     if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[all-platforms]')

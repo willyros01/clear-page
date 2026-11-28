@@ -9,6 +9,7 @@ import {setupIOSViewport} from './ios-viewport.js';
 import {setupProjects} from './project-ui.js';
 import {createDocumentTabs,MAX_TABS} from './document-tabs.js';
 import {createTabBar,roomFor,groupOf} from './tab-groups.js';
+import {createKeyboardWatch,screenIsLandscape} from './keyboard-line.js';
 import {createGitHub} from './github.js';
 import {setupGitHub} from './github-ui.js';
 import {Capacitor} from '@capacitor/core';
@@ -30,7 +31,9 @@ for(const id of ['file','projectFiles'])document.getElementById(id).removeAttrib
 let workspace=null,projects=null,githubUi=null,loading=true,syntax=null,languageManual=false,advanced=true,closingApplication=false;
 if(tabbed)try{const p=JSON.parse(localStorage.getItem('clear-page-preferences-v1')||'null');advanced=p?.experienceMode? p.experienceMode==='advanced':!!(p||localStorage.getItem('clear-page-workspace-v1')||localStorage.getItem('clear-page-draft-v1'));}catch{advanced=false}
 const editor=createEditor($('editor'),()=>{if(!loading){closingApplication=false;dirty=true;counts();persist();syntax?.changed()}});let font=27,dirty=false,pending=null;const key='clear-page-draft-v1';const prefsKey='clear-page-preferences-v1';
-function notice(msg){$('notice').textContent=msg;$('notice').hidden=!msg}
+function notice(msg){$('notice').textContent=msg;$('notice').hidden=!msg;$('notice').classList.remove('expanded')}
+// Phone-sized screens keep the message to one line; tapping it shows the whole message.
+$('notice').addEventListener('click',()=>$('notice').classList.toggle('expanded'));
 function counts(){const t=editor.value;const words=t.trim()?t.trim().split(/\s+/u).length:0;$('counts').textContent=`${words.toLocaleString()} ${words===1?'word':'words'} · ${Array.from(t).length.toLocaleString()} characters`}
 function persist(){if(workspace&&!loading){workspace.edit();return}try{localStorage.setItem(key,JSON.stringify({text:editor.value,name:$('name').value,fontPt:font,dark:document.body.classList.contains('dark'),language:$('language').value,languageManual}));$('status').textContent='Draft saved on this device'}catch(e){$('status').textContent='Draft not saved — use Save file'}}
 function persistPreferences(){try{localStorage.setItem(prefsKey,JSON.stringify({fontPt:font,buttonStyle:$('buttonStyle').value,editingMode:$('editingMode').value,dark:document.body.classList.contains('dark'),experienceMode:advanced?'advanced':'basic'}))}catch(e){}}
@@ -130,6 +133,7 @@ function groupMenu(g,ctl){
  if(changed.length&&g.kind==='github')add(`Save the ${changed.length} changed ${changed.length===1?'file':'files'} together…`,()=>githubUi.saveTabs(g.owner,g.repo,g.branch),'primary');
  if(changed.length&&g.kind==='project')add(`Save the ${changed.length} changed ${changed.length===1?'file':'files'}`,async()=>{if(saving)return;saving=true;let ok=0;try{for(const t of changed){const r=await projects.save(t.projectRef,t.name,t.text);workspace.saved(t.id,t.text,r.name,{...r.projectRef,projectName:t.projectRef.projectName});ok++}notice(`Saved ${ok} ${ok===1?'file':'files'} in the project.`)}catch(e){notice(e.message+` ${ok} saved; the rest are kept unsaved.`)}finally{saving=false;dirty=workspace.current.dirty}},'primary');
  add(ctl.folded?'Open this group':'Fold this group',ctl.folded?ctl.open:ctl.fold);
+ if(g.kind==='device'){const doc=docs.find(t=>t.id===workspace.current?.id)||docs[0];if(doc)add(`Save a copy of ${doc.name||'this file'} to GitHub…`,()=>{$('menu').close();githubUi.saveCopy({name:doc.name,text:doc.text})})}
  if(g.kind==='github')add('Open the GitHub screen for this branch',()=>{$('menu').close();githubUi.open({owner:g.owner,repo:g.repo,branch:g.branch})});
  add(`Close all ${docs.length} ${docs.length===1?'file':'files'}…`,()=>{
   if(!changed.length){workspace.closeMany(docs.map(t=>t.id));return}
@@ -177,7 +181,7 @@ if(tabbed){
 }
 
 // Touch devices: hide the bottom line while the on-screen keyboard takes the screen.
-if(window.visualViewport&&matchMedia('(pointer:coarse)').matches){const vv=window.visualViewport;let base=0,wide=innerWidth>innerHeight;const keyboard=()=>{const now=innerWidth>innerHeight;if(now!==wide){wide=now;base=0}base=Math.max(base,vv.height);document.documentElement.classList.toggle('keyboard-up',vv.height<base*0.75)};vv.addEventListener('resize',keyboard);addEventListener('resize',keyboard);keyboard()}
+if(window.visualViewport&&matchMedia('(pointer:coarse)').matches){const vv=window.visualViewport;const keyboard=createKeyboardWatch({height:()=>vv.height,landscape:()=>screenIsLandscape(window),onChange:up=>document.documentElement.classList.toggle('keyboard-up',up)});vv.addEventListener('resize',keyboard);addEventListener('resize',keyboard);screen.orientation?.addEventListener?.('change',keyboard);keyboard()}
 
 // Vim: show the mode (NORMAL, INSERT…) in the bottom line instead of a separate strip;
 // the strip still appears while a Vim command (:w, /search) or message is shown.

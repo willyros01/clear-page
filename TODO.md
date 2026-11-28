@@ -4,7 +4,7 @@ Last updated: 12 November 2026 (UTC).
 
 Feature backlog: [ATE features to-do list](FEATURES-TODO.md), recorded 15 November 2026, with six planned features in the agreed priority order.
 
-## Next build batch — owner's testing of 0.8.9 (30) on the Fire 8 (27 November 2026). Build only when the owner says so.
+## 0.8.9 (31) batch — owner's testing of 0.8.9 (30) on the Fire 8 (27 November 2026). Owner approved building on 28 November 2026; all four items done in this build.
 
 1. Bottom line too tall on a phone-sized screen: "Opened from GitHub: owner/repo · branch · full path" wraps to three lines. Shorten to "Opened <file name> from GitHub" (repository and branch are already in the tab) and keep the bottom line to one line on narrow screens, long messages cut with "…" and shown in full on tap.
 2. Fire 8: the bottom line stays visible while the on-screen keyboard is up (it hides on iPhone, iPad and other Android devices). Find why the Fire's keyboard is not detected, fix it, and add a Fire-sized check to the Android emulator tests.
