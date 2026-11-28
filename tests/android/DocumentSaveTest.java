@@ -45,7 +45,7 @@ public class DocumentSaveTest {
         assertTrue("Save must launch DocumentsUI, not a share chooser",device.wait(Until.hasObject(By.pkg(DOCUMENTS)),15000));
         device.pressBack();
         assertTrue("Editor must resume after cancelling Save",device.wait(Until.hasObject(By.pkg(context.getPackageName())),10000));
-        assertTrue("Cancellation notice missing",device.wait(Until.hasObject(By.textContains("Your draft is kept")),10000));
+        assertTrue("Cancellation notice missing",notice(device,"Your draft is kept",10000));
         openSavePicker(device,context);
         assertTrue(device.wait(Until.hasObject(By.pkg(DOCUMENTS)),15000));
         UiObject2 roots=device.findObject(By.desc("Show roots"));
@@ -59,14 +59,14 @@ public class DocumentSaveTest {
             clickSelector(device,nativeSave,"Native Save");
             if(device.wait(Until.gone(nativeSave),3000))break;
         }
-        assertTrue("Successful native document save notice missing",device.wait(Until.hasObject(By.textContains("Saved ate-storage-check.c")),15000));
+        assertTrue("Successful native document save notice missing",notice(device,"Saved ate-storage-check.c",15000));
         click(device,"Menu");click(device,"Open");
         assertTrue("Open must launch DocumentsUI",device.wait(Until.hasObject(By.pkg(DOCUMENTS)),15000));
         UiObject2 saved=device.wait(Until.findObject(By.text("ate-storage-check.c")),10000);
         // Android's Files screen sometimes opens on another place (Recent): look in Downloads, where it was saved.
         if(saved==null&&device.hasObject(By.desc("Show roots"))){clickSelector(device,By.desc("Show roots"),"Show roots");device.waitForIdle();clickSelector(device,By.text("Downloads"),"Downloads");device.waitForIdle();saved=device.wait(Until.findObject(By.text("ate-storage-check.c")),10000);}
         assertNotNull("Saved document missing from file manager",saved);saved.click();
-        if(!device.wait(Until.hasObject(By.textContains("Opened ate-storage-check.c")),15000))fail("Native file open did not complete. On screen: "+screenTexts(device)+" | ATE saw: "+keyboardReadings(device));
+        if(!notice(device,"Opened ate-storage-check.c",15000))fail("Native file open did not complete. On screen: "+screenTexts(device)+" | ATE saw: "+keyboardReadings(device));
         openSavePicker(device,context);
         assertTrue(device.wait(Until.hasObject(By.pkg(DOCUMENTS)),15000));
         filename=device.wait(Until.findObject(By.clazz("android.widget.EditText")),10000);
@@ -74,12 +74,12 @@ public class DocumentSaveTest {
         device.waitForIdle();
         if(device.hasObject(By.pkg(Pattern.compile(".*inputmethod.*")))){device.pressBack();device.waitForIdle();}
         clickSelector(device,nativeSave,"Extensionless Save");
-        assertTrue("Extensionless save notice missing",device.wait(Until.hasObject(By.textContains("Saved ate-no-extension.")),15000));
+        assertTrue("Extensionless save notice missing",notice(device,"Saved ate-no-extension.",15000));
         click(device,"Menu");click(device,"Open");
         assertTrue(device.wait(Until.hasObject(By.pkg(DOCUMENTS)),15000));
         UiObject2 extensionless=device.wait(Until.findObject(By.text("ate-no-extension")),10000);
         assertNotNull("Provider appended or changed the extensionless filename",extensionless);extensionless.click();
-        assertTrue(device.wait(Until.hasObject(By.textContains("Opened ate-no-extension")),15000));
+        assertTrue(notice(device,"Opened ate-no-extension",15000));
         System.out.println("PASS: ACTION_CREATE_DOCUMENT picker, cancel preserves draft, filename/destination save and reopen succeed");
     }
     // Fire HD 8 sized screen (800 x 1280 pixels, about 600 x 960 in the page): with the on-screen keyboard up,
@@ -153,6 +153,16 @@ public class DocumentSaveTest {
             if(!device.hasObject(By.pkg(context.getPackageName())))return;
             device.waitForIdle();
         }
+    }
+    // ATE's messages show in the bottom line, which steps aside while the on-screen keyboard is up (by design:
+    // opening a file puts the cursor in the editor, which can bring the keyboard up). Close the keyboard, then look.
+    private boolean notice(UiDevice device,String text,long timeout) throws Exception{
+        long end=System.currentTimeMillis()+timeout;
+        while(System.currentTimeMillis()<end){
+            if(device.executeShellCommand("dumpsys input_method").contains("mInputShown=true")){device.pressBack();device.waitForIdle();}
+            if(device.wait(Until.hasObject(By.textContains(text)),1000))return true;
+        }
+        return false;
     }
     // Words on screen and ATE's keyboard readings, so a failure explains itself on the test run's page.
     private String screenTexts(UiDevice device){
