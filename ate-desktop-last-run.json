@@ -3,10 +3,10 @@
   "workflow": "ATE Apple and Desktop",
   "branch": "desktop",
   "version": "0.8.9",
-  "run_id": 45944744818,
-  "source_sha": "a44550f3df481f40feb2b6bee2bf7bbb433eabad",
-  "web_artifact_id": 15174756161,
-  "windows_artifact_id": 15174377521,
-  "mac_artifact_id": 15173993823,
-  "created_at": "2026-11-27T05:29:10.332Z"
+  "run_id": 46117055485,
+  "source_sha": "2b4b6b870cd2867ff82905b9da5d438d6bffc54d",
+  "web_artifact_id": 15252331502,
+  "windows_artifact_id": 15252158980,
+  "mac_artifact_id": 15252731015,
+  "created_at": "2026-11-28T06:44:33.472Z"
 }
